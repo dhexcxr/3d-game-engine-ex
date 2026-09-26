@@ -510,7 +510,7 @@ var gameEngineJS = (function(){
 
   var _fDrawFrame = function(screen, overlayscreen, target){
     var frame = _fPrepareFrame(screen, overlayscreen);
-// 	var frame = screen;		// DEBUG uncomment to remove skew
+// 	var frame = screen;		// DEBUG uncomment to remove skew from look up/down rendering
     var target = target || eScreen;
 
     var sOutput = "";
@@ -908,6 +908,8 @@ var gameEngineJS = (function(){
     mouseLook: function(){
       var fMouseLookFactor = 0.002;
 
+// TODO add listener for pointerlockchange so mouse doesn't move viewport when not "locked"
+	// see https://developer.mozilla.org/en-US/docs/Web/API/Document/pointerlockchange_event
       document.body.requestPointerLock();
       document.onmousemove = function (e) {
 		// Ignore the event if the window is not currently active or paused
@@ -1408,7 +1410,7 @@ var gameEngineJS = (function(){
       	// check if player is on door tile, so we can properly render it
       	let playerInsideDoorTile = map[~~fPlayerY * nMapWidth + ~~fPlayerX] === 'X';
 
-		if (playerInsideDoorTile) {
+		if (playerInsideDoorTile) {	// NOTE this is not working, just comment out for now
 // 			bHitWall = true;
 
 			fDistanceToWall = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
@@ -1615,11 +1617,22 @@ var gameEngineJS = (function(){
 
 
     	if(screenColumn === nScreenWidth / 2 && (sWalltype == '#' || sWalltype == 'X')) {
+/*
 			midFrameInfoMsg = `
 			fDistToDoor: ${fDistToDoor.toFixed(3)}; nDoorHeight: ${nDoorHeight.toFixed(3)};
 			nDoorFrameTop: ${nDoorFrameTop.toFixed(3)}; nDoorFrameBot: ${nDoorFrameBot.toFixed(3)};<br>
 			fDistanceToWall: ${fDistanceToWall.toFixed(3)}; wallHeight: ${wallHeight.toFixed(3)};
 			nCeiling: ${nCeiling.toFixed(3)}; nFloor: ${nFloor.toFixed(3)};
+			`;
+ */
+ 			midFrameInfoMsg = `
+			fDistanceToObject: ${fDistanceToObject};
+			nObjectCeiling: ${nObjectCeiling.toFixed(3)};
+			nObjectFloor: ${nObjectFloor.toFixed(3)};
+			fDistanceToInverseObject: ${fDistanceToInverseObject};
+			nFObjectBackwall: ${nFObjectBackwall.toFixed(3)};
+			fDistanceToWall: ${fDistanceToWall};
+			nFloor: ${nFloor}
 			`;
     	}
 
