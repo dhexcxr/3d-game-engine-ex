@@ -151,6 +151,8 @@ var gameEngineJS = (function(){
     return ~~(Math.random() * (max - min + 1) + min);
   };
 
+  let starPicker =() => _randomIntFromInterval(1, 100) === 1;
+
 
   // generates only pogels that can be placed
   var _generateRandomCoordinates = function(){
@@ -1565,13 +1567,13 @@ var gameEngineJS = (function(){
 
                 screen[screenRow * nScreenWidth + screenColumn] = _rh.renderWall(fDistanceToWall, sWallDirection, _getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
               } else {
-                screen[screenRow * nScreenWidth + screenColumn] = brightness[0];
+                screen[screenRow * nScreenWidth + screenColumn] = starPicker() ? '.' : brightness[0];
               }
             } else {		// draw ceiling/sky
               if(sWalltype == ",") {
                 screen[screenRow * nScreenWidth + screenColumn] = "1";
               } else {
-                screen[screenRow * nScreenWidth + screenColumn] = brightness[0];
+                screen[screenRow * nScreenWidth + screenColumn] = starPicker() ? '.' : brightness[0];
               }
             }		          // solid block
           } else if( screenRow > nCeiling && screenRow <= nFloor && !(screenRow >= nDoorFrameBot && sWalltype == 'X') ) {
@@ -1581,7 +1583,7 @@ var gameEngineJS = (function(){
 			  if (screenRow > nDoorFrameTop) {
 				screen[screenRow * nScreenWidth + screenColumn] = _rh.renderGate(screenRow, fDistToDoor, nDoorFrameTop, nCeiling);
               } else {
-                screen[screenRow * nScreenWidth + screenColumn] = brightness[0];
+                screen[screenRow * nScreenWidth + screenColumn] = starPicker() ? '.' : brightness[0];
               }
             }  else if(sWalltype != "." || sWalltype == "T") {		// Solid Walltype
 
