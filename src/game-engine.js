@@ -515,8 +515,6 @@ var gameEngineJS = (function(){
         } else if( pix > nScreenWidth - removePixels ) {
           sOutput += "";
         } else {
-//           if (frame[printIndex] === 'undefined')		// DEBUG
-//           	console.log('frame[printIndex] undef');
           sOutput += frame[printIndex];
         }
 
@@ -537,12 +535,6 @@ var gameEngineJS = (function(){
     renderWall: function(fDistanceToWall, sWallDirection, pixel){
 
       var fill = "";
-
-//       var b100 = "&#9608;";
-//       var b75  = "&#9619;";
-//       var b50  = "&#9618;";
-//       var b25  = "&#9617;";		// NOTE above my towers this is being rendered a bunch, like on the ceiling
-//       var b0   = "&nbsp;";
 
       if( sWallDirection === "N" || sWallDirection === "S" ){
 
@@ -655,11 +647,7 @@ var gameEngineJS = (function(){
         }
       }
 
-      if (fill === 'undefined')
-      	console.log('renderWall fill undef');		// DUBUG
-
       return fill;
-
     },
 
     // figures out shading for given section
@@ -712,9 +700,6 @@ var gameEngineJS = (function(){
           fill = "|";
         }
       }
-
-      if(fill === 'undefined')
-      	console.log('renderGate fill undef');		// DEBUG
       return fill;
     },
 
@@ -770,7 +755,7 @@ var gameEngineJS = (function(){
 
       window.onkeydown = function(e) {
 
-        console.log(e.which);
+        console.log(e.which);		// DEBUG ONLY
 		if (e.which === 192) {		// `, print ray details to console
 			printRayObs();
 		}
@@ -830,7 +815,7 @@ var gameEngineJS = (function(){
           bMoveBackward = true;
         }
 
-        printPlayerLoc();
+        printPlayerLoc();		// DEBUG only
       };
 
       window.onkeyup = function(e) {
@@ -861,7 +846,7 @@ var gameEngineJS = (function(){
           bMoveBackward = false;
         }
 
-        printPlayerLoc();
+        printPlayerLoc();		// DEBUG only
       };
     },
 
@@ -875,6 +860,7 @@ var gameEngineJS = (function(){
      * Ultimately modifies the `fLooktimer` variable, which is global :)
      */
     yMoveUpdate: function(fMoveInput, fMoveFactor ){
+
       // look up/down (with bounds)
       if(LockLook) return;		// DEBUG
       var fYMoveBy = fMoveInput * fMoveFactor;
@@ -904,7 +890,7 @@ var gameEngineJS = (function(){
         // look up and down
         _moveHelpers.yMoveUpdate( ( e.movementY || e.mozMovementY || e.webkitMovementY || 0), 0.05 );
 
-        printPlayerLoc();
+        printPlayerLoc();		// DEBUG only
       }
     },
 
@@ -1498,22 +1484,12 @@ var gameEngineJS = (function(){
         // set to their last value, representing their distances
         // based on the distance to wall, determine how much floor and ceiling to show per column,
         // Adding in the recalc for looking (fLookTimer) and jumping (nJumptimer)
-        // // var nCeiling = (nScreenHeight / 2) - nScreenHeight / fDistanceToWall;
-        // // var nCeiling = (nScreenHeight / (2 - fLooktimer * 0.15)) - nScreenHeight / fDistanceToWall;
         var wallHeight = Math.round(nScreenHeight / fDistanceToWall);
         var nCeiling = screenSkew - wallHeight / 2;
 	var nFloor   = screenSkew + wallHeight / 2;
 
-		// NOTE TODO - walls are nice and square now but apparently being drawn too small
-			// with the sprite monsters on I can see them clip behind the wall where we're drawing floor
 
-	rayObs.push(new RayOb(screenColumn, -1, fDistanceToWall, wallHeight, nCeiling, nFloor, fLooktimer, tileType));
-
-        // NOTE turns out this is a euclidian projection or whatever and part of what makes the fisheye
-//         var nCeiling = screenSkew - nScreenHeight / fDistanceToWall;
-//         var nFloor   = screenSkew + nScreenHeight / fDistanceToWall;
-
-        // similar for towers and gates	// NOTE TODO towers have a weird artifact of light ascii block rendering above them when we get close
+        // similar for towers and gates
         let nTower = screenSkew - wallHeight / 2 - wallHeight;
 	// TODO update this like i did with nTower
 //         var nDoorFrameHeight = screenSkew - nScreenHeight / (fDistanceToWall + 2);
@@ -1548,7 +1524,7 @@ var gameEngineJS = (function(){
         // the spot where the wall was hit
         fDepthBuffer[screenColumn] = fDistanceToWall;
 
-// TODO print out details on the Tower block, and see why we're painting shader in the sky
+// DEBUG ONLY print out details on the Tower block, and see why we're painting shader in the sky
 //_debugOutput(`SprDist: ${fSpriteDist}; SprH: ${fSpriteHeight}; SprCeil: ${fSpriteCeiling}; SprFlr: ${fSpriteFloor}`, 'debug2');
 
         // draw the columns one screenheight-pixel at a time
@@ -1563,7 +1539,6 @@ var gameEngineJS = (function(){
 
                 var fSampleY = ( (screenRow - nTower) / (nCeiling - nTower) );
 
-                // screen[screenRow * nScreenWidth + screenColumn] = _rh.renderSolidWall(fDistanceToWall, isBoundary);
                 screen[screenRow * nScreenWidth + screenColumn] = _rh.renderWall(fDistanceToWall, sWallDirection, _getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
               } else {
                 screen[screenRow * nScreenWidth + screenColumn] = brightness[0];
@@ -1579,56 +1554,11 @@ var gameEngineJS = (function(){
 
             // Door/exit Walltype
             if(sWalltype == "X"){
-//               if(screenRow > nCeiling && screenRow < nDoorFrameTop) {
-//               	let fPrevDistanceToWall = fDistanceToWall - 1;
-// 				let jambHeight = Math.round(nScreenHeight / fPrevDistanceToWall);	// ALSO, does this need to be new or rather the prev
-// 				let jambCeiling = screenSkew - jambHeight / 2;						// am I calc'ing the jamb or the exit here?
-// 				let jambFloor   = screenSkew + jambHeight / 2;
-//
-// 				// YOOOOOOOO i need to get the new column not the new row, row stays the same
-// 					// DUDE no wonder this is wrong
-// 				// NOTE new screenRow for this door jamb
-// 					// (screenRow - centerOfScreen) / fDistanceToWall = (newScreenRow - centerOfScreen) / fPrevDistanceToWall
-// 					// or something like that, they are similar overlapping triangles
-//
-// 														// NOTE this might could be just the delta_x or y
-// // 					(screenColumn - nScreenWidth / 2) / (fDistanceToWall - fPrevDistanceToWall) =
-//
-//
-// // 				let doorJambScreenCol = ~~(nScreenWidth / 2 + ((screenColumn - nScreenWidth / 2) * (fDistanceToWall / (fDistanceToWall - fPrevDistanceToWall))));
-//
-// 				// using $$x = \frac{(h_2 \cdot b) + (h_1 \cdot B)}{h_{\text{large}}}$$
-// 				// where h2 = lower leg, from big base to bisecting line, fPrevDistanceToWall
-// 					// b = small, top base, wallHeight * fSampleX because we're -so- far into the width of the whole square
-// 					// h1 = top leg, from bisecting line to small top base, fDistanceToWall - fPrevDistanceToWall
-// 					// B = large base, from current column to middle of screen, screenColumn - nScreenWidth / 2
-// 					// h_large = total height, fDistanceToWall
-//
-// 															// NOTE, h1 is probably wrong
-// 				let topBase = Math.abs(screenColumn - nScreenWidth / 2);
-// 				let topSeg = fDistanceToWall - fPrevDistanceToWall;
-// 				let bigBase = nScreenWidth / 2;
-//
-// 				let opOne = fPrevDistanceToWall * topBase;
-// 				let opTwo = topSeg * bigBase
-//
-// 				let doorJambScreenCol =
-// 					(opOne + opTwo) / fDistanceToWall + (bigBase * Math.sign(screenColumn - nScreenWidth / 2));
-// 				let fPrevSampleX = hit_side === 0 ? fPlayerY + fPrevDistanceToWall * rayDirY : fPlayerX + fPrevDistanceToWall * rayDirX;
-// 				fPrevSampleX -= ~~fPrevSampleX;
-// 				let fdoorJambSampleY = ( (screenRow - jambCeiling) / (jambFloor - jambCeiling) );
-//
-// 				var fSampleY = ( (screenRow - nCeiling) / (nFloor - nCeiling) );
-//       			screen[screenRow * nScreenWidth + screenColumn] = _rh.renderWall(fDistToDoor, sWallDirection, _getSamplePixel(textures['#'], fSampleX, fSampleY));
-//       		  } else {
-			if (screenRow > nDoorFrameTop) {
+			  if (screenRow > nDoorFrameTop) {
 				screen[screenRow * nScreenWidth + screenColumn] = _rh.renderGate(screenRow, fDistToDoor, nDoorFrameTop, nCeiling);
-
               } else {
                 screen[screenRow * nScreenWidth + screenColumn] = brightness[0];
               }
-
-//       		  }
             }  else if(sWalltype != "." || sWalltype == "T") {		// Solid Walltype
 
               var fSampleY = ( (screenRow - nCeiling) / (nFloor - nCeiling) );
@@ -1686,7 +1616,6 @@ var gameEngineJS = (function(){
 			nCeiling: ${nCeiling.toFixed(3)}; nFloor: ${nFloor.toFixed(3)};
 			`;
     	}
-
 
 		if(midFrameInfoMsg !== '' || endDoorInfoMsg !== '') {
 			_debugOutput(`${midFrameInfoMsg}<br>${endDoorInfoMsg}`, 'debug2');
@@ -1762,7 +1691,7 @@ var gameEngineJS = (function(){
 
 // 		  _debugOutput(`SprDist: ${fSpriteDist}; SprH: ${fSpriteHeight}; SprCeil: ${fSpriteCeiling}; SprFlr: ${fSpriteFloor}`, 'debug2');
 
-				// NOTE does this need rounding? try without sometime
+				// NOTE does this need rounding? try without sometime, or ~~
           var fSpriteCeiling = Math.round(fSpriteCeiling);
           var fSpriteFloor = Math.round(fSpriteFloor);
 
@@ -1928,7 +1857,7 @@ var gameEngineJS = (function(){
     // if it does, set aspect-ratio-based height
     // and start the game
     else{
-      var fAdjustedAspectRatio = viewPortAspect / 2.82;
+      var fAdjustedAspectRatio = viewPortAspect / 2.82;		// TODO figure out what all these magic number are
       _debugOutput(fAdjustedAspectRatio, 'debug');
 
       if( fAdjustedAspectRatio < 0.266 ){
@@ -1946,7 +1875,7 @@ var gameEngineJS = (function(){
     // prep document
     eScreen = document.getElementById("display");
     eScreen2 = document.getElementById("seconddisplay");
-    eDebugOut = document.getElementById("debug");
+//     eDebugOut = document.getElementById("debug");
     eTouchLook = document.getElementById("touchinputlook");
     eTouchMove = document.getElementById("touchinputmove");
 
