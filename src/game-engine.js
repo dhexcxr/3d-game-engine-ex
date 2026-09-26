@@ -1589,53 +1589,69 @@ var gameEngineJS = (function(){
       }  // end column loop
 
 
+      // draw sprites	// TODO change this to an array of objects probably
+	  for (const sprite of Object.values(oLevelSprites)) {
 
-      // draw sprites
-      for(var si=0; si < Object.keys(oLevelSprites).length; si++ ){
+		let spriteTileIndex = ~~sprite.y * nMapWidth + ~~sprite.x;
 
-        // the sprite in the level-side
-        var sprite = oLevelSprites[Object.keys(oLevelSprites)[si]];
+// 		let spriteTileAdjacentCardinals = [spriteTileIndex, spriteTileIndex + 1, spriteTileIndex - 1,
+// 											spriteTileIndex + nMapWidth, spriteTileIndex + nMapWidth + 1, spriteTileIndex + nMapWidth - 1,
+// 											spriteTileIndex - nMapWidth, spriteTileIndex - nMapWidth + 1, spriteTileIndex - nMapWidth - 1];
+		let spriteTileAdjacentCardinals = [spriteTileIndex];
 
-        // reference to the global-side sprite
-        var currentSpriteObject = allSprites[sprite["name"]];
+		let spriteTileNotVisited = spriteTileAdjacentCardinals.some(tileIndex => visitedTiles[tileIndex] !== currentFrame);
 
+		if(spriteTileNotVisited) {
+// 			_debugOutput(`STV: ${!spriteTileNotVisited}`, 'debug2');
+			continue;
+		}
 
-        // can object be seen?
-        var fVecX = sprite["x"] - fPlayerX;
-        var fVecY = sprite["y"] - fPlayerY;
-        var fDistanceFromPlayer = Math.sqrt(fVecX*fVecX + fVecY*fVecY);
+		// reference to the global-side sprite
+        var currentSpriteObject = allSprites[sprite.name];
 
-        // calculate angle between sprite and player, to see if in fov
-        var fEyeX = Math.cos(fPlayerA);
-        var fEyeY = Math.sin(fPlayerA);
+		// Translate sprite position relative to the player
+        let playerToSpriteX = sprite.x - fPlayerX;
+        let playerToSpriteY = sprite.y - fPlayerY;
 
-        var fSpriteAngle = Math.atan2(fVecY, fVecX) - Math.atan2(fEyeY, fEyeX) ;
-        if (fSpriteAngle < -PI___){
-          fSpriteAngle += PIx2;
+        // Rotate sprite into player's local space using your view angles
+	    let invDet = 1.0 / (planeX * viewY - viewX * planeY);
+	    	// Transform sprite position into camera space using the inverse matrix
+		// spriteViewX is the lateral (left/right) offset on the screen plane
+		// fSpriteDist is the depth
+		let spriteViewX = invDet * (viewY * playerToSpriteX - viewX * playerToSpriteY);
+		let fSpriteDist = invDet * (-planeY * playerToSpriteX + planeX * playerToSpriteY);
+
+	    if (fSpriteDist < MIN_DIST) {
+//	     	_debugOutput(`STV: ${!spriteTileNotVisited}; STC: ${fSpriteDist < MIN_DIST}`, 'debug2');
+        	continue; // Sprite is directly behind or on top of the player
         }
-        if (fSpriteAngle > PI___){
-          fSpriteAngle -= PIx2;
-        }
 
-        var bInPlayerView = Math.abs(fSpriteAngle) < fFOV / 2;
-        // var bInPlayerView = true;
+	        // project onto screen
+        let spriteScreenX = (nScreenWidth / 2) * (1 + spriteViewX / fSpriteDist);
+
+        	// TODO add constant for wall height, 16
+        let fSpriteHeight = nScreenHeight / fSpriteDist;
+
+        let bInPlayerView = true;		// NOTE this should be removed at some point, we'll only have visible sprites at this point
 
 
         // only proceed if sprite is visible
-        if( bInPlayerView && fDistanceFromPlayer >= 0.5 ){
+        if( bInPlayerView && fSpriteDist >= 0.5 ) {
 
           // very similar operation to background floor and ceiling.
           // Sprite height is default 1, but we can adjust with the factor passed in the sprite object/
-          var fSpriteCeiling = +(nScreenHeight / ((2 - nJumptimer*0.15) - fLooktimer*0.15)) - nScreenHeight / (+(fDistanceFromPlayer) ) * currentSpriteObject["hghtFctr"];
-          var fSpriteFloor = +(nScreenHeight / ((2 - nJumptimer*0.15) - fLooktimer*0.15)) + nScreenHeight / (+(fDistanceFromPlayer) );
+	      var fSpriteCeiling = screenSkew - fSpriteHeight / 2 * currentSpriteObject.hghtFctr;
+		  var fSpriteFloor = fSpriteCeiling - fSpriteHeight;
 
+// 		  _debugOutput(`SprDist: ${fSpriteDist}; SprH: ${fSpriteHeight}; SprCeil: ${fSpriteCeiling}; SprFlr: ${fSpriteFloor}`, 'debug2');
+
+				// NOTE does this need rounding? try without sometime
           var fSpriteCeiling = Math.round(fSpriteCeiling);
           var fSpriteFloor = Math.round(fSpriteFloor);
 
-          var fSpriteHeight = fSpriteFloor - fSpriteCeiling;
-          var fSpriteAspectRatio = +(currentSpriteObject["height"]) / +(currentSpriteObject["width"] * currentSpriteObject["aspctRt"]);
+          var fSpriteAspectRatio = +(currentSpriteObject.height) / +(currentSpriteObject.width * currentSpriteObject.aspctRt);
           var fSpriteWidth = fSpriteHeight / fSpriteAspectRatio;
-          var fMiddleOfSprite = (0.5 * (fSpriteAngle / (fFOV / 2.0)) + 0.5) * +(nScreenWidth);
+          var fMiddleOfSprite = spriteScreenX;
 
           // The angle the sprite is facing relative to the player
           var fSpriteBeautyAngle = fPlayerA - sprite.r + PIdiv4;
@@ -1712,13 +1728,13 @@ var gameEngineJS = (function(){
 
               if (nSpriteColumn >= 0 && nSpriteColumn < nScreenWidth){
                 // only render the sprite pixel if it is not a . or a space, and if the sprite is far enough from the player
-                if (sSpriteGlyph != "." && sSpriteGlyph != "&nbsp;" && fDepthBuffer[nSpriteColumn] >= fDistanceFromPlayer ){
+                if (sSpriteGlyph != "." && sSpriteGlyph != brightness[0] && fDepthBuffer[nSpriteColumn] >= fSpriteDist ) {
 
                   // render pixels to screen
                   var yccord = fSpriteCeiling + sy;
                   var xccord = nSpriteColumn;
-                  screen[ yccord*nScreenWidth + xccord ] = sSpriteGlyph;
-                  fDepthBuffer[nSpriteColumn] = fDistanceFromPlayer;
+                  screen[ yccord * nScreenWidth + xccord ] = sSpriteGlyph;
+                  fDepthBuffer[nSpriteColumn] = fSpriteDist;
                 }
               }
             }
