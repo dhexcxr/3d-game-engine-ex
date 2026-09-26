@@ -13,6 +13,22 @@
 
 var gameEngineJS = (function(){
 
+  let isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
+
+  // Update status when the user switches tabs or minimizes the window
+  document.addEventListener('visibilitychange', () => {
+    isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
+  });
+
+  // Update status when the window gains or loses OS focus
+  window.addEventListener('focus', () => {
+    isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
+  });
+
+  window.addEventListener('blur', () => {
+    isWindowActive = false;
+  });
+
   // constants
   const PI___    = +(Math.PI);
   const PI_0     = 0.0;
@@ -754,11 +770,31 @@ var gameEngineJS = (function(){
     keylisten: function(){
 
       window.onkeydown = function(e) {
+      	// Ignore the event if the window is not currently active
+  		if (!isWindowActive) return;
+
 
         console.log(e.which);		// DEBUG ONLY
 		if (e.which === 192) {		// `, print ray details to console
 			printRayObs();
 		}
+
+
+        if (e.which == 80) { // p
+          if( bPaused ){		// TODO do not respond to mouselook when paused
+            _testScreenSizeAndStartTheGame();
+            bPaused = false;
+          } else {
+            clearInterval(gameRun);
+            bPaused = true;
+          }
+        }
+
+        if (bPaused) return;
+
+        // movement based conditions
+
+        // DEBUG movement
 		if (e.which === 49) {		// 1, lock lookup/down to center
 			LockLook = !LockLook;
 			fLooktimer = 0;
@@ -780,16 +816,7 @@ var gameEngineJS = (function(){
 			hitSideCheck = 0;
 		}
 
-
-        if (e.which == 80) { // p
-          if( bPaused ){		// NOTE TODO my version still accepts mouselook when paused, original seems to not
-            _testScreenSizeAndStartTheGame();
-            bPaused = false;
-          } else {
-            clearInterval(gameRun);
-            bPaused = true;
-          }
-        }
+        // normal movement
         if (e.which == 16) { // shift
           bRunning = true;
         }
@@ -883,6 +910,8 @@ var gameEngineJS = (function(){
 
       document.body.requestPointerLock();
       document.onmousemove = function (e) {
+		// Ignore the event if the window is not currently active or paused
+  		if (!isWindowActive || bPaused) return;
 
         // look left/right
         fPlayerA   += ( (e.movementX * fMouseLookFactor) || (e.mozMovementX * fMouseLookFactor) || (e.webkitMovementX * fMouseLookFactor) || 0);
@@ -947,6 +976,8 @@ var gameEngineJS = (function(){
 
       // look (left hand of screen)
       eTouchLook.addEventListener("touchmove", function(e){
+		// Ignore the event if the window is not currently active or is paused
+  		if (!isWindowActive || bPaused) return;
 
         // fetches differences from input
         var oDifferences = _moveHelpers.touchCalculate( _moveHelpers.oTouch.look, e);
@@ -975,6 +1006,9 @@ var gameEngineJS = (function(){
 
       // move (right hand of screen)
       eTouchMove.addEventListener("touchmove", function(e){
+        // Ignore the event if the window is not currently active or is paused
+  		if (!isWindowActive || bPaused) return;
+
         var oDifferences = _moveHelpers.touchCalculate( _moveHelpers.oTouch.move, e);
 
         // makes sure no crazy
