@@ -1407,10 +1407,10 @@ var gameEngineJS = (function(){
 		nRayLength = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
 
 		if(hit_side === 0) {		// NS wall	// sin(RayAng) gives normalized Ray Vector
-			fSampleX = fPlayerY + nRayLength * rayDirY;
+			fSampleX = fPlayerY + fDistanceToWall * rayDirY;
 			sWallDirection = step_x === 1 ? "W" : "E";
 		} else {
-			fSampleX = fPlayerX + nRayLength * rayDirX;
+			fSampleX = fPlayerX + fDistanceToWall * rayDirX;
 			sWallDirection = step_y === 1 ? "N" : "S";
 		}
 
@@ -1460,14 +1460,26 @@ var gameEngineJS = (function(){
 	// TODO update this like i did with nTower
 //         var nDoorFrameHeight = screenSkew - nScreenHeight / (fDistanceToWall + 2);
 
-	let fDistToDoor = fDistanceToWall + 0.5 * (hit_side === 0 ? delta_x : delta_y);
-        let nDoorFrameHeight = screenSkew - fDistToDoor / 2 + fDistToDoor / 2;	// FOLLOWUP, this doesn't seem to work the same as the tower
+// TODO we need to add an actual condition to check for doors
+	// then we can do the add half the distance into the tile
+	// check that we're still in the tile
+	// etc.
+// 	let fDistToDoor = fDistanceToWall + 0.5 * (hit_side === 0 ? delta_x : delta_y);	// original one I had, totally not working
+
+			// technique from original wolf3d code (I think), and also this guy: https://github.com/permadi-com/ray-cast/blob/master/demo/1/sample1.js
+			// TODO put expensive tan calc in "hit door" code so it doesn't run all the time
+				// alternatively, find an alternative method
+// 	let fRayAngle = (fPlayerA - fFOV / 1.8) + (screenColumn / nScreenWidth) * fFOV;		// MOVED to its own door hit logic
+// 	let fDistToDoor = fDistanceToWall + 0.5 * Math.abs(1/Math.tan(fRayAngle));
+	let nDoorHeight = Math.round(nScreenHeight / fDistanceToWall)
+        let nDoorFrameHeight = screenSkew - nDoorHeight / 2;	// FOLLOWUP, this doesn't seem to work the same as the tower
         											// it doesn't seem to make the door shorter
         										// TODO first, change the render
         											// make the blockV on the left and right edges (maybe in the center, like striped)
         											// and blockH in the center
         										// Second, try to actually give it an upper door jamb
         										// ALSO, standardize Door vs Gate in var and func names
+        let nDoorFrameLow = screenSkew + nDoorHeight / 2;
 
         // similar operation for objects
         var nObjectCeiling = screenSkew - nScreenHeight / fDistanceToObject;
@@ -1505,11 +1517,11 @@ var gameEngineJS = (function(){
                 screen[screenRow * nScreenWidth + screenColumn] = brightness[0];
               }
             }		          // solid block
-          } else if( screenRow > nCeiling && screenRow <= nFloor ) {
+          } else if( screenRow > nCeiling && (screenRow <= nFloor || (screenRow <= nDoorFrameLow && sWalltype == 'X') )) {
 
             // Door/exit Walltype
             if(sWalltype == "X"){
-              if(screenRow > nCeiling && screenRow < nDoorFrameHeight) {
+//               if(screenRow > nCeiling && screenRow < nDoorFrameHeight) {
 //               	let fPrevDistanceToWall = fDistanceToWall - 1;
 // 				let jambHeight = Math.round(nScreenHeight / fPrevDistanceToWall);	// ALSO, does this need to be new or rather the prev
 // 				let jambCeiling = screenSkew - jambHeight / 2;						// am I calc'ing the jamb or the exit here?
@@ -1548,11 +1560,17 @@ var gameEngineJS = (function(){
 // 				fPrevSampleX -= ~~fPrevSampleX;
 // 				let fdoorJambSampleY = ( (screenRow - jambCeiling) / (jambFloor - jambCeiling) );
 //
-				var fSampleY = ( (screenRow - nCeiling) / (nFloor - nCeiling) );
-      			screen[screenRow * nScreenWidth + screenColumn] = _rh.renderWall(fDistToDoor, sWallDirection, _getSamplePixel(textures['#'], fSampleX, fSampleY));
-      		  } else {
-      		  	screen[screenRow * nScreenWidth + screenColumn] = _rh.renderGate(screenRow, fDistToDoor, nDoorFrameHeight, nCeiling);
-      		  }
+// 				var fSampleY = ( (screenRow - nCeiling) / (nFloor - nCeiling) );
+//       			screen[screenRow * nScreenWidth + screenColumn] = _rh.renderWall(fDistToDoor, sWallDirection, _getSamplePixel(textures['#'], fSampleX, fSampleY));
+//       		  } else {
+			if (screenRow > nDoorFrameHeight) {
+				screen[screenRow * nScreenWidth + screenColumn] = _rh.renderGate(screenRow, fDistToDoor, nDoorFrameHeight, nCeiling);
+			
+              } else {
+                screen[screenRow * nScreenWidth + screenColumn] = brightness[0];
+              }
+      		  	
+//       		  }
             }  else if(sWalltype != "." || sWalltype == "T") {		// Solid Walltype
 
               var fSampleY = ( (screenRow - nCeiling) / (nFloor - nCeiling) );
