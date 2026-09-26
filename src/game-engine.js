@@ -72,6 +72,7 @@ var gameEngineJS = (function(){
   // ▓
   // ▒
   // ░
+  const brightness = ["&nbsp;", "&#9617;", "&#9618;", "&#9619;", "&#9608;"];
 
   var _randomIntFromInterval = function(min, max) { // min and max included
     return ~~(Math.random() * (max - min + 1) + min);
@@ -467,68 +468,64 @@ var gameEngineJS = (function(){
 
       var fill = "";
 
-      var b100 = "&#9608;";
-      var b75  = "&#9619;";
-      var b50  = "&#9618;";
-      var b25  = "&#9617;";
-      var b0   = "&nbsp;";
+//       var b100 = "&#9608;";
+//       var b75  = "&#9619;";
+//       var b50  = "&#9618;";
+//       var b25  = "&#9617;";		// NOTE above my towers this is being rendered a bunch, like on the ceiling
+//       var b0   = "&nbsp;";
 
       if( sWallDirection === "N" || sWallDirection === "S" ){
 
         if(fDistanceToWall < fDepth / 5.5 ){
 
           if( pixel === "#" ){
-            fill = b100;
-          }else if( pixel === "7" ){
-            fill = b75;
-          }else if( pixel === "*" || pixel === "o"){
-            fill = b50;
-          }else{
-            fill = b25;
+            fill = brightness[4];
+          } else if( pixel === "7" ) {
+            fill = brightness[3];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[2];
+          } else {
+            fill = brightness[1];
           }
 
-        }
-        else if(fDistanceToWall < fDepth / 3.66 ){
+        } else if(fDistanceToWall < fDepth / 3.66 ) {
 
           if( pixel === "#" ){
-            fill = b75;
-          }else if( pixel === "7" ){
-            fill = b50;
-          }else if( pixel === "*" || pixel === "o"){
-            fill = b25;
-          }else{
-            fill = b0;
+            fill = brightness[3];
+          } else if( pixel === "7" ) {
+            fill = brightness[2];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[1];
+          } else {
+            fill = brightness[0];
           }
 
-        }
-        else if(fDistanceToWall < fDepth / 2.33 ){
+        } else if(fDistanceToWall < fDepth / 2.33 ) {
 
           if( pixel === "#" ){
-            fill = b50;
-          }else if( pixel === "7" ){
-            fill = b25;
-          }else if( pixel === "*" || pixel === "o"){
-            fill = b25;
-          }else{
-            fill = b0;
+            fill = brightness[2];
+          } else if( pixel === "7" ) {
+            fill = brightness[1];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[1];
+          } else {
+            fill = brightness[0];
           }
 
-        }
-        else if(fDistanceToWall < fDepth / 1 ){
+        } else if(fDistanceToWall < fDepth / 1 ) {
 
           if( pixel === "#" ){
-            fill = b25;
-          }else if( pixel === "7" ){
-            fill = b25;
-          }else if( pixel === "*" || pixel === "o"){
-            fill = b25;
-          }else{
-            fill = b0;
+            fill = brightness[1];
+          } else if( pixel === "7" ) {
+            fill = brightness[1];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[1];
+          } else {
+            fill = brightness[0];
           }
 
-        }
-        else{
-          fill = "&nbsp;";
+        } else {
+          fill = brightness[0];
         }
       }
 
@@ -538,57 +535,53 @@ var gameEngineJS = (function(){
         if(fDistanceToWall < fDepth / 5.5 ){
 
           if( pixel === "#" ){
-            fill = b75;
-          }else if( pixel === "7" ){
-            fill = b50;
-          }else if( pixel === "*" || pixel === "o"){
-            fill = b25;
-          }else{
-            fill = b0;
+            fill = brightness[3];
+          } else if( pixel === "7" ) {
+            fill = brightness[2];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[1];
+          } else {
+            fill = brightness[0];
           }
 
-        }
-        else if(fDistanceToWall < fDepth / 3.66 ){
+        } else if(fDistanceToWall < fDepth / 3.66 ) {
 
           if( pixel === "#" ){
-            fill = b50;
-          }else if( pixel === "7" ){
-            fill = b50;
-          }else if( pixel === "*" || pixel === "o"){
-            fill = b25;
-          }else{
-            fill = b0;
+            fill = brightness[2];
+          } else if( pixel === "7" ) {
+            fill = brightness[2];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[1];
+          } else {
+            fill = brightness[0];
           }
 
-        }
-        else if(fDistanceToWall < fDepth / 2.33 ){
+        } else if(fDistanceToWall < fDepth / 2.33 ) {
 
           if( pixel === "#" ){
-            fill = b50;
-          }else if( pixel === "7" ){
-            fill = b25;
-          }else if( pixel === "*" || pixel === "o"){
-            fill = b25;
-          }else{
-            fill = b0;
+            fill = brightness[2];
+          } else if( pixel === "7" ) {
+            fill = brightness[1];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[1];
+          } else {
+            fill = brightness[0];
           }
 
-        }
-        else if(fDistanceToWall < fDepth / 1 ){
+        } else if(fDistanceToWall < fDepth / 1 ) {
 
           if( pixel === "#" ){
-            fill = b25;
-          }else if( pixel === "7" ){
-            fill = b25;
-          }else if( pixel === "*" || pixel === "o"){
-            fill = b0;
-          }else{
-            fill = b0;
+            fill = brightness[1];
+          } else if( pixel === "7" ) {
+            fill = brightness[1];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[0];
+          } else {
+            fill = brightness[0];
           }
 
-        }
-        else{
-          fill = "&nbsp;";
+        } else {
+          fill = brightness[0];
         }
       }
 
@@ -597,38 +590,32 @@ var gameEngineJS = (function(){
     },
 
     // figures out shading for given section
-    renderSolidWall: function(j, fDistanceToWall, isBoundary){
-      var fill = "&#9617;";
+    renderSolidWall: function(fDistanceToWall, isBoundary){
+      var fill = brightness[1];
 
       if(fDistanceToWall < fDepth / 6.5 ){
-        fill = "&#9608;";
-      }
-      else if(fDistanceToWall < fDepth / 4.66 ){
-        fill = "&#9619;";
-      }
-      else if(fDistanceToWall < fDepth / 3.33 ){
-        fill = "&#9618;";
-      }
-      else if(fDistanceToWall < fDepth / 1 ){
-        fill = "&#9617;";
-      }else{
-        fill = "&nbsp;";
+        fill = brightness[4];
+      } else if(fDistanceToWall < fDepth / 4.66 ) {
+        fill = brightness[3];
+      } else if(fDistanceToWall < fDepth / 3.33 ) {
+        fill = brightness[2];
+      } else if(fDistanceToWall < fDepth / 1 ) {
+        fill = brightness[1];
+      } else {
+        fill = brightness[0];
       }
 
       if( isBoundary ){
         if(fDistanceToWall < fDepth / 6.5 ){
-          fill = "&#9617;";
-        }
-        else if(fDistanceToWall < fDepth / 4.66 ){
-          fill = "&#9617;";
-        }
-        else if(fDistanceToWall < fDepth / 3.33 ){
-          fill = "&nbsp;";
-        }
-        else if(fDistanceToWall < fDepth / 1 ){
-          fill = "&nbsp;";
-        }else{
-          fill = "&nbsp;";
+          fill = brightness[1];
+        } else if(fDistanceToWall < fDepth / 4.66 ) {
+          fill = brightness[1];
+        } else if(fDistanceToWall < fDepth / 3.33 ) {
+          fill = brightness[0];
+        } else if(fDistanceToWall < fDepth / 1 ) {
+          fill = brightness[0];
+        } else {
+          fill = brightness[0];
         }
       }
 
@@ -670,8 +657,8 @@ var gameEngineJS = (function(){
         fill = "-";
       } else if(b < 0.9) {
         fill = "`";
-      }else{
-        fill = "&nbsp;";
+      } else {
+        fill = brightness[0];
       }
 
       return fill;
