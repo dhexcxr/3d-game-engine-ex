@@ -1112,11 +1112,14 @@ var gameEngineJS = (function(){
       let newX = fPlayerX + totalX;
       let newY = fPlayerY + totalY;
 
+
+      // TODO i think i need the direction the door faces, if the player stays on that side of the door then all movement should be allowed
+      	// that will fix the issue with only being allowed to move normal to the door
       let checkX = (totalX > 0) ? (newX + PLAYER_RADIUS) : (newX - PLAYER_RADIUS);
 
       if (map[~~fPlayerY * nMapWidth + ~~checkX] === '.') {
       	fPlayerX = newX;
-	  } else if (map[~~fPlayerY * nMapWidth + ~~checkX] === 'X'
+	  } else if (map[~~fPlayerY * nMapWidth + ~~checkX] === 'X'		// check for door tiles so we can go half way into the tile
 	  		&& ((Math.sign(totalX) <= 0 && checkX - ~~checkX > 0.5) || (Math.sign(totalX) >= 0 && checkX - ~~checkX < 0.5))) {
 	  	fPlayerX = newX;
 	  }
@@ -1130,7 +1133,8 @@ var gameEngineJS = (function(){
 	  	fPlayerY = newY;
 	  }
 
-	  // TODO add check for door tiles so we can go half way into the tile
+
+
 //       _debugOutput(`dX: ${deltaX}; dDirX: ${deltaXDir}; totX: ${totalX}; dY: ${deltaY}; dDirY: ${deltaYDir}; totY: ${totalY}`, 'debug2');
 	  },
   };
@@ -1414,7 +1418,7 @@ var gameEngineJS = (function(){
 			let distToDoorX = ~~(fPlayerX + fDistToDoor * rayDirX);
 			let distToDoorY = ~~(fPlayerY + fDistToDoor * rayDirY);
 
-			bBreakLoop = map_x === distToDoorX && map_y === distToDoorY;
+			bBreakLoop = map_x === distToDoorX && map_y === distToDoorY && fDistToDoor >= 0;
             sWalltype = tileType;
 		}
 
@@ -1525,31 +1529,15 @@ var gameEngineJS = (function(){
 
         // similar for towers and gates
         let nTower = screenSkew - wallHeight / 2 - wallHeight;
-	// TODO update this like i did with nTower
-//         var nDoorFrameHeight = screenSkew - nScreenHeight / (fDistanceToWall + 2);
-
-// TODO we need to add an actual condition to check for doors
-	// then we can do the add half the distance into the tile
-	// check that we're still in the tile
-	// etc.
-// 	let fDistToDoor = fDistanceToWall + 0.5 * (hit_side === 0 ? delta_x : delta_y);	// original one I had, totally not working
 
 			// technique from original wolf3d code (I think), and also this guy: https://github.com/permadi-com/ray-cast/blob/master/demo/1/sample1.js
-			// TODO put expensive tan calc in "hit door" code so it doesn't run all the time
-				// alternatively, find an alternative method
-// 	let fRayAngle = (fPlayerA - fFOV / 1.8) + (screenColumn / nScreenWidth) * fFOV;		// MOVED to its own door hit logic
-// 	let fDistToDoor = fDistanceToWall + 0.5 * Math.abs(1/Math.tan(fRayAngle));
-	let nDoorHeight = Math.round(nScreenHeight / fDistToDoor)
-        let nDoorFrameTop = screenSkew - nDoorHeight / 2;	// FOLLOWUP, this doesn't seem to work the same as the tower
-        											// it doesn't seem to make the door shorter
-        										// TODO first, change the render
-        											// make the blockV on the left and right edges (maybe in the center, like striped)
-        											// and blockH in the center
-        										// Second, try to actually give it an upper door jamb
-        										// ALSO, standardize Door vs Gate in var and func names
-        let nDoorFrameBot = screenSkew + nDoorHeight / 2;
+			// TODO put all these types of calcs in each "hit object" code so it doesn't run all the time
+		let nDoorHeight = Math.round(nScreenHeight / fDistToDoor)	// TODO change the gate render, make the blockV on the left and right edges
+        let nDoorFrameTop = screenSkew - nDoorHeight / 2;			//  (maybe in the center, like striped), and blockH in the center
+        let nDoorFrameBot = screenSkew + nDoorHeight / 2;			// Second, try to actually give it an upper door jamb
+				        										// ALSO, standardize Door vs Gate in var and func names
 
-        // similar operation for objects
+        // similar operation for objects		// TODO calc these like we did for walls and doors probably
         var nObjectCeiling = screenSkew - nScreenHeight / fDistanceToObject;
         var nObjectFloor = screenSkew + nScreenHeight / fDistanceToObject;
         var nFObjectBackwall = screenSkew + (nScreenHeight / (fDistanceToInverseObject + 0) ); // 0 makes the object flat, higher the number, the higher the object :)
@@ -1625,23 +1613,7 @@ var gameEngineJS = (function(){
           }
         } // end draw column loop
 
-        if (prevTile === 'X' && hit_side === hitSideCheck && screenColumn === nScreenWidth) {		// DEBUG only
-          		prevTile = '';
-          		let fPrevRayAngle = (fPlayerA - fFOV / 1.8) + ((screenColumn) / nScreenWidth) * fFOV;
 
-				if (doorEndAngle === 0) {
-// 					doorEndAngle = ~~( fPrevRayAngle * I80divPI) % 360;
-					doorEndAngle = fPrevRayAngle;
-				}
-          	}
-        //
-//         if(doorStartAngle !== 0 || doorEndAngle !== 0) {
-// 			endDoorInfoMsg = `hit_side: ${hit_side.toFixed(3)};
-// 			doorStartAngle: ${doorStartAngle.toFixed(3)}; doorStartDist: ${doorStartDist.toFixed(3)};
-// 			doorEndAngle: ${doorEndAngle.toFixed(3)}; doorEndDist: ${doorEndDist.toFixed(3)};
-// 			`;
-//     	}
-//
     	if(screenColumn === nScreenWidth / 2 && (sWalltype == '#' || sWalltype == 'X')) {
 			midFrameInfoMsg = `
 			fDistToDoor: ${fDistToDoor.toFixed(3)}; nDoorHeight: ${nDoorHeight.toFixed(3)};
