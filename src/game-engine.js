@@ -1149,13 +1149,13 @@ var gameEngineJS = (function(){
         if( sprite.z < 1 && sprite.a !== "B" ){
           sprite.r = (+(sprite.r) + PIx1_5 ) % PIx2;
         }
-
-        // if player hits sprite, prevent moving
-        if( sprite.z < 0.75 ){
-          bPlayerMayMoveForward = false;
-        } else {
-          bPlayerMayMoveForward = true;
-        }
+    // remove this for now 'cause it's frustrating
+        // // if player hits sprite, prevent moving
+//         if( sprite.z < 0.75 ){
+//           bPlayerMayMoveForward = false;
+//         } else {
+//           bPlayerMayMoveForward = true;
+//         }
 
         // TODO: sprites hitting each other
         // for(var sj=0; sj < Object.keys(oLevelSprites).length; sj++ ){
