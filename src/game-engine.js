@@ -246,7 +246,7 @@ var gameEngineJS = (function(){
   function _toConsumableArray(arr) {
   	return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
   }
-  
+
   function _evenlyPickItemsFromArray(allItems, neededCount) {
     if (neededCount >= allItems.length) {
       return _toConsumableArray(allItems);
@@ -274,10 +274,10 @@ var gameEngineJS = (function(){
   		debugEl.innerHTML = input;
   	}
   };
-  
+
   function printPlayerLoc() {
 	   _debugOutput(`Ang: ${fPlayerA}; x: ${fPlayerX}; y: ${fPlayerY}
-	   Look: ${fLooktimer}`, 'debug'); 
+	   Look: ${fLooktimer}`, 'debug');
   }
 
 
@@ -625,7 +625,7 @@ var gameEngineJS = (function(){
     // shading and sectionals for gate
     renderGate: function(screenRow, fDistanceToWall, nDoorFrameHeight, nCeiling) {
       var fill = "X";
-      
+
       if( screenRow < nDoorFrameHeight) {
         if(fDistanceToWall < fDepth / 4) {
           fill = "&boxH;";
@@ -729,7 +729,7 @@ var gameEngineJS = (function(){
         if (e.which == 83 || e.which == 40) { // s or down
           bMoveBackward = true;
         }
-        
+
         printPlayerLoc();
       };
 
@@ -760,7 +760,7 @@ var gameEngineJS = (function(){
         if (e.which == 83 || e.which == 40) { // s or down
           bMoveBackward = false;
         }
-        
+
         printPlayerLoc();
       };
     },
@@ -802,7 +802,7 @@ var gameEngineJS = (function(){
 
         // look up and down
         _moveHelpers.yMoveUpdate( ( e.movementY || e.mozMovementY || e.webkitMovementY || 0), 0.05 );
-        
+
         printPlayerLoc();
       }
     },
@@ -1064,13 +1064,14 @@ var gameEngineJS = (function(){
         }
 
         // if sprite is close to the player, and facing the player, turn around
-        if( sprite["z"] < 1 && sprite["a"] !== "B" ){
-          sprite["r"] = (+(sprite["r"]) + PIx1_5 ) % PIx2;
+        if( sprite.z < 1 && sprite.a !== "B" ){
+          sprite.r = (+(sprite.r) + PIx1_5 ) % PIx2;
         }
+
         // if player hits sprite, prevent moving
-        if( sprite["z"] < 0.75 ){
+        if( sprite.z < 0.75 ){
           bPlayerMayMoveForward = false;
-        }else{
+        } else {
           bPlayerMayMoveForward = true;
         }
 
@@ -1104,7 +1105,7 @@ var gameEngineJS = (function(){
    * Sorts the Sprite list based on distance from the player
    */
    var _updateSpriteBuffer = function(){
-    
+
     	// converts object of objects to list
     oLevelSprites = {
     	...(Object.values(oLevelSprites).map(sprite => {
@@ -1174,7 +1175,7 @@ var gameEngineJS = (function(){
        */
 
 
-      // holds the frames we"re going to send to the renderer
+      // holds the frames we're going to send to the renderer
       var screen = [];
       var spritescreen = [];
       var overlayscreen = [];
@@ -1500,7 +1501,7 @@ var gameEngineJS = (function(){
           var fMiddleOfSprite = (0.5 * (fSpriteAngle / (fFOV / 2.0)) + 0.5) * +(nScreenWidth);
 
           // The angle the sprite is facing relative to the player
-          var fSpriteBeautyAngle = fPlayerA - sprite["r"] + PIdiv4;
+          var fSpriteBeautyAngle = fPlayerA - sprite.r + PIdiv4;
           // normalize
           if (fSpriteBeautyAngle < 0){
             fSpriteBeautyAngle += PIx2;
@@ -1510,8 +1511,8 @@ var gameEngineJS = (function(){
           }
 
           // loops through the sprite pixels
-          for(var sx = 0; sx < fSpriteWidth; sx++ ){
-            for(var sy = 0; sy < fSpriteHeight; sy++){
+          for(var sx = 0; sx < fSpriteWidth; sx++ ) {
+            for(var sy = 0; sy < fSpriteHeight; sy++) {
 
               // sample sprite
               var fSampleX = sx / fSpriteWidth;
@@ -1524,12 +1525,12 @@ var gameEngineJS = (function(){
 
               // animation-cycle available, determine the current cycle
               // TODO: randomize cycle position
-              if( sprite["move"] && "walkframes" in currentSpriteObject ){
+              if( sprite.move && "walkframes" in currentSpriteObject ){
                 if( animationTimer < 5 ){
                   sAnimationFrame = "W1";
-                }else if( animationTimer >= 5 && animationTimer < 10 ){
+                } else if( animationTimer >= 5 && animationTimer < 10 ) {
                   sAnimationFrame = "W2";
-                }else if( animationTimer >= 10 ){
+                } else if( animationTimer >= 10 ) {
                   sAnimationFrame = false;
                 }
               }
@@ -1538,31 +1539,25 @@ var gameEngineJS = (function(){
               if( "angles" in currentSpriteObject ){
 
                 if( fSpriteBeautyAngle >= PI_0 && fSpriteBeautyAngle < PIx05 ){
-                  sprite["a"] = "B";
-                }
-                else if( +(fSpriteBeautyAngle) >= +(PIx05) && +(fSpriteBeautyAngle) < +(PIx1) ){
-                  sprite["a"] = "L";
-                }
-                else if( +(fSpriteBeautyAngle) >= +(PIx1) && +(fSpriteBeautyAngle) < +(PIx1_5) ){
-                  sprite["a"] = "F";
-                }
-                else if( +(fSpriteBeautyAngle) >= +(PIx1_5) && +(fSpriteBeautyAngle) < +(PIx2) ){
-                  sprite["a"] = "R";
+                  sprite.a = "B";
+                } else if( +(fSpriteBeautyAngle) >= +(PIx05) && +(fSpriteBeautyAngle) < +(PIx1) ) {
+                  sprite.a = "L";
+                } else if( +(fSpriteBeautyAngle) >= +(PIx1) && +(fSpriteBeautyAngle) < +(PIx1_5) ) {
+                  sprite.a = "F";
+                } else if( +(fSpriteBeautyAngle) >= +(PIx1_5) && +(fSpriteBeautyAngle) < +(PIx2) ) {
+                  sprite.a = "R";
                 }
               }
 
 
               // check if object has both, angles, or animations
-              if( sprite["a"] && sAnimationFrame ){
-                sSamplePixel = _getSamplePixel(currentSpriteObject["angles"][sprite["a"]][sAnimationFrame], fSampleX, fSampleY);
-              }
-              else if( sprite["a"] ){
-                sSamplePixel = _getSamplePixel(currentSpriteObject["angles"][sprite["a"]], fSampleX, fSampleY);
-              }
-              else if( sAnimationFrame ){
+              if( sprite.a && sAnimationFrame ) {
+                sSamplePixel = _getSamplePixel(currentSpriteObject.angles[sprite.a][sAnimationFrame], fSampleX, fSampleY);
+              } else if( sprite.a ) {
+                sSamplePixel = _getSamplePixel(currentSpriteObject.angles[sprite.a], fSampleX, fSampleY);
+              } else if( sAnimationFrame ) {
                 sSamplePixel = _getSamplePixel(currentSpriteObject[sAnimationFrame], fSampleX, fSampleY);
-              }
-              else{
+              } else {
                 // if not, use basic sprite
                 sSamplePixel = _getSamplePixel(currentSpriteObject, fSampleX, fSampleY);
               }
@@ -1570,9 +1565,8 @@ var gameEngineJS = (function(){
 
               // assign based on render mode
               if( nRenderMode == 2 || nRenderMode == 0 ){
-                sSpriteGlyph = _rh.renderWall( j, fDistanceFromPlayer, "W", sSamplePixel );
-              }
-              else{
+                sSpriteGlyph = _rh.renderWall( fSpriteDist, "W", sSamplePixel );
+              } else {
                 sSpriteGlyph = sSamplePixel;
               }
 
@@ -1592,10 +1586,7 @@ var gameEngineJS = (function(){
               }
             }
           }
-        } // end if
-
-        // player was hit
-        else{
+        } else {	// player was hit
           // clearInterval(gameRun);
         }
 
