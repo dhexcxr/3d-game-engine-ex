@@ -1103,32 +1103,16 @@ var gameEngineJS = (function(){
   /**
    * Sorts the Sprite list based on distance from the player
    */
-  var _updateSpriteBuffer = function(){
-
-    // calculates the distance to the player
-    for(var si=0; si < Object.keys(oLevelSprites).length; si++ ){
-      var sprite = oLevelSprites[Object.keys(oLevelSprites)[si]];
-
-      // the distance between the sprite and the player
-      var fDistance = Math.hypot(sprite["x"]-fPlayerX, sprite["y"]-fPlayerY);
-
-      sprite["z"] = fDistance;
-    }
-
-    // converts array of objects to list
-    var newList = [];
-    for(var sj=0; sj < Object.keys(oLevelSprites).length; sj++ ){
-      newList.push(oLevelSprites[Object.keys(oLevelSprites)[sj]]);
-    }
-
-    // sorts the list
-    newList = newList.sort( _sortSpriteList );
-
-    // make object from array again
-    oLevelSprites = {};
-    for(var sk=0; sk < Object.keys(newList).length; sk++ ){
-      oLevelSprites[sk] = newList[sk]
-    }
+   var _updateSpriteBuffer = function(){
+    
+    	// converts object of objects to list
+    oLevelSprites = {
+    	...(Object.values(oLevelSprites).map(sprite => {
+    		    // calculates the distance to the player
+    		sprite.z = Math.sqrt((sprite.x - fPlayerX) ** 2 + (sprite.y - fPlayerY) ** 2);
+    		return sprite;
+    	}).sort(_sortSpriteList))    // sorts the list
+    };		    // make object from array again
   };
 
 
