@@ -68,6 +68,44 @@ var gameEngineJS = (function(){
   var gameRun;
   var animationTimer = 0;
 
+  let LockLook = false;
+  let printedScreenRays = false;
+  let rayObs = new Array();		// debug object to hold details of rays
+  							// column, ray angle, height of wall
+  class RayOb {
+  	column = 0;
+  	angle = 0;
+  	wallDistance = 0;
+  	wallHeight = 0;
+  	ceilHeight = 0;
+  	floorHeight = 0;
+  	lookSkew = 0;
+  	tileType = '';
+
+
+  	constructor (column, angle, wallDistance, wallHeight, ceilRow, floorRow, lookSkew, tileType) {
+  		this.column = column;
+  		this.angle = angle;
+  		this.wallDistance = wallDistance;
+  		this.wallHeight = wallHeight;
+  		this.ceilRow = ceilRow;
+  		this.floorRow = floorRow;
+  		this.lookSkew = lookSkew;
+  		this.tileType = tileType;
+  	}
+
+  	toString() {
+  		return `Col: ${this.column}; RayAng: ${this.angle}; WallDist: ${this.wallDistance};
+  		WallH: ${this.wallHeight}; CeilH: ${this.ceilRow}; FloorH: ${this.floorRow}
+  		Skew: ${this.lookSkew}; Tile: ${this.tileType}`;
+  	}
+  }
+
+  function printRayObs () {
+  	rayObs.forEach(rayOb => console.log(rayOb.toString()));
+  }
+
+
   // █
   // ▓
   // ▒
@@ -167,6 +205,8 @@ var gameEngineJS = (function(){
       // load sprites
       oLevelSprites = window[sLevelstring].sprites;
 
+
+// 	oLevelSprites = '';		// DEBUG uncomment to disable sprites
       if( oLevelSprites == "autogen" ){
         oLevelSprites = _generateRandomSprites();
       }
@@ -225,7 +265,10 @@ var gameEngineJS = (function(){
 
     if( x < 0 || x > texWidth || y < 0 || y > texHeight ){
       return "+";
-    }else{
+    } else {
+      let retVal = texpixels[samplePosition];
+      if(retVal === 'undefined')		// DEBUG
+      	console.log(retVal);
       return texpixels[samplePosition];
     }
   };
@@ -427,6 +470,7 @@ var gameEngineJS = (function(){
 
   var _fDrawFrame = function(screen, overlayscreen, target){
     var frame = _fPrepareFrame(screen, overlayscreen);
+// 	var frame = screen;		// DEBUG uncomment to remove skew
     var target = target || eScreen;
 
     var sOutput = "";
@@ -447,6 +491,8 @@ var gameEngineJS = (function(){
         } else if( pix > nScreenWidth - removePixels ) {
           sOutput += "";
         } else {
+//           if (frame[printIndex] === 'undefined')		// DEBUG
+//           	console.log('frame[printIndex] undef');
           sOutput += frame[printIndex];
         }
 
@@ -585,6 +631,9 @@ var gameEngineJS = (function(){
         }
       }
 
+      if (fill === 'undefined')
+      	console.log('renderWall fill undef');		// DUBUG
+
       return fill;
 
     },
@@ -639,6 +688,9 @@ var gameEngineJS = (function(){
           fill = "|";
         }
       }
+
+      if(fill === 'undefined')
+      	console.log('renderGate fill undef');		// DEBUG
       return fill;
     },
 
@@ -694,7 +746,15 @@ var gameEngineJS = (function(){
 
       window.onkeydown = function(e) {
 
-        // _debugOutput(e.which);
+        console.log(e.which);
+	if (e.which === 192) {		// `
+		printRayObs();
+	}
+	if (e.which === 49) {		// 1
+		LockLook = !LockLook;
+		fLooktimer = 0;
+	}
+
 
         if (e.which == 80) { // p
           if( bPaused ){		// NOTE TODO my version still accepts mouselook when paused, original seems to not
@@ -776,6 +836,7 @@ var gameEngineJS = (function(){
      */
     yMoveUpdate: function(fMoveInput, fMoveFactor ){
       // look up/down (with bounds)
+      if(LockLook) return;		// DEBUG
       var fYMoveBy = fMoveInput * fMoveFactor;
 
       // if the looktimer is negative (looking down), increase the speed
@@ -1134,14 +1195,16 @@ var gameEngineJS = (function(){
       }
 
       _updateSpriteBuffer();
-      _moveSprites();
+//       _moveSprites();		// DEBUG don't move sprites while I work on better render logic
 
 
       /**
        * Player-movement related
        */
 
-      _moveHelpers.move();
+	  if (bPlayerMoving()) {
+	    _moveHelpers.move(viewX, viewY);
+	  }
 
       // normalize player angle
       if (fPlayerA < 0){
