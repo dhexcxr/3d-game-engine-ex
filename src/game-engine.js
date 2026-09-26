@@ -31,6 +31,7 @@ var gameEngineJS = (function(){
 
   var nScreenWidth = 320;
   var nScreenHeight = 80;
+  let nScreenCenter = nScreenWidth / 2;
 
   var fFOV = PI___ / 2.25; // (PI___ / 4.0 originally)
   var fDepth = 16.0; // viewport depth
@@ -68,6 +69,11 @@ var gameEngineJS = (function(){
   var nMapWidth = 16;
   var map = "";
   var sLevelstring = "";
+
+
+  // keep track of map tiles visited by the rays, help cull sprites without trig
+  let visitedTiles = new Uint32Array(nMapWidth * nMapHeight);
+  let currentFrame = 0;
 
   var gameRun;
   var animationTimer = 0;
@@ -1199,6 +1205,14 @@ var gameEngineJS = (function(){
   var main = function(){
     gameRun = setInterval(gameLoop, 33);
     function gameLoop(){
+	  currentFrame++;
+
+	  let viewX = Math.cos(fPlayerA);		// NOTE these are used all over the place for player movement, maybe share
+	  let viewY = Math.sin(fPlayerA);
+
+	  // camera plane
+	  let planeX = -viewY * 0.66;		// initially 0.8391, based on tan(FOV/2), TODO make constant
+	  let planeY = viewX * 0.66;		// smaller will be more wider
 
       /**
        * Game-function related
@@ -1247,6 +1261,8 @@ var gameEngineJS = (function(){
         bFalling = false;
       }
 
+      let screenSkew = nScreenHeight / (2 - nJumptimer * 0.15 - fLooktimer * 0.15);
+
 
       /**
        * Drawing related
@@ -1259,17 +1275,23 @@ var gameEngineJS = (function(){
       var overlayscreen = [];
 
 
-      // Converts player turn position into degrees (used for texturing)
-      nDegrees = ~~( fPlayerA * I80divPI) % 360;
-
 
       // for the length of the screenwidth (one frame)
-      for(var i = 0; i < nScreenWidth; i++){
+      for(var screenColumn = 1; screenColumn <= nScreenWidth; screenColumn++) {
 
         // calculates the ray angle into the world space
         // take the current player angle, subtract half the field of view
-        // and then chop it up into equal little bits of the screen width (at the current colum)
-        var fRayAngle = (fPlayerA - fFOV / 1.8) + (i / nScreenWidth) * fFOV;
+        // and then chop it up into equal little bits of the screen width (at the current column)
+//         var fRayAngle = (fPlayerA - fFOV / 1.8) + (screenColumn / nScreenWidth) * fFOV;
+        	// TODO calc first ray angle outside of individual ray loop
+        		// then calc interval between rays
+        		// then just add interval to original angle on each iteration
+        		// see https://tech.nextroll.com/blog/dev/2022/02/02/rustenstein.html
+
+		let cameraX = (2 * screenColumn / nScreenWidth) - 1;
+		let rayDirX = viewX + (planeX * cameraX);
+		let rayDirY = viewY + (planeY * cameraX);
+
 
         var bBreakLoop = false;
 
@@ -1284,9 +1306,10 @@ var gameEngineJS = (function(){
 
         var sWalltype = "#";
         var sObjectType = "0";
+        let isBoundary = false;
 
-        var fEyeX = Math.cos(fRayAngle); // I think this determines the line the testing travels along
-        var fEyeY = Math.sin(fRayAngle);
+//         var fEyeX = Math.cos(fRayAngle); // I think this determines the line the testing travels along
+//         var fEyeY = Math.sin(fRayAngle);
 
         var fSampleX = 0.0;
         var sWallDirection = "N";
@@ -1294,118 +1317,109 @@ var gameEngineJS = (function(){
         var nRayLength = 0.0;
 
         // var nGrainControl = 0.1;
-        var nGrainControl = 0.05;
+//         var nGrainControl = 0.05;
+
+        var map_x = ~~(fPlayerX);	// the player's current map xy coordinates
+		var map_y = ~~(fPlayerY);	// TODO get all this stuff that is constant out of this loop, actually this needs to be reset every ray
+
+		visitedTiles[map_y * nMapWidth + map_x] = currentFrame;	// TODO maybe just check the player XY instead of setting this for sprites
+
+      	let tileType = map[map_y * nMapWidth + map_x];	// NOTE this could be only inside loop, I want it right now so we can debug what the ray is hitting by saving into rayOb	// ACTUALLY i think I might have meant outside the loop, it doesn't change with the rays cast
+
+      	var delta_x = Math.abs(1 / rayDirX);	// the dist the ray must travel to reach the border of the next tile
+      	var delta_y = Math.abs(1 / rayDirY);
+
+      	var hit_side = 0;
+
+      	var step_x = absSign(rayDirX);
+      	var step_y = absSign(rayDirY);
+
+      		// calculate distance to initial tile boundary
+      	var side_dist_x = delta_x * (step_x === 1 ? (map_x + 1 - fPlayerX) : (fPlayerX - map_x));
+      	var side_dist_y = delta_y * (step_y === 1 ? (map_y + 1 - fPlayerY) : (fPlayerY - map_y));
 
         /**
          * Ray Casting Loop
          */
-        while(!bBreakLoop && nRayLength < fDepth){
+        while(!bBreakLoop && nRayLength < fDepth * 2){
 
-          // increment
-          nRayLength += nGrainControl;
+		  if(side_dist_x < side_dist_y) {
+			side_dist_x += delta_x;
+			map_x += step_x;
+			hit_side = 0;
+		  } else {
+			side_dist_y += delta_y;
+			map_y += step_y;
+			hit_side = 1;
+		  }
 
-          if( !bHitObject ){
-            fDistanceToObject += nGrainControl;
-          }
-          if( !bHitBackObject ){
-            fDistanceToInverseObject += nGrainControl;
-          }
-          if( !bHitWall ){
-            fDistanceToWall += nGrainControl;
-          }
-
-          // ray position
-          var nTestX = ~~( ((fPlayerX) + fEyeX * nRayLength) );
-          var nTestY = ~~( ((fPlayerY) + fEyeY * nRayLength) );
+          visitedTiles[map_y * nMapWidth + map_x] = currentFrame;
+		  tileType = map[map_y * nMapWidth + map_x];
 
           // test if ray hits out of bounds
-          if(nTestX < 0 || nTestX >= nMapWidth || nTestY < 0 || nTestY >= nMapHeight){
-            bHitWall = true; // didn"t actually, just no wall there
+          if(map_x < 0 || map_x >= nMapWidth || map_y < 0 || map_y >= nMapHeight){
+//             bHitWall = true; // didn't actually, just no wall there, with this enabled we paint a wall, but we can still go through it
             fDistanceToWall = fDepth;
             bBreakLoop = true;
           }
 
-          // test for objects
-          else if(map[nTestY * nMapWidth + nTestX] == "o" || map[nTestY * nMapWidth + nTestX] == ","){
+          // test for objects		// NOTE TODO holes in the floor are not rendering at all
+          else if(tileType == "o" || tileType == ","){
+          	if(!bHitObject) fDistanceToObject = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
             bHitObject = true;
-            sObjectType = map[nTestY * nMapWidth + nTestX];
-          }
-          else if(bHitObject == true && map[nTestY * nMapWidth + nTestX] == "." || bHitObject == true && map[nTestY * nMapWidth + nTestX] == "."){
+            sObjectType = tileType;
+          } else if(bHitObject == true && tileType == "."){
+          	if(!bHitBackObject) fDistanceToInverseObject = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
             bHitBackObject = true;
           }
 
-          // Test for walls
-          else if( map[nTestY * nMapWidth + nTestX] != "." ){
+          // Test for walls	// NOTE why is it not....like, testing /for/ walls...
+          else if( tileType != "." ){
             bHitWall = true;
+
+            fDistanceToWall = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
             bBreakLoop = true;
 
-            sWalltype = map[nTestY * nMapWidth + nTestX];
+            sWalltype = tileType;
 
-
-            // test found boundries of the wall
-            var fBound = 0.01;
-            var isBoundary = false;
-
-            var vectorPairList = [];
-            for (var tx = 0; tx < 2; tx++) {
-              for (var ty = 0; ty < 2; ty++) {
-                var vy = +(nTestY) + ty - fPlayerY;
-                var vx = +(nTestX) + tx - fPlayerX;
-                var d = Math.sqrt(vx*vx + vy*vy);
-
-                var dot = (fEyeX * vx / d) + (fEyeY * vy / d);
-                vectorPairList.push([d, dot]);
-              }
-            }
-
-            vectorPairList.sort((a, b) => {
-              return a[0] - b[0];
-            })
-
-            if (Math.acos(vectorPairList[0][1]) < fBound) {
-              isBoundary = true;
-            }
-            if (Math.acos(vectorPairList[1][1]) < fBound) {
-              isBoundary = true;
-            }
-
-
-            // 1u wide cell into quarters
-            var fBlockMidX = (nTestX) + 0.5;
-            var fBlockMidY = (nTestY) + 0.5;
-
-
-            // using the distance to the wall and the player angle (Eye Vectors)
-            // to determine the collusion point
-            var fTestPointX = fPlayerX + fEyeX * fDistanceToWall;
-            var fTestPointY = fPlayerY + fEyeY * fDistanceToWall;
-
-
-            // now we have the location of the middle of the cell,
-            // and the location of point of collision, work out angle
-            var fTestAngle = Math.atan2( (fTestPointY - fBlockMidY), (fTestPointX - fBlockMidX) )
-            // rotate by pi over 4
-
-
-            if( fTestAngle >= -PIx0_25 && fTestAngle < PIx0_25 ){
-              fSampleX = fTestPointY - +(nTestY);
-              sWallDirection = "W";
-            }
-            if( fTestAngle >= PIx0_25 && fTestAngle < PIx0_75 ){
-              fSampleX = fTestPointX - +(nTestX);
-              sWallDirection = "N";
-            }
-            if( fTestAngle < -PIx0_25 && fTestAngle >= -PIx0_75 ){
-              fSampleX = fTestPointX - +(nTestX);
-              sWallDirection = "S";
-            }
-            if( fTestAngle >= PIx0_75 || fTestAngle < -PIx0_75 ){
-              fSampleX = fTestPointY - +(nTestY);
-              sWallDirection = "E";
-            }
-
+			// var isBoundary = true;		// NOTE i only guessed that this needs to be true, it seemed like it was set when they nieve raytraced rays were found to be close to tile boundary
+			isBoundary = true;
           }
+
         } // end ray casting loop
+
+
+
+		nRayLength = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
+
+		if(hit_side === 0) {		// NS wall	// sin(RayAng) gives normalized Ray Vector
+			fSampleX = fPlayerY + nRayLength * rayDirY;
+			sWallDirection = step_x === 1 ? "W" : "E";
+		} else {
+			fSampleX = fPlayerX + nRayLength * rayDirX;
+			sWallDirection = step_y === 1 ? "N" : "S";
+		}
+
+		// used to place texture exactly where ray hit wall
+		fSampleX -= ~~(fSampleX);
+
+			// NOTE i think tracking objects and...whatever a backObject is this way
+				// only allows a ray to "hit" one, the last one
+				// we might need to make some way to track what object is hit
+				// and the distance to that specific object
+// 		if( bHitObject ) fDistanceToObject = nRayLength;
+// 		if( bHitBackObject ) fDistanceToInverseObject = nRayLength;
+// 		if( bHitWall ) fDistanceToWall = nRayLength;
+			// TODO i feel like these could be bumped up into the above tile checks
+				// but the first time I did it the renderer completely broke
+				/// FOLLWUP, so the original incremented each of these fDistance... vars
+					// inside the ray cast loop, while the <things> were NOT hit
+					// thus stopping updating them when they were hit
+				// I feel like I could keep them out, but I might need an hit_side
+					// var for each object maybe
+				// at the very least I need to record the ray length whenever a thing is hit
+					// and not update it afterwards
+
 
 
         // at the end of ray casting, we should have the lengths of the rays
@@ -1413,107 +1427,152 @@ var gameEngineJS = (function(){
         // based on the distance to wall, determine how much floor and ceiling to show per column,
         // Adding in the recalc for looking (fLookTimer) and jumping (nJumptimer)
         // // var nCeiling = (nScreenHeight / 2) - nScreenHeight / fDistanceToWall;
-        // // var nCeiling = (nScreenHeight / (2 - fLooktimer*0.15)) - nScreenHeight / fDistanceToWall;
-        var nCeiling = (nScreenHeight / ((2 - nJumptimer*0.15) - fLooktimer*0.15)) - nScreenHeight / fDistanceToWall;
-        var nFloor   = (nScreenHeight / ((2 - nJumptimer*0.15) - fLooktimer*0.15)) + nScreenHeight / fDistanceToWall;
+        // // var nCeiling = (nScreenHeight / (2 - fLooktimer * 0.15)) - nScreenHeight / fDistanceToWall;
+        var wallHeight = Math.round(nScreenHeight / fDistanceToWall);
+        var nCeiling = screenSkew - wallHeight / 2;
+	var nFloor   = screenSkew + wallHeight / 2;
 
-        // similar for towers and gates
-        var nTower   = (nScreenHeight / ((2 - nJumptimer*0.15) - fLooktimer*0.15)) - nScreenHeight / (fDistanceToWall - 2);
-        var nDoorFrameHeight = (nScreenHeight / ((2 - nJumptimer*0.15) - fLooktimer*0.15)) - nScreenHeight / (fDistanceToWall + 2);
+		// NOTE TODO - walls are nice and square now but apparently being drawn too small
+			// with the sprite monsters on I can see them clip behind the wall where we're drawing floor
+
+	rayObs.push(new RayOb(screenColumn, -1, fDistanceToWall, wallHeight, nCeiling, nFloor, fLooktimer, tileType));
+
+        // NOTE turns out this is a euclidian projection or whatever and part of what makes the fisheye
+//         var nCeiling = screenSkew - nScreenHeight / fDistanceToWall;
+//         var nFloor   = screenSkew + nScreenHeight / fDistanceToWall;
+
+        // similar for towers and gates	// NOTE TODO towers have a weird artifact of light ascii block rendering above them when we get close
+        let nTower = screenSkew - wallHeight / 2 - wallHeight;
+	// TODO update this like i did with nTower
+//         var nDoorFrameHeight = screenSkew - nScreenHeight / (fDistanceToWall + 2);
+
+	let fDistToDoor = fDistanceToWall + 0.5 * (hit_side === 0 ? delta_x : delta_y);
+        let nDoorFrameHeight = screenSkew - fDistToDoor / 2 + fDistToDoor / 2;	// FOLLOWUP, this doesn't seem to work the same as the tower
+        											// it doesn't seem to make the door shorter
+        										// TODO first, change the render
+        											// make the blockV on the left and right edges (maybe in the center, like striped)
+        											// and blockH in the center
+        										// Second, try to actually give it an upper door jamb
+        										// ALSO, standardize Door vs Gate in var and func names
 
         // similar operation for objects
-        var nObjectCeiling = (nScreenHeight / ((2 - nJumptimer*0.15) - fLooktimer*0.15)) - nScreenHeight / fDistanceToObject;
-        var nObjectFloor = (nScreenHeight / ((2 - nJumptimer*0.15) - fLooktimer*0.15)) + nScreenHeight / fDistanceToObject;
-        var nFObjectBackwall = (nScreenHeight / ((2 - nJumptimer*0.15) - fLooktimer*0.15) ) + (nScreenHeight / (fDistanceToInverseObject + 0) ); // 0 makes the object flat, higher the number, the higher the object :)
+        var nObjectCeiling = screenSkew - nScreenHeight / fDistanceToObject;
+        var nObjectFloor = screenSkew + nScreenHeight / fDistanceToObject;
+        var nFObjectBackwall = screenSkew + (nScreenHeight / (fDistanceToInverseObject + 0) ); // 0 makes the object flat, higher the number, the higher the object :)
 
 
         // the spot where the wall was hit
-        fDepthBuffer[i] = fDistanceToWall;
+        fDepthBuffer[screenColumn] = fDistanceToWall;
 
+// TODO print out details on the Tower block, and see why we're painting shader in the sky
+//_debugOutput(`SprDist: ${fSpriteDist}; SprH: ${fSpriteHeight}; SprCeil: ${fSpriteCeiling}; SprFlr: ${fSpriteFloor}`, 'debug2');
 
         // draw the columns one screenheight-pixel at a time
-        for(var j = 0; j < nScreenHeight; j++){
+        for(var screenRow = 0; screenRow < nScreenHeight; screenRow++){
 
           // sky
-          if( j < nCeiling){
+          if( screenRow < nCeiling){
 
             // case of tower block (the bit that reaches into the ceiling)
             if(sWalltype == "T"){
-              if( j > nTower ){
+              if( screenRow > nTower ) {
 
-                var fSampleY = ( (j - nCeiling + 6) / (nFloor - nCeiling + 6) );
+                var fSampleY = ( (screenRow - nTower) / (nCeiling - nTower) );
 
-                // screen[j*nScreenWidth+i] = _rh.renderSolidWall(j, fDistanceToWall, isBoundary);
-                screen[j*nScreenWidth+i] = _rh.renderWall(j, fDistanceToWall, sWallDirection, _getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
-              }else{
-                screen[j*nScreenWidth+i] = "&nbsp;";
+                // screen[screenRow * nScreenWidth + screenColumn] = _rh.renderSolidWall(fDistanceToWall, isBoundary);
+                screen[screenRow * nScreenWidth + screenColumn] = _rh.renderWall(fDistanceToWall, sWallDirection, _getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
+              } else {
+                screen[screenRow * nScreenWidth + screenColumn] = brightness[0];
               }
-            }
-
-            // draw ceiling/sky
-            else{
-              if(sWalltype == ","){
-                screen[j*nScreenWidth+i] = "1";
-              }else{
-                screen[j*nScreenWidth+i] = "&nbsp;";
+            } else {		// draw ceiling/sky
+              if(sWalltype == ",") {
+                screen[screenRow * nScreenWidth + screenColumn] = "1";
+              } else {
+                screen[screenRow * nScreenWidth + screenColumn] = brightness[0];
               }
-            }
-          }
+            }		          // solid block
+          } else if( screenRow > nCeiling && screenRow <= nFloor ) {
 
-          // solid block
-          else if( j > nCeiling && j <= nFloor ){
-
-            // Door Walltype
+            // Door/exit Walltype
             if(sWalltype == "X"){
-              screen[j*nScreenWidth+i] = _rh.renderGate(j, fDistanceToWall, nDoorFrameHeight);
-            }
+              if(screenRow > nCeiling && screenRow < nDoorFrameHeight) {
+//               	let fPrevDistanceToWall = fDistanceToWall - 1;
+// 				let jambHeight = Math.round(nScreenHeight / fPrevDistanceToWall);	// ALSO, does this need to be new or rather the prev
+// 				let jambCeiling = screenSkew - jambHeight / 2;						// am I calc'ing the jamb or the exit here?
+// 				let jambFloor   = screenSkew + jambHeight / 2;
+//
+// 				// YOOOOOOOO i need to get the new column not the new row, row stays the same
+// 					// DUDE no wonder this is wrong
+// 				// NOTE new screenRow for this door jamb
+// 					// (screenRow - centerOfScreen) / fDistanceToWall = (newScreenRow - centerOfScreen) / fPrevDistanceToWall
+// 					// or something like that, they are similar overlapping triangles
+//
+// 														// NOTE this might could be just the delta_x or y
+// // 					(screenColumn - nScreenWidth / 2) / (fDistanceToWall - fPrevDistanceToWall) =
+//
+//
+// // 				let doorJambScreenCol = ~~(nScreenWidth / 2 + ((screenColumn - nScreenWidth / 2) * (fDistanceToWall / (fDistanceToWall - fPrevDistanceToWall))));
+//
+// 				// using $$x = \frac{(h_2 \cdot b) + (h_1 \cdot B)}{h_{\text{large}}}$$
+// 				// where h2 = lower leg, from big base to bisecting line, fPrevDistanceToWall
+// 					// b = small, top base, wallHeight * fSampleX because we're -so- far into the width of the whole square
+// 					// h1 = top leg, from bisecting line to small top base, fDistanceToWall - fPrevDistanceToWall
+// 					// B = large base, from current column to middle of screen, screenColumn - nScreenWidth / 2
+// 					// h_large = total height, fDistanceToWall
+//
+// 															// NOTE, h1 is probably wrong
+// 				let topBase = Math.abs(screenColumn - nScreenWidth / 2);
+// 				let topSeg = fDistanceToWall - fPrevDistanceToWall;
+// 				let bigBase = nScreenWidth / 2;
+//
+// 				let opOne = fPrevDistanceToWall * topBase;
+// 				let opTwo = topSeg * bigBase
+//
+// 				let doorJambScreenCol =
+// 					(opOne + opTwo) / fDistanceToWall + (bigBase * Math.sign(screenColumn - nScreenWidth / 2));
+// 				let fPrevSampleX = hit_side === 0 ? fPlayerY + fPrevDistanceToWall * rayDirY : fPlayerX + fPrevDistanceToWall * rayDirX;
+// 				fPrevSampleX -= ~~fPrevSampleX;
+// 				let fdoorJambSampleY = ( (screenRow - jambCeiling) / (jambFloor - jambCeiling) );
+//
+				var fSampleY = ( (screenRow - nCeiling) / (nFloor - nCeiling) );
+      			screen[screenRow * nScreenWidth + screenColumn] = _rh.renderWall(fDistToDoor, sWallDirection, _getSamplePixel(textures['#'], fSampleX, fSampleY));
+      		  } else {
+      		  	screen[screenRow * nScreenWidth + screenColumn] = _rh.renderGate(screenRow, fDistToDoor, nDoorFrameHeight, nCeiling);
+      		  }
+            }  else if(sWalltype != "." || sWalltype == "T") {		// Solid Walltype
 
-            // Solid Walltype
-            else if(sWalltype != "." || sWalltype == "T"){
-
-              var fSampleY = ( (j - nCeiling) / (nFloor - nCeiling) );
+              var fSampleY = ( (screenRow - nCeiling) / (nFloor - nCeiling) );
 
               /**
                * animation timer example
                */
               // if( animationTimer < 5 ){
-              //   screen[j*nScreenWidth+i] = _getSamplePixel(texture, fSampleX, fSampleY);
-              // }else if( animationTimer >= 5 && animationTimer < 10 ){
-              //   screen[j*nScreenWidth+i] = _getSamplePixel(texture2, fSampleX, fSampleY);
-              // }else if( animationTimer >= 10 ){
-              //   screen[j*nScreenWidth+i] = _getSamplePixel(texture3, fSampleX, fSampleY);
+              //   screen[screenRow * nScreenWidth + screenColumn] = _getSamplePixel(texture, fSampleX, fSampleY);
+              // } else if( animationTimer >= 5 && animationTimer < 10 ) {
+              //   screen[screenRow * nScreenWidth + screenColumn] = _getSamplePixel(texture2, fSampleX, fSampleY);
+              // } else if( animationTimer >= 10 ) {
+              //   screen[screenRow * nScreenWidth + screenColumn] = _getSamplePixel(texture3, fSampleX, fSampleY);
               // }
 
 
               // Render Texture Directly
               if( nRenderMode == 1 ){
-                screen[j*nScreenWidth+i] = _getSamplePixel(textures[sWalltype], fSampleX, fSampleY);
+                screen[screenRow * nScreenWidth + screenColumn] = _getSamplePixel(textures[sWalltype], fSampleX, fSampleY);
+              } else if( nRenderMode == 2 ) {		// Render Texture with Shading
+                screen[screenRow * nScreenWidth + screenColumn] = _rh.renderWall(fDistanceToWall, sWallDirection, _getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
+              } else if( nRenderMode == 0 ) {	// old, solid-style shading
+                screen[screenRow * nScreenWidth + screenColumn] = _rh.renderSolidWall(fDistanceToWall, isBoundary);
               }
-
-
-              // Render Texture with Shading
-              if( nRenderMode == 2 ){
-                screen[j*nScreenWidth+i] = _rh.renderWall(j, fDistanceToWall, sWallDirection, _getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
-              }
-
-
-              // old, solid-style shading
-              if( nRenderMode == 0 ){
-                screen[j*nScreenWidth+i] = _rh.renderSolidWall(j, fDistanceToWall, isBoundary);
-              }
+            } else {		// render whatever char is on the map as walltype
+              screen[screenRow * nScreenWidth + screenColumn] = sWalltype;
             }
-
-            // render whatever char is on the map as walltype
-            else{
-              screen[j*nScreenWidth+i] = sWalltype;
-            }
-          } // end solid block
-
-
-          // floor
-          else {
-            screen[j*nScreenWidth+i] = _rh.renderFloor(j);
+          } else {		// floor
+            screen[screenRow * nScreenWidth + screenColumn] = _rh.renderFloor(screenRow);
           }
+
+          if(screenColumn === nScreenWidth / 2 && (sWalltype == '#' || sWalltype == 'X')) {
+		_debugOutput(`fDistToDoor: ${fDistToDoor}; fDistanceToWall: ${fDistanceToWall}; nCeiling: ${nCeiling}; nDoorFrameHeight: ${nDoorFrameHeight}`, 'debug2');
+           }
         } // end draw column loop
 
 
@@ -1522,7 +1581,7 @@ var gameEngineJS = (function(){
           if( y > nObjectCeiling && y <= nObjectFloor ){
             if(sObjectType == "o"){
               if( y >=  nFObjectBackwall ){
-                screen[y*nScreenWidth+i] = _rh.renderSolidWall(y, fDistanceToObject, isBoundary);
+                screen[y * nScreenWidth + screenColumn] = _rh.renderSolidWall(fDistanceToObject, isBoundary);
               }
             }
           }
