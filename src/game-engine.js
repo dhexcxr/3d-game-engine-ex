@@ -46,7 +46,11 @@ var gameEngineJS = (function(){
   var bFalling;
   var bRunning;
   var bPaused;
-  var bPlayerMayMoveForward;
+  var bPlayerMayMoveForward = true;
+
+  let bPlayerMoving = () => (bTurnLeft || bTurnRight || bStrafeLeft || bStrafeRight
+  							|| (bMoveForward && bPlayerMayMoveForward) || bMoveBackward
+  							|| bJumping || bFalling || bRunning) && !bPaused;
 
   var nJumptimer = 0;
   var fLooktimer = 0;
@@ -67,6 +71,12 @@ var gameEngineJS = (function(){
 
   var gameRun;
   var animationTimer = 0;
+
+  const MIN_DIST = 0.1; // Prevent division by zero if standing exactly on a sprite
+
+  const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls
+
+  const absSign = (x) => (x === 0 ? 1 : Math.sign(x));
 
   let LockLook = false;
   let printedScreenRays = false;
@@ -1000,7 +1010,7 @@ var gameEngineJS = (function(){
     },
 
     // called once per frame, handles movement computation
-    move: function(){
+    move: function(viewX, viewY){
 
       if(bTurnLeft){
         fPlayerA -= 0.05;
@@ -1015,55 +1025,60 @@ var gameEngineJS = (function(){
         fMoveFactor = 0.2;
       }
 
-      if(bStrafeLeft){
-        fPlayerX += ( Math.sin(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
-        fPlayerY -= ( Math.cos(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
+      let deltaXDir = 0;
+      let deltaYDir = 0;
+      let deltaX = ( viewX + 5.0 * 0.0051 ) * fMoveFactor;
+      let deltaY = ( viewY + 5.0 * 0.0051 ) * fMoveFactor;
+      let totalX = 0;
+      let totalY = 0;
 
-        // converts coordinates into integer space and check if it is a wall (!.), if so, reverse
-        if(map[~~(fPlayerY) * nMapWidth + ~~(fPlayerX)] != "."){
-          _moveHelpers.checkExit();
-          fPlayerX -= ( Math.sin(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
-          fPlayerY += ( Math.cos(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
-        }
+
+      if(bStrafeLeft ^ bStrafeRight) {		// TODO continue optimizing this
+      	let [straifDeltaX, straifDeltaY] = [deltaY, deltaX];
+      	if(bStrafeLeft) {
+      		deltaXDir = 1;
+        	deltaYDir = -1;
+      	} else {
+      		deltaXDir = -1;
+        	deltaYDir = 1;
+
+      	}
+
+        totalX += straifDeltaX * deltaXDir;
+        totalY += straifDeltaY * deltaYDir;
       }
 
-      if(bStrafeRight){
-        fPlayerX -= ( Math.sin(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
-        fPlayerY += ( Math.cos(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
 
-        // converts coordinates into integer space and check if it is a wall (!.), if so, reverse
-        if(map[~~(fPlayerY) * nMapWidth + ~~(fPlayerX)] != "."){
-          _moveHelpers.checkExit();
-          fPlayerX += ( Math.sin(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
-          fPlayerY -= ( Math.cos(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
-        }
+      if((bMoveForward && bPlayerMayMoveForward) ^ bMoveBackward) {
+        if(bMoveForward) {
+      	  deltaXDir = 1;
+          deltaYDir = 1;
+      	} else {
+      	  deltaXDir = -1;
+          deltaYDir = -1;
+      	}
+
+        totalX += deltaX * deltaXDir;
+        totalY += deltaY * deltaYDir;
       }
 
-      if(bMoveForward && bPlayerMayMoveForward){
-        fPlayerX += ( Math.cos(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
-        fPlayerY += ( Math.sin(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
+      let newX = fPlayerX + totalX;
+      let newY = fPlayerY + totalY;
 
-        // converts coordinates into integer space and check if it is a wall (!.), if so, reverse
-        if(map[~~(fPlayerY) * nMapWidth + ~~(fPlayerX)] != "."){
-          _moveHelpers.checkExit();
-          fPlayerX -= ( Math.cos(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
-          fPlayerY -= ( Math.sin(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
-        }
-      }
+      let checkX = (totalX > 0) ? (newX + PLAYER_RADIUS) : (newX - PLAYER_RADIUS);
 
-      if(bMoveBackward){
-        fPlayerX -= ( Math.cos(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
-        fPlayerY -= ( Math.sin(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
+      if (map[~~fPlayerY * nMapWidth + ~~checkX] === '.') {
+      	fPlayerX = newX;
+	  }
 
-        // converts coordinates into integer space and check if it is a wall (!.), if so, reverse
-        if(map[~~(fPlayerY) * nMapWidth + ~~(fPlayerX)] != "."){
-          _moveHelpers.checkExit();
-          fPlayerX += ( Math.cos(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
-          fPlayerY += ( Math.sin(fPlayerA) + 5.0 * 0.0051 ) * fMoveFactor;
-        }
-      }
+      let checkY = (totalY > 0) ? (newY + PLAYER_RADIUS) : (newY - PLAYER_RADIUS);
 
-    },
+      if (map[~~checkY * nMapWidth + ~~fPlayerX] === '.') {
+      	fPlayerY = newY;
+	  }
+
+//       _debugOutput(`dX: ${deltaX}; dDirX: ${deltaXDir}; totX: ${totalX}; dY: ${deltaY}; dDirY: ${deltaYDir}; totY: ${totalY}`, 'debug2');
+	  },
   };
 
 
