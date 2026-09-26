@@ -14,16 +14,16 @@
 var gameEngineJS = (function(){
 
   // constants
-  var PI___    = +(Math.PI);
-  var PI_0     = 0.0;
-  var PIx0_25  = +(PI___ * 0.25);
-  var PIx05    = +(PI___ * 0.5);
-  var PIx0_75  = +(PI___ * 0.75);
-  var PIx1     = PI___;
-  var PIx1_5   = +(PI___ * 1.5);
-  var PIx2     = +(PI___ * 2.0);
-  var I80divPI = (180/PI___)
-  var PIdiv4   = PI___ / 4.0
+  const PI___    = +(Math.PI);
+  const PI_0     = 0.0;
+  const PIx0_25  = +(PI___ * 0.25);
+  const PIx05    = +(PI___ * 0.5);
+  const PIx0_75  = +(PI___ * 0.75);
+  const PIx1     = PI___;
+  const PIx1_5   = +(PI___ * 1.5);
+  const PIx2     = +(PI___ * 2.0);
+  const I80divPI = (180/PI___)
+  const PIdiv4   = PI___ / 4.0
 
   // setup variables
   var eScreen;
@@ -102,7 +102,7 @@ var gameEngineJS = (function(){
   var _generateRandomSprites = function( nNumberOfSprites ){
     nNumberOfSprites = nNumberOfSprites || Math.round( nMapWidth * nMapWidth / 15 );
     // generates random Pogels or Obetrls! :oooo
-    var oRandomLevelSprites = {};
+    var oRandomLevelSprites = {};	// NOTE this is an object.....
     for( var m = 0; m < nNumberOfSprites; m++){
       var randAngle = _randomIntFromInterval(0, PIx2);
       var nSpriteRand = _randomIntFromInterval(0,3);
@@ -116,7 +116,7 @@ var gameEngineJS = (function(){
           "speed": _randomIntFromInterval(0, 5) * 0.01,
           "stuckcounter": 0,
       }
-      oRandomLevelSprites[m] = oRandomSprite ;
+      oRandomLevelSprites[m] = oRandomSprite ;	// and it holds more objects that are referenced by an integer
     }
     return oRandomLevelSprites;
   };
@@ -197,18 +197,18 @@ var gameEngineJS = (function(){
    */
   var _getSamplePixel = function(texture, x, y){
 
-    var scaleFactor = texture["scale"]  || defaultTexScale;
-    var texWidth    = texture["width"]  || defaultTexWidth;
-    var texHeight   = texture["height"] || defaultTexHeight;
+    var scaleFactor = texture.scale  || defaultTexScale;
+    var texWidth    = texture.width  || defaultTexWidth;
+    var texHeight   = texture.height || defaultTexHeight;
 
-    var texpixels = texture["texture"];
+    var texpixels = texture.texture;
 
-    if( texture["texture"] == "DIRECTIONAL" ){
+    if( texture.texture == "DIRECTIONAL" ){
       // Different Texture based on viewport
-      if( nDegrees > 0 && nDegrees < 180 ){
-        texpixels = texture["S"];
-      }else{
-        texpixels = texture["N"];
+      if( fPlayerA > 0 && fPlayerA < PI___ ){
+        texpixels = texture.S;
+      } else {
+        texpixels = texture.N;
       }
     }
 
@@ -217,10 +217,10 @@ var gameEngineJS = (function(){
     x = scaleFactor * x%1;
     y = scaleFactor * y%1;
 
-    var sampleX = ~~(texWidth*x);
-    var sampleY = ~~(texHeight*y);
+    var sampleX = ~~(texWidth * x);
+    var sampleY = ~~(texHeight * y);
 
-    var samplePosition = (texWidth*(sampleY)) + sampleX;
+    var samplePosition = (texWidth * (sampleY)) + sampleX;
 
     if( x < 0 || x > texWidth || y < 0 || y > texHeight ){
       return "+";
@@ -242,7 +242,10 @@ var gameEngineJS = (function(){
    * @returns {Array}
    */
   // helper function
-  function _toConsumableArray(arr) { return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread(); }
+  function _toConsumableArray(arr) {
+  	return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
+  }
+  
   function _evenlyPickItemsFromArray(allItems, neededCount) {
     if (neededCount >= allItems.length) {
       return _toConsumableArray(allItems);
@@ -323,7 +326,7 @@ var gameEngineJS = (function(){
     // if sOverlay !0, appends it to the output instead
     if( sOverlay && sOverlay[nIndex] != 0){
       sOutput += sOverlay[nIndex];
-    }else{
+    } else {
       sOutput += sInput[nIndex];
     }
     return sOutput;
@@ -340,6 +343,8 @@ var gameEngineJS = (function(){
     var oOverlay = oOverlay || false;
     var eTarget  = eTarget || eScreen;
     var sOutput = [];
+
+// NOTE TODO i think this is where the skewing can be improved
 
     // this is the maximum of variation created by the lookup timer, aka the final lookmodifier value
     var neverMoreThan = Math.round(nScreenHeight / _skipEveryXrow(fLooktimer) - 1);
@@ -359,11 +364,8 @@ var gameEngineJS = (function(){
 
       // increment the fLookModifier every time it needs to grow (grows per row)
       if ( _everyAofB(row, _skipEveryXrow(fLooktimer)) ) {
-        if( fLooktimer > 0 ){ // looking up
-          fLookModifier--;
-        }else{
-          fLookModifier++;
-        }
+						// looking up
+          fLooktimer > 0 ? fLookModifier-- : fLookModifier++;
       }
 
       // print filler pixels
@@ -371,7 +373,7 @@ var gameEngineJS = (function(){
         sOutput.push( "." );
       }
 
-      var toBeRemoved = (2*fLookModifier);
+      var toBeRemoved = (2 * fLookModifier);
       var removeFrom = [];
 
       //  make a new array that contains the indices of the elements to print
@@ -393,7 +395,7 @@ var gameEngineJS = (function(){
         // print only if the pixel is in the list of pixels to print
         if( removeFrom.includes(rpix) ){
           // don"t print
-        }else{
+        } else {
           // print
           sOutput.push( _printCompositPixel(oInput, oOverlay, globalPrintIndex) );
         }
@@ -420,7 +422,7 @@ var gameEngineJS = (function(){
 
     // interates over each row again, and omits the first and last 30 pixels, to disguise the skewing!
     var printIndex = 0;
-    var removePixels = nScreenHeight/2;
+    var removePixels = nScreenHeight / 2;
     for(var row = 0; row < nScreenHeight; row++){
       for(var pix = 0; pix < nScreenWidth; pix++){
 
@@ -431,11 +433,9 @@ var gameEngineJS = (function(){
 
         if( pix < removePixels ){
           sOutput += "";
-        }
-        else if( pix > nScreenWidth-removePixels ){
+        } else if( pix > nScreenWidth - removePixels ) {
           sOutput += "";
-        }
-        else{
+        } else {
           sOutput += frame[printIndex];
         }
 
@@ -453,7 +453,7 @@ var gameEngineJS = (function(){
   // each value can be rendered with 5 shades (4 plus black)
   var _rh = {
 
-    renderWall: function(j, fDistanceToWall, sWallDirection, pixel){
+    renderWall: function(fDistanceToWall, sWallDirection, pixel){
 
       var fill = "";
 
@@ -626,23 +626,19 @@ var gameEngineJS = (function(){
     },
 
     // shading and sectionals for gate
-    renderGate: function(j, fDistanceToWall, nDoorFrameHeight){
+    renderGate: function(screenRow, fDistanceToWall, nDoorFrameHeight, nCeiling) {
       var fill = "X";
-      if( j < nDoorFrameHeight){
-
-        if(fDistanceToWall < fDepth / 4){
+      
+      if( screenRow < nDoorFrameHeight) {
+        if(fDistanceToWall < fDepth / 4) {
           fill = "&boxH;";
-        }
-        else{
+        } else {
           fill = "=";
         }
-
-      }else{
-
-        if(fDistanceToWall < fDepth / 4){
+      } else {
+        if(fDistanceToWall < fDepth / 4) {
           fill = "&boxV;";
-        }
-        else{
+        } else {
           fill = "|";
         }
       }
@@ -654,15 +650,15 @@ var gameEngineJS = (function(){
 
       // draw floor, in different shades
       b = 1 - (j -nScreenHeight / 2) / (nScreenHeight / 2);
-      b = 1 - (j -nScreenHeight / (2- fLooktimer*0.15)) / (nScreenHeight / (2 - fLooktimer*0.15));
+      b = 1 - (j -nScreenHeight / (2- fLooktimer * 0.15)) / (nScreenHeight / (2 - fLooktimer * 0.15));
 
       if(b < 0.25){
         fill = "x";
-      }else if(b < 0.5){
+      } else if(b < 0.5) {
         fill = "=";
-      }else if(b < 0.75){
+      } else if(b < 0.75) {
         fill = "-";
-      }else if(b < 0.9){
+      } else if(b < 0.9) {
         fill = "`";
       }else{
         fill = "&nbsp;";
@@ -678,13 +674,13 @@ var gameEngineJS = (function(){
       b = 1 - (j -nScreenHeight / 2) / (nScreenHeight / 2);
       if(b < 0.25){
         fill = "`";
-      }else if(b < 0.5){
+      } else if(b < 0.5) {
         fill = "-";
-      }else if(b < 0.75){
+      } else if(b < 0.75) {
         fill = "=";
-      }else if(b < 0.9){
+      } else if(b < 0.9) {
         fill = "x";
-      }else{
+      } else {
         fill = "#";
       }
 
@@ -694,7 +690,7 @@ var gameEngineJS = (function(){
 
 
   // keyboard and mouse
-  var _moveHelpers = {
+  var _moveHelpers = {		// TODO make this into a class
 
     // keystroke listening engine
     keylisten: function(){
@@ -704,10 +700,10 @@ var gameEngineJS = (function(){
         // _debugOutput(e.which);
 
         if (e.which == 80) { // p
-          if( bPaused ){
+          if( bPaused ){		// NOTE TODO my version still accepts mouselook when paused, original seems to not
             _testScreenSizeAndStartTheGame();
             bPaused = false;
-          }else{
+          } else {
             clearInterval(gameRun);
             bPaused = true;
           }
@@ -736,6 +732,8 @@ var gameEngineJS = (function(){
         if (e.which == 83 || e.which == 40) { // s or down
           bMoveBackward = true;
         }
+        
+        printPlayerLoc();
       };
 
       window.onkeyup = function(e) {
@@ -765,6 +763,8 @@ var gameEngineJS = (function(){
         if (e.which == 83 || e.which == 40) { // s or down
           bMoveBackward = false;
         }
+        
+        printPlayerLoc();
       };
     },
 
@@ -783,13 +783,13 @@ var gameEngineJS = (function(){
 
       // if the looktimer is negative (looking down), increase the speed
       if( fLooktimer < 0 ){
-        fYMoveBy = fYMoveBy*4;
+        fYMoveBy = fYMoveBy * 4;
       }
 
       // the reason for the increased speed is that looking “down” becomes expotentially less,
       // so we are artificially increasing the down-factor. it's a hack, but it works okay!
       fLooktimer -= fYMoveBy;
-      if( fLooktimer > nLookLimit*0.7 || fLooktimer < -nLookLimit*2 ){
+      if( fLooktimer > nLookLimit * 0.7 || fLooktimer < -nLookLimit * 2 ){
         fLooktimer += fYMoveBy;
       }
     },
@@ -801,10 +801,12 @@ var gameEngineJS = (function(){
       document.onmousemove = function (e) {
 
         // look left/right
-        fPlayerA   += ( (e.movementX*fMouseLookFactor) || (e.mozMovementX*fMouseLookFactor) || (e.webkitMovementX*fMouseLookFactor) || 0);
+        fPlayerA   += ( (e.movementX * fMouseLookFactor) || (e.mozMovementX * fMouseLookFactor) || (e.webkitMovementX * fMouseLookFactor) || 0);
 
         // look up and down
         _moveHelpers.yMoveUpdate( ( e.movementY || e.mozMovementY || e.webkitMovementY || 0), 0.05 );
+        
+        printPlayerLoc();
       }
     },
 
@@ -899,7 +901,7 @@ var gameEngineJS = (function(){
         // first touch will be a huge difference, that"s why we only move after the first touch
         if( !_moveHelpers.oTouch.move.bFirstTouch ){
 
-          // walk
+          // walk		// TODO rewrite these touch funcs without all the trig
           fPlayerX -= ( Math.sin(fPlayerA) + 5.0 * 0.0051 ) * oDifferences.x * 0.05;
           fPlayerY += ( Math.cos(fPlayerA) + 5.0 * 0.0051 ) * oDifferences.x * 0.05;
 
@@ -1013,54 +1015,53 @@ var gameEngineJS = (function(){
   var _moveSprites = function(){
 
     // for each sprite object
-    for(var si=0; si < Object.keys(oLevelSprites).length; si++ ){
-      var sprite = oLevelSprites[Object.keys(oLevelSprites)[si]];
-
+	for (const sprite of Object.values(oLevelSprites)) {
       // if the sprite"s move flag is set
-      if( sprite["move"] ){
+      if( sprite.move ){
         // var fMovementSpeed = 0.01;
-        var fMovementSpeed = sprite["speed"] || 0.03;
+        var fMovementSpeed = sprite.speed || 0.03;
 
         // move the sprite along it's radiant line
-        sprite["x"] = +(sprite["x"]) + +(Math.cos(sprite["r"])) * fMovementSpeed;
-        sprite["y"] = +(sprite["y"]) + +(Math.sin(sprite["r"])) * fMovementSpeed;
+        sprite.x = +(sprite.x) + +(Math.cos(sprite.r)) * fMovementSpeed;
+        sprite.y = +(sprite.y) + +(Math.sin(sprite.r)) * fMovementSpeed;
+        				// NOTE TODO i don't /think/ all these unary plus operators are necessary
 
         // collision coordinates (attempting to center sprite)
-        var fCollideY = +(sprite["y"]) - 0.65; // 0.5
-        var fCollideX = +(sprite["x"]) + 0.125; // 0.25
+        var fCollideY = +(sprite.y) - 0.65; // 0.5
+        var fCollideX = +(sprite.x) + 0.125; // 0.25
 
-        var fCollideY2 = +(sprite["y"]) + 0.425; // 0.25
-        var fCollideX2 = +(sprite["x"]) - 0.65; //0.5
+        var fCollideY2 = +(sprite.y) + 0.425; // 0.25
+        var fCollideX2 = +(sprite.x) - 0.65; //0.5
 
         if( map[ ~~(fCollideY) * nMapWidth + ~~(fCollideX)] != "." || map[ ~~(fCollideY2) * nMapWidth + ~~(fCollideX2)] != "." ){
 
-          sprite["stuckcounter"]++;
+          sprite.stuckcounter++;
 
           // // reverse last movement
-          sprite["x"] = +(sprite["x"]) - +(Math.cos(sprite["r"])) * fMovementSpeed*2;
-          sprite["y"] = +(sprite["y"]) - +(Math.sin(sprite["r"])) * fMovementSpeed*2;
+          sprite.x = +(sprite.x) - +(Math.cos(sprite.r)) * fMovementSpeed * 2;	// TODO rewrite this to check before moving sprite, like player movement
+          sprite.y = +(sprite.y) - +(Math.sin(sprite.r)) * fMovementSpeed * 2;
 
 
           // // repeat may help unstuck sprites
-          // sprite["x"] = +(sprite["x"]) - +(Math.cos(sprite["r"])) * fMovementSpeed;
-          // sprite["y"] = +(sprite["y"]) - +(Math.sin(sprite["r"])) * fMovementSpeed;
-          // sprite["x"] = +(sprite["x"]) - +(Math.cos(sprite["r"])) * fMovementSpeed;
-          // sprite["y"] = +(sprite["y"]) - +(Math.sin(sprite["r"])) * fMovementSpeed;
+          // sprite.x = +(sprite.x) - +(Math.cos(sprite.r)) * fMovementSpeed;
+          // sprite.y = +(sprite.y) - +(Math.sin(sprite.r)) * fMovementSpeed;
+          // sprite.x = +(sprite.x) - +(Math.cos(sprite.r)) * fMovementSpeed;
+          // sprite.y = +(sprite.y) - +(Math.sin(sprite.r)) * fMovementSpeed;
 
 
           // change the angle and visible angle
-          sprite["r"] = (+(sprite["r"]) + PIx1_5 ) % PIx2; // TODO: sometimes buggie
+          sprite.r = (+(sprite.r) + PIx1_5 ) % PIx2; // TODO: sometimes buggy
 
           // if sprite keeps getting stuck, shove it outta there
-          if( sprite["stuckcounter"] > 10 ){
-            sprite["stuckcounter"] = 0;
-            sprite["r"] = 0.5
-            sprite["x"] = +(sprite["x"]) - +(Math.cos(sprite["r"])) * 0.5;
-            sprite["y"] = +(sprite["y"]) - +(Math.sin(sprite["r"])) * 0.5;
+          if( sprite.stuckcounter > 10 ){
+            sprite.stuckcounter = 0;
+            sprite.r = 0.5
+            sprite.x = +(sprite.x) - +(Math.cos(sprite.r)) * 0.5;
+            sprite.y = +(sprite.y) - +(Math.sin(sprite.r)) * 0.5;
 
-            // sprite["move"]  = false;
-            // sprite["x"]  = 0;
-            // sprite["7"]  = 0;
+            // sprite.move  = false;
+            // sprite.x  = 0;
+            // sprite.7  = 0;
 
           }
         }
@@ -1079,8 +1080,8 @@ var gameEngineJS = (function(){
         // TODO: sprites hitting each other
         // for(var sj=0; sj < Object.keys(oLevelSprites).length; sj++ ){
         //   var jsprite = oLevelSprites[Object.keys(oLevelSprites)[sj]];
-        //   if( jsprite["z"] - sprite["z"] > 2 ){
-        //     jsprite["r"] = (+(sprite["r"]) + PIx1_5 ) % PIx2;
+        //   if( jsprite.z - sprite.z > 2 ){
+        //     jsprite.r = (+(sprite.r) + PIx1_5 ) % PIx2;
         //   }
         // }
 
@@ -1093,10 +1094,9 @@ var gameEngineJS = (function(){
    * Sorts List
    */
   function _sortSpriteList( b, a ) {
-    if ( a["z"] < b["z"] ){
+    if ( a.z < b.z ){
       return -1;
-    }
-    if ( a["z"] > b["z"] ){
+    } else if ( a.z > b.z ){
       return 1;
     }
     return 0;
@@ -1629,9 +1629,9 @@ var gameEngineJS = (function(){
   // for every row make a nScreenWidth amount of pixels
   var _createTestScreen = function(){
     var sOutput = "";
-    for(var i = 0; i < nScreenHeight; i++){
-      for(var j = 0; j < nScreenWidth; j++){
-        sOutput += "&nbsp;";
+    for(var screnCol = 0; screnCol < nScreenHeight; screnCol++){
+      for(var screenRow = 0; screenRow < nScreenWidth; screenRow++){
+        sOutput += brightness[0];
       }
       sOutput += "<br>";
     }
@@ -1678,16 +1678,16 @@ var gameEngineJS = (function(){
       if( nTrymax > 0 ){
         nTrymax--;
         _testScreenSizeAndStartTheGame();
-      }else{
-        _debugOutput("Trymax exceeded");
+      } else {
+        _debugOutput("Trymax exceeded", 'debug');
       }
 
     }
     // if it does, set aspect-ratio-based height
     // and start the game
     else{
-      var fAdjustedAspectRatio = viewPortAspect/2.82;
-      _debugOutput( fAdjustedAspectRatio );
+      var fAdjustedAspectRatio = viewPortAspect / 2.82;
+      _debugOutput(fAdjustedAspectRatio, 'debug');
 
       if( fAdjustedAspectRatio < 0.266 ){
         fAdjustedAspectRatio = 0.266;
