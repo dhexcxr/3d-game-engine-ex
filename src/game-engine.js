@@ -265,9 +265,19 @@ var gameEngineJS = (function(){
 
 
   // leaving the console for errors, logging seems to kill performance
-  var _debugOutput = function(input){
-    eDebugOut.innerHTML = input;
+  var _debugOutput = function(input, elementId, append = false){
+  	let debugEl = document.getElementById(elementId)
+  	if(append) {
+  		debugEl.innerHTML += '; ' + input;
+  	} else {
+  		debugEl.innerHTML = input;
+  	}
   };
+  
+  function printPlayerLoc() {
+	   _debugOutput(`Ang: ${fPlayerA}; x: ${fPlayerX}; y: ${fPlayerY}
+	   Look: ${fLooktimer}`, 'debug'); 
+  }
 
 
   // returns true every a-th interation of b
