@@ -71,6 +71,9 @@ var gameEngineJS = (function(){
   var sLevelstring = "";
 
 
+  let hitSideCheck = 0;		// DEBUG only
+
+
   // keep track of map tiles visited by the rays, help cull sprites without trig
   let visitedTiles = new Uint32Array(nMapWidth * nMapHeight);
   let currentFrame = 0;
@@ -327,10 +330,15 @@ var gameEngineJS = (function(){
   // leaving the console for errors, logging seems to kill performance
   var _debugOutput = function(input, elementId, append = false){
   	let debugEl = document.getElementById(elementId)
-  	if(append) {
-  		debugEl.innerHTML += '; ' + input;
+
+  	if(input === 'clear') {
+  	  debugEl.textContent = '';
   	} else {
+	  if(append) {
+  		debugEl.insertAdjacentHTML("beforeend", `; ${input}`);
+  	  } else {
   		debugEl.innerHTML = input;
+  	  }
   	}
   };
 
@@ -763,13 +771,29 @@ var gameEngineJS = (function(){
       window.onkeydown = function(e) {
 
         console.log(e.which);
-	if (e.which === 192) {		// `
-		printRayObs();
-	}
-	if (e.which === 49) {		// 1
-		LockLook = !LockLook;
-		fLooktimer = 0;
-	}
+		if (e.which === 192) {		// `, print ray details to console
+			printRayObs();
+		}
+		if (e.which === 49) {		// 1, lock lookup/down to center
+			LockLook = !LockLook;
+			fLooktimer = 0;
+		}
+		if (e.which === 50) {		// 2, go to cardinal direction N
+			fPlayerA = PIx05;
+			hitSideCheck = 1;
+		}
+		if (e.which === 51) {		// 3, go to cardinal direction E
+			fPlayerA = PI___;
+			hitSideCheck = 0;
+		}
+		if (e.which === 52) {		// 4, go to cardinal direction S
+			fPlayerA = PIx1_5;
+			hitSideCheck = 1;
+		}
+		if (e.which === 53) {		// 5, go to cardinal direction W
+			fPlayerA = PIx2;
+			hitSideCheck = 0;
+		}
 
 
         if (e.which == 80) { // p
@@ -1205,6 +1229,8 @@ var gameEngineJS = (function(){
   var main = function(){
     gameRun = setInterval(gameLoop, 33);
     function gameLoop(){
+//       _debugOutput('clear', 'debug2');
+
 	  currentFrame++;
 
 	  let viewX = Math.cos(fPlayerA);		// NOTE these are used all over the place for player movement, maybe share
@@ -1275,6 +1301,14 @@ var gameEngineJS = (function(){
       var overlayscreen = [];
 
 
+		let doorStartAngle = 0;		// DEBUG only
+		let doorEndAngle = 0;		// DEBUG only
+		let prevTile = '';		// DEBUG only
+
+		let midFrameInfoMsg = '';		// DEBUG only
+		let endDoorInfoMsg = '';		// DEBUG only
+
+
 
       // for the length of the screenwidth (one frame)
       for(var screenColumn = 1; screenColumn <= nScreenWidth; screenColumn++) {
@@ -1296,6 +1330,8 @@ var gameEngineJS = (function(){
         var bBreakLoop = false;
 
         var fDistanceToWall = 0;
+	let addlDoorDist = 0;		// DEBUG only
+
         var fDistanceToObject = 0;
         var fDistanceToInverseObject = 0;
 
@@ -1381,6 +1417,7 @@ var gameEngineJS = (function(){
 
           	let fRayAngle = (fPlayerA - fFOV / 1.8) + (screenColumn / nScreenWidth) * fFOV;
 			fDistToDoor = fDistanceToWall + 0.5 * 1/Math.tan(fRayAngle) * (hit_side === 0 ? step_y : step_x);
+          	addlDoorDist = 0.5 * Math.abs(1/Math.tan(fRayAngle / 2));	// DEBUG only
 
 			bBreakLoop = true;
             sWalltype = tileType;
@@ -1389,6 +1426,16 @@ var gameEngineJS = (function(){
 
           // Test for walls	// NOTE why is it not....like, testing /for/ walls...
           else if( tileType != "." ){
+          	if (prevTile === 'X' && hit_side === hitSideCheck) {		// DEBUG only
+          		prevTile = '';
+          		let fPrevRayAngle = (fPlayerA - fFOV / 1.8) + ((screenColumn - 1) / nScreenWidth) * fFOV;
+
+				if (doorEndAngle === 0) {
+// 					doorEndAngle = ~~( fPrevRayAngle * I80divPI) % 360;
+					doorEndAngle = fPrevRayAngle;
+				}
+          	}
+
             bHitWall = true;
 
             fDistanceToWall = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
@@ -1569,7 +1616,7 @@ var gameEngineJS = (function(){
               } else {
                 screen[screenRow * nScreenWidth + screenColumn] = brightness[0];
               }
-      		  	
+
 //       		  }
             }  else if(sWalltype != "." || sWalltype == "T") {		// Solid Walltype
 
@@ -1601,11 +1648,28 @@ var gameEngineJS = (function(){
           } else {		// floor
             screen[screenRow * nScreenWidth + screenColumn] = _rh.renderFloor(screenRow);
           }
-
-          if(screenColumn === nScreenWidth / 2 && (sWalltype == '#' || sWalltype == 'X')) {
-		_debugOutput(`fDistToDoor: ${fDistToDoor}; fDistanceToWall: ${fDistanceToWall}; nCeiling: ${nCeiling}; nDoorFrameHeight: ${nDoorFrameHeight}`, 'debug2');
-           }
         } // end draw column loop
+
+        if(sWalltype == 'X' && doorStartAngle !== 0 && doorEndAngle !== 0) {
+			endDoorInfoMsg = `hit_side: ${hit_side.toFixed(3)};
+			doorStartAngle: ${doorStartAngle.toFixed(3)}; doorEndAngle: ${doorEndAngle.toFixed(3)};
+			`;
+    	}
+
+    	if(screenColumn === nScreenWidth / 2 && (sWalltype == '#' || sWalltype == 'X')) {
+			midFrameInfoMsg = `
+			fDistToDoor: ${fDistToDoor.toFixed(3)}; nDoorHeight: ${nDoorHeight.toFixed(3)};
+			nDoorFrameTop: ${nDoorFrameTop.toFixed(3)}; nDoorFrameBot: ${nDoorFrameBot.toFixed(3)};
+			addlDoorDist: ${addlDoorDist.toFixed(3)};<br>
+			fDistanceToWall: ${fDistanceToWall.toFixed(3)}; wallHeight: ${wallHeight.toFixed(3)};
+			nCeiling: ${nCeiling.toFixed(3)}; nFloor: ${nFloor.toFixed(3)};
+			`;
+    	}
+
+
+		if(midFrameInfoMsg !== '' || endDoorInfoMsg !== '') {
+			_debugOutput(`${midFrameInfoMsg}<br>${endDoorInfoMsg}`, 'debug2');
+		}
 
 
         // Object-Draw (removed overlayscreen)
