@@ -62,7 +62,7 @@ var gameEngineJS = (function(){
   var fPlayerX = 14.0;
   var fPlayerY = 1.0;
   var fPlayerA = 1.5;
-  var nDegrees = 0;
+//   var nDegrees = 0;
   var nRenderMode = 2;
 
   var nMapHeight = 16;
@@ -344,7 +344,7 @@ var gameEngineJS = (function(){
 
   function printPlayerLoc() {
 	   _debugOutput(`Ang: ${fPlayerA}; x: ${fPlayerX}; y: ${fPlayerY}
-	   Look: ${fLooktimer}`, 'debug');
+	   Look: ${fLooktimer}; Tile: ${map[~~fPlayerY * nMapWidth + ~~fPlayerX]}`, 'debug');
   }
 
 
@@ -696,10 +696,10 @@ var gameEngineJS = (function(){
     },
 
     // shading and sectionals for gate
-    renderGate: function(screenRow, fDistanceToWall, nDoorFrameHeight, nCeiling) {
+    renderGate: function(screenRow, fDistanceToWall, nDoorFrameTop, nCeiling) {
       var fill = "X";
 
-      if( screenRow < nDoorFrameHeight) {
+      if( screenRow < nDoorFrameTop) {
         if(fDistanceToWall < fDepth / 4) {
           fill = "&boxH;";
         } else {
@@ -1050,10 +1050,7 @@ var gameEngineJS = (function(){
         fPlayerA += 0.05;
       }
 
-      var fMoveFactor = 0.1;
-      if(bRunning){
-        fMoveFactor = 0.2;
-      }
+      let fMoveFactor = bRunning ? 0.2 : 0.1;
 
       let deltaXDir = 0;
       let deltaYDir = 0;
@@ -1099,14 +1096,21 @@ var gameEngineJS = (function(){
 
       if (map[~~fPlayerY * nMapWidth + ~~checkX] === '.') {
       	fPlayerX = newX;
+	  } else if (map[~~fPlayerY * nMapWidth + ~~checkX] === 'X'
+	  		&& ((Math.sign(totalX) <= 0 && checkX - ~~checkX > 0.5) || (Math.sign(totalX) >= 0 && checkX - ~~checkX < 0.5))) {
+	  	fPlayerX = newX;
 	  }
 
       let checkY = (totalY > 0) ? (newY + PLAYER_RADIUS) : (newY - PLAYER_RADIUS);
 
       if (map[~~checkY * nMapWidth + ~~fPlayerX] === '.') {
       	fPlayerY = newY;
+	  } else if (map[~~checkY * nMapWidth + ~~fPlayerX] === 'X'
+	  		&& ((Math.sign(totalY) >= 0 && checkY - ~~checkY < 0.5) || (Math.sign(totalY) <= 0 && checkY - ~~checkY > 0.5))) {
+	  	fPlayerY = newY;
 	  }
 
+	  // TODO add check for door tiles so we can go half way into the tile
 //       _debugOutput(`dX: ${deltaX}; dDirX: ${deltaXDir}; totX: ${totalX}; dY: ${deltaY}; dDirY: ${deltaYDir}; totY: ${totalY}`, 'debug2');
 	  },
   };
@@ -1302,7 +1306,9 @@ var gameEngineJS = (function(){
 
 
 		let doorStartAngle = 0;		// DEBUG only
+		let doorStartDist = 0;
 		let doorEndAngle = 0;		// DEBUG only
+		let doorEndDist = 0;
 		let prevTile = '';		// DEBUG only
 
 		let midFrameInfoMsg = '';		// DEBUG only
@@ -1330,6 +1336,7 @@ var gameEngineJS = (function(){
         var bBreakLoop = false;
 
         var fDistanceToWall = 0;
+	let fDistToDoor = 0;
 	let addlDoorDist = 0;		// DEBUG only
 
         var fDistanceToObject = 0;
@@ -1365,7 +1372,7 @@ var gameEngineJS = (function(){
       	var delta_x = Math.abs(1 / rayDirX);	// the dist the ray must travel to reach the border of the next tile
       	var delta_y = Math.abs(1 / rayDirY);
 
-      	var hit_side = 0;
+      	var hit_side = side_dist_x < side_dist_y ? 0 : 1;
 
       	var step_x = absSign(rayDirX);
       	var step_y = absSign(rayDirY);
@@ -1373,6 +1380,23 @@ var gameEngineJS = (function(){
       		// calculate distance to initial tile boundary
       	var side_dist_x = delta_x * (step_x === 1 ? (map_x + 1 - fPlayerX) : (fPlayerX - map_x));
       	var side_dist_y = delta_y * (step_y === 1 ? (map_y + 1 - fPlayerY) : (fPlayerY - map_y));
+
+      	// check if player is on door tile, so we can properly render it
+      	let playerInsideDoorTile = map[~~fPlayerY * nMapWidth + ~~fPlayerX] === 'X';
+
+		if (playerInsideDoorTile) {
+// 			bHitWall = true;
+
+			fDistanceToWall = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
+
+			fDistToDoor = fDistanceToWall + Math.abs(0.5 / (hit_side === 0 ? rayDirX : rayDirY));
+
+			let distToDoorX = ~~(fPlayerX + fDistToDoor * rayDirX);
+			let distToDoorY = ~~(fPlayerY + fDistToDoor * rayDirY);
+
+			bBreakLoop = map_x === distToDoorX && map_y === distToDoorY;
+            sWalltype = tileType;
+		}
 
         /**
          * Ray Casting Loop
@@ -1412,32 +1436,21 @@ var gameEngineJS = (function(){
           else if (tileType === 'X') {		// exit door
           	bHitWall = true;
 
-            fPrevDistanceToWall = hit_side === 0 ? side_dist_x - delta_x * 1.5 : side_dist_y - delta_y * 1.5;
             fDistanceToWall = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
 
-          	let fRayAngle = (fPlayerA - fFOV / 1.8) + (screenColumn / nScreenWidth) * fFOV;
-			fDistToDoor = fDistanceToWall + 0.5 * 1/Math.tan(fRayAngle) * (hit_side === 0 ? step_y : step_x);
-          	addlDoorDist = 0.5 * Math.abs(1/Math.tan(fRayAngle / 2));	// DEBUG only
+			fDistToDoor = fDistanceToWall + Math.abs(0.5 / (hit_side === 0 ? rayDirX : rayDirY));
 
-			bBreakLoop = true;
+			let distToDoorX = ~~(fPlayerX + fDistToDoor * rayDirX);
+			let distToDoorY = ~~(fPlayerY + fDistToDoor * rayDirY);
+
+			bBreakLoop = map_x === distToDoorX && map_y === distToDoorY;
             sWalltype = tileType;
             isBoundary = true;
           }
 
           // Test for walls	// NOTE why is it not....like, testing /for/ walls...
-          else if( tileType != "." ){
-          	if (prevTile === 'X' && hit_side === hitSideCheck) {		// DEBUG only
-          		prevTile = '';
-          		let fPrevRayAngle = (fPlayerA - fFOV / 1.8) + ((screenColumn - 1) / nScreenWidth) * fFOV;
-
-				if (doorEndAngle === 0) {
-// 					doorEndAngle = ~~( fPrevRayAngle * I80divPI) % 360;
-					doorEndAngle = fPrevRayAngle;
-				}
-          	}
-
+          else if( tileType != "." ) {
             bHitWall = true;
-
             fDistanceToWall = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
             bBreakLoop = true;
 
@@ -1449,9 +1462,7 @@ var gameEngineJS = (function(){
 
         } // end ray casting loop
 
-
-
-		nRayLength = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
+// 		nRayLength = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
 
 		if(hit_side === 0) {		// NS wall	// sin(RayAng) gives normalized Ray Vector
 			fSampleX = fPlayerY + fDistanceToWall * rayDirY;
@@ -1518,15 +1529,15 @@ var gameEngineJS = (function(){
 				// alternatively, find an alternative method
 // 	let fRayAngle = (fPlayerA - fFOV / 1.8) + (screenColumn / nScreenWidth) * fFOV;		// MOVED to its own door hit logic
 // 	let fDistToDoor = fDistanceToWall + 0.5 * Math.abs(1/Math.tan(fRayAngle));
-	let nDoorHeight = Math.round(nScreenHeight / fDistanceToWall)
-        let nDoorFrameHeight = screenSkew - nDoorHeight / 2;	// FOLLOWUP, this doesn't seem to work the same as the tower
+	let nDoorHeight = Math.round(nScreenHeight / fDistToDoor)
+        let nDoorFrameTop = screenSkew - nDoorHeight / 2;	// FOLLOWUP, this doesn't seem to work the same as the tower
         											// it doesn't seem to make the door shorter
         										// TODO first, change the render
         											// make the blockV on the left and right edges (maybe in the center, like striped)
         											// and blockH in the center
         										// Second, try to actually give it an upper door jamb
         										// ALSO, standardize Door vs Gate in var and func names
-        let nDoorFrameLow = screenSkew + nDoorHeight / 2;
+        let nDoorFrameBot = screenSkew + nDoorHeight / 2;
 
         // similar operation for objects
         var nObjectCeiling = screenSkew - nScreenHeight / fDistanceToObject;
@@ -1564,11 +1575,11 @@ var gameEngineJS = (function(){
                 screen[screenRow * nScreenWidth + screenColumn] = brightness[0];
               }
             }		          // solid block
-          } else if( screenRow > nCeiling && (screenRow <= nFloor || (screenRow <= nDoorFrameLow && sWalltype == 'X') )) {
+          } else if( screenRow > nCeiling && screenRow <= nFloor && !(screenRow >= nDoorFrameBot && sWalltype == 'X') ) {
 
             // Door/exit Walltype
             if(sWalltype == "X"){
-//               if(screenRow > nCeiling && screenRow < nDoorFrameHeight) {
+//               if(screenRow > nCeiling && screenRow < nDoorFrameTop) {
 //               	let fPrevDistanceToWall = fDistanceToWall - 1;
 // 				let jambHeight = Math.round(nScreenHeight / fPrevDistanceToWall);	// ALSO, does this need to be new or rather the prev
 // 				let jambCeiling = screenSkew - jambHeight / 2;						// am I calc'ing the jamb or the exit here?
@@ -1610,9 +1621,9 @@ var gameEngineJS = (function(){
 // 				var fSampleY = ( (screenRow - nCeiling) / (nFloor - nCeiling) );
 //       			screen[screenRow * nScreenWidth + screenColumn] = _rh.renderWall(fDistToDoor, sWallDirection, _getSamplePixel(textures['#'], fSampleX, fSampleY));
 //       		  } else {
-			if (screenRow > nDoorFrameHeight) {
-				screen[screenRow * nScreenWidth + screenColumn] = _rh.renderGate(screenRow, fDistToDoor, nDoorFrameHeight, nCeiling);
-			
+			if (screenRow > nDoorFrameTop) {
+				screen[screenRow * nScreenWidth + screenColumn] = _rh.renderGate(screenRow, fDistToDoor, nDoorFrameTop, nCeiling);
+
               } else {
                 screen[screenRow * nScreenWidth + screenColumn] = brightness[0];
               }
@@ -1650,17 +1661,27 @@ var gameEngineJS = (function(){
           }
         } // end draw column loop
 
-        if(sWalltype == 'X' && doorStartAngle !== 0 && doorEndAngle !== 0) {
-			endDoorInfoMsg = `hit_side: ${hit_side.toFixed(3)};
-			doorStartAngle: ${doorStartAngle.toFixed(3)}; doorEndAngle: ${doorEndAngle.toFixed(3)};
-			`;
-    	}
+        if (prevTile === 'X' && hit_side === hitSideCheck && screenColumn === nScreenWidth) {		// DEBUG only
+          		prevTile = '';
+          		let fPrevRayAngle = (fPlayerA - fFOV / 1.8) + ((screenColumn) / nScreenWidth) * fFOV;
 
+				if (doorEndAngle === 0) {
+// 					doorEndAngle = ~~( fPrevRayAngle * I80divPI) % 360;
+					doorEndAngle = fPrevRayAngle;
+				}
+          	}
+        //
+//         if(doorStartAngle !== 0 || doorEndAngle !== 0) {
+// 			endDoorInfoMsg = `hit_side: ${hit_side.toFixed(3)};
+// 			doorStartAngle: ${doorStartAngle.toFixed(3)}; doorStartDist: ${doorStartDist.toFixed(3)};
+// 			doorEndAngle: ${doorEndAngle.toFixed(3)}; doorEndDist: ${doorEndDist.toFixed(3)};
+// 			`;
+//     	}
+//
     	if(screenColumn === nScreenWidth / 2 && (sWalltype == '#' || sWalltype == 'X')) {
 			midFrameInfoMsg = `
 			fDistToDoor: ${fDistToDoor.toFixed(3)}; nDoorHeight: ${nDoorHeight.toFixed(3)};
-			nDoorFrameTop: ${nDoorFrameTop.toFixed(3)}; nDoorFrameBot: ${nDoorFrameBot.toFixed(3)};
-			addlDoorDist: ${addlDoorDist.toFixed(3)};<br>
+			nDoorFrameTop: ${nDoorFrameTop.toFixed(3)}; nDoorFrameBot: ${nDoorFrameBot.toFixed(3)};<br>
 			fDistanceToWall: ${fDistanceToWall.toFixed(3)}; wallHeight: ${wallHeight.toFixed(3)};
 			nCeiling: ${nCeiling.toFixed(3)}; nFloor: ${nFloor.toFixed(3)};
 			`;
