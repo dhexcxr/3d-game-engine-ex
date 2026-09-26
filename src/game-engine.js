@@ -1373,6 +1373,20 @@ var gameEngineJS = (function(){
             bHitBackObject = true;
           }
 
+          else if (tileType === 'X') {		// exit door
+          	bHitWall = true;
+
+            fPrevDistanceToWall = hit_side === 0 ? side_dist_x - delta_x * 1.5 : side_dist_y - delta_y * 1.5;
+            fDistanceToWall = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
+
+          	let fRayAngle = (fPlayerA - fFOV / 1.8) + (screenColumn / nScreenWidth) * fFOV;
+			fDistToDoor = fDistanceToWall + 0.5 * 1/Math.tan(fRayAngle) * (hit_side === 0 ? step_y : step_x);
+
+			bBreakLoop = true;
+            sWalltype = tileType;
+            isBoundary = true;
+          }
+
           // Test for walls	// NOTE why is it not....like, testing /for/ walls...
           else if( tileType != "." ){
             bHitWall = true;
