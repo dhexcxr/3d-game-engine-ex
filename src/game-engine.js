@@ -97,6 +97,8 @@ var gameEngineJS = (function(){
   var gameRun;
   var animationTimer = 0;
 
+  const edgeThreshold = 0.01;		// control thickness of border in flat renderer, also holes
+
   const MIN_DIST = 0.1; // Prevent division by zero if standing exactly on a sprite
 
   const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls
@@ -1473,7 +1475,7 @@ var gameEngineJS = (function(){
 
 			bBreakLoop = map_x === distToDoorX && map_y === distToDoorY;
             sWalltype = tileType;
-            isBoundary = true;
+//             isBoundary = true;
           }
 
           // Test for walls	// NOTE why is it not....like, testing /for/ walls...
@@ -1485,7 +1487,7 @@ var gameEngineJS = (function(){
             sWalltype = tileType;
 
 			// var isBoundary = true;		// NOTE i only guessed that this needs to be true, it seemed like it was set when they nieve raytraced rays were found to be close to tile boundary
-			isBoundary = true;
+// 			isBoundary = true;
           }
 
 	          // save back of object distance as soon as we're out of it
@@ -1529,6 +1531,19 @@ var gameEngineJS = (function(){
 					// var for each object maybe
 				// at the very least I need to record the ray length whenever a thing is hit
 					// and not update it afterwards
+
+			// NOTE isBoundary is only used for the solid wall rendering
+				// it also effects the holes
+
+		if (fSampleX <= edgeThreshold || fSampleX >= 1.0 - edgeThreshold) {
+			if(hit_NS_wall) {
+				tileCheckLocDif = sWallFaceDirection === 'W' ? -1 : 1;
+				isBoundary = sWalltype !== map[map_y * nMapWidth + map_x + tileCheckLocDif];
+			} else {
+				tileCheckLocDif = sWallFaceDirection === 'S' ? -1 : 1;
+				isBoundary = sWalltype !== map[(map_y + tileCheckLocDif) * nMapWidth + map_x];
+			}
+		}
 
 
 
