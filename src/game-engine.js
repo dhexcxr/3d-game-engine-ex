@@ -1456,10 +1456,10 @@ var gameEngineJS = (function(){
           	if(!bHitObject) fDistanceToObject = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
             bHitObject = true;
             sObjectType = tileType;
-          } else if(bHitObject == true && tileType == "."){
-          	if(!bHitBackObject) fDistanceToInverseObject = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
-            bHitBackObject = true;
-          }
+          } // else if(bHitObject == true && tileType !== "o"){
+//           	if(!bHitBackObject) fDistanceToInverseObject = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
+//             bHitBackObject = true;
+//           }
 
           else if (tileType === 'X') {		// exit door
           	bHitWall = true;
@@ -1488,7 +1488,17 @@ var gameEngineJS = (function(){
 			isBoundary = true;
           }
 
+	          // save back of object distance as soon as we're out of it
+          if(bHitObject == true && tileType !== "o") {	// if we get multiple objects we'll eventually need to make an array of them or something and loop through them to check when we leave a specific one
+          		// well, if we don't have them overlapping in a single screen column....
+          		// TODO test how this might work with two separate holes, we'll need to paint hole, then floor, then hole
+          	if(!bHitBackObject) fDistanceToInverseObject = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
+            bHitBackObject = true;
+          }
+
         } // end ray casting loop
+
+
 
 // 		nRayLength = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
 
@@ -1542,9 +1552,9 @@ var gameEngineJS = (function(){
 				        										// ALSO, standardize Door vs Gate in var and func names
 
         // similar operation for objects		// TODO calc these like we did for walls and doors probably
-        var nObjectCeiling = screenSkew - nScreenHeight / fDistanceToObject;
-        var nObjectFloor = screenSkew + nScreenHeight / fDistanceToObject;
-        var nFObjectBackwall = screenSkew + (nScreenHeight / (fDistanceToInverseObject + 0) ); // 0 makes the object flat, higher the number, the higher the object :)
+        var nObjectCeiling = screenSkew - nScreenHeight / fDistanceToObject / 2;
+        var nObjectFloor = screenSkew + nScreenHeight / fDistanceToObject / 2;
+        var nFObjectBackwall = screenSkew + (nScreenHeight / (fDistanceToInverseObject + 0) /2 ); // 0 makes the object flat, higher the number, the higher the object :)
 
 
         // the spot where the wall was hit
