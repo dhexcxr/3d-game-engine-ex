@@ -553,11 +553,11 @@ var gameEngineJS = (function(){
   // each value can be rendered with 5 shades (4 plus black)
   var _rh = {
 
-    renderWall: function(fDistanceToWall, sWallDirection, pixel){
+    renderWall: function(fDistanceToWall, sWallFaceDirection, pixel){
 
       var fill = "";
 
-      if( sWallDirection === "N" || sWallDirection === "S" ){
+      if( sWallFaceDirection === "N" || sWallFaceDirection === "S" ){
 
         if(fDistanceToWall < fDepth / 5.5 ){
 
@@ -1386,7 +1386,7 @@ var gameEngineJS = (function(){
 //         var fEyeY = Math.sin(fRayAngle);
 
         var fSampleX = 0.0;
-        var sWallDirection = "N";
+        var sWallFaceDirection = "N";
 
         var nRayLength = 0.0;
 
@@ -1403,7 +1403,7 @@ var gameEngineJS = (function(){
       	var delta_x = Math.abs(1 / rayDirX);	// the dist the ray must travel to reach the border of the next tile
       	var delta_y = Math.abs(1 / rayDirY);
 
-      	var hit_side = side_dist_x < side_dist_y ? 0 : 1;
+      	var hit_NS_wall = side_dist_x < side_dist_y ? 0 : 1;
 
       	var step_x = absSign(rayDirX);
       	var step_y = absSign(rayDirY);
@@ -1418,9 +1418,9 @@ var gameEngineJS = (function(){
 		if (playerInsideDoorTile) {	// NOTE this is not working, just comment out for now
 // 			bHitWall = true;
 
-			fDistanceToWall = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
+			fDistanceToWall = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
 
-			fDistToDoor = fDistanceToWall + Math.abs(0.5 / (hit_side === 0 ? rayDirX : rayDirY));
+			fDistToDoor = fDistanceToWall + Math.abs(0.5 / (hit_NS_wall ? rayDirX : rayDirY));
 
 			let distToDoorX = ~~(fPlayerX + fDistToDoor * rayDirX);
 			let distToDoorY = ~~(fPlayerY + fDistToDoor * rayDirY);
@@ -1437,11 +1437,11 @@ var gameEngineJS = (function(){
 		  if(side_dist_x < side_dist_y) {
 			side_dist_x += delta_x;
 			map_x += step_x;
-			hit_side = 0;
+			hit_NS_wall = true;
 		  } else {
 			side_dist_y += delta_y;
 			map_y += step_y;
-			hit_side = 1;
+			hit_NS_wall = false;
 		  }
 
           visitedTiles[map_y * nMapWidth + map_x] = currentFrame;
@@ -1456,20 +1456,20 @@ var gameEngineJS = (function(){
 
           // test for objects		// NOTE TODO holes in the floor are not rendering at all
           else if(tileType == "o" || tileType == ","){
-          	if(!bHitObject) fDistanceToObject = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
+          	if(!bHitObject) fDistanceToObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
             bHitObject = true;
             sObjectType = tileType;
           } // else if(bHitObject == true && tileType !== "o"){
-//           	if(!bHitBackObject) fDistanceToInverseObject = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
+//           	if(!bHitBackObject) fDistanceToInverseObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
 //             bHitBackObject = true;
 //           }
 
           else if (tileType === 'X') {		// exit door
           	bHitWall = true;
 
-            fDistanceToWall = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
+            fDistanceToWall = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
 
-			fDistToDoor = fDistanceToWall + Math.abs(0.5 / (hit_side === 0 ? rayDirX : rayDirY));
+			fDistToDoor = fDistanceToWall + Math.abs(0.5 / (hit_NS_wall ? rayDirX : rayDirY));
 
 			let distToDoorX = ~~(fPlayerX + fDistToDoor * rayDirX);
 			let distToDoorY = ~~(fPlayerY + fDistToDoor * rayDirY);
@@ -1482,7 +1482,7 @@ var gameEngineJS = (function(){
           // Test for walls	// NOTE why is it not....like, testing /for/ walls...
           else if( tileType != "." ) {
             bHitWall = true;
-            fDistanceToWall = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
+            fDistanceToWall = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
             bBreakLoop = true;
 
             sWalltype = tileType;
@@ -1495,7 +1495,7 @@ var gameEngineJS = (function(){
           if(bHitObject == true && tileType !== "o") {	// if we get multiple objects we'll eventually need to make an array of them or something and loop through them to check when we leave a specific one
           		// well, if we don't have them overlapping in a single screen column....
           		// TODO test how this might work with two separate holes, we'll need to paint hole, then floor, then hole
-          	if(!bHitBackObject) fDistanceToInverseObject = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
+          	if(!bHitBackObject) fDistanceToInverseObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
             bHitBackObject = true;
           }
 
@@ -1503,14 +1503,14 @@ var gameEngineJS = (function(){
 
 
 
-// 		nRayLength = hit_side === 0 ? side_dist_x - delta_x : side_dist_y - delta_y;
+// 		nRayLength = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
 
-		if(hit_side === 0) {		// NS wall	// sin(RayAng) gives normalized Ray Vector
+		if(hit_NS_wall) {		// NS wall	// sin(RayAng) gives normalized Ray Vector
 			fSampleX = fPlayerY + fDistanceToWall * rayDirY;
-			sWallDirection = step_x === 1 ? "W" : "E";
+			sWallFaceDirection = step_x === 1 ? "W" : "E";
 		} else {
 			fSampleX = fPlayerX + fDistanceToWall * rayDirX;
-			sWallDirection = step_y === 1 ? "N" : "S";
+			sWallFaceDirection = step_y === 1 ? "N" : "S";
 		}
 
 		// used to place texture exactly where ray hit wall
@@ -1528,7 +1528,7 @@ var gameEngineJS = (function(){
 				/// FOLLWUP, so the original incremented each of these fDistance... vars
 					// inside the ray cast loop, while the <things> were NOT hit
 					// thus stopping updating them when they were hit
-				// I feel like I could keep them out, but I might need an hit_side
+				// I feel like I could keep them out, but I might need an hit_NS_wall
 					// var for each object maybe
 				// at the very least I need to record the ray length whenever a thing is hit
 					// and not update it afterwards
@@ -1591,7 +1591,7 @@ var gameEngineJS = (function(){
 
                 var fSampleY = ( (screenRow - nTower) / (nCeiling - nTower) );
 
-                screen[screenRow * nScreenWidth + screenColumn] = _rh.renderWall(fDistanceToWall, sWallDirection, _getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
+                screen[screenRow * nScreenWidth + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
               } else {
                 screen[screenRow * nScreenWidth + screenColumn] = brightness[0];
               }
@@ -1631,7 +1631,7 @@ var gameEngineJS = (function(){
               if( nRenderMode == 1 ){
                 screen[screenRow * nScreenWidth + screenColumn] = _getSamplePixel(textures[sWalltype], fSampleX, fSampleY);
               } else if( nRenderMode == 2 ) {		// Render Texture with Shading
-                screen[screenRow * nScreenWidth + screenColumn] = _rh.renderWall(fDistanceToWall, sWallDirection, _getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
+                screen[screenRow * nScreenWidth + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
               } else if( nRenderMode == 0 ) {	// old, solid-style shading
                 screen[screenRow * nScreenWidth + screenColumn] = _rh.renderSolidWall(fDistanceToWall, isBoundary);
               }
@@ -1653,14 +1653,19 @@ var gameEngineJS = (function(){
 			nCeiling: ${nCeiling.toFixed(3)}; nFloor: ${nFloor.toFixed(3)};
 			`;
  */
+ 			// midFrameInfoMsg = `
+// 			fDistanceToObject: ${fDistanceToObject};
+// 			nObjectCeiling: ${nObjectCeiling.toFixed(3)};
+// 			nObjectFloor: ${nObjectFloor.toFixed(3)};
+// 			fDistanceToInverseObject: ${fDistanceToInverseObject};
+// 			nFObjectBackwall: ${nFObjectBackwall.toFixed(3)};
+// 			fDistanceToWall: ${fDistanceToWall};
+// 			nFloor: ${nFloor}
+// 			`;
+
  			midFrameInfoMsg = `
-			fDistanceToObject: ${fDistanceToObject};
-			nObjectCeiling: ${nObjectCeiling.toFixed(3)};
-			nObjectFloor: ${nObjectFloor.toFixed(3)};
-			fDistanceToInverseObject: ${fDistanceToInverseObject};
-			nFObjectBackwall: ${nFObjectBackwall.toFixed(3)};
-			fDistanceToWall: ${fDistanceToWall};
-			nFloor: ${nFloor}
+			hit_NS_wall: ${hit_NS_wall};
+			sWallFaceDirection: ${sWallFaceDirection};
 			`;
     	}
 
