@@ -93,27 +93,14 @@ let resModifier = 2;
 	  // co-opt bracket notation to automatically encode chars as numbers for storage in Unit16Array
 	  this.buffer = new Proxy(bufferArray, {
 		get(target, prop, receiver) {
-		  // Intercept bracket reads like obj[0]
-		  if (typeof prop === 'string' && !isNaN(prop)) {
-			const index = Number(prop);
-			const charCode = target.innerUint16Array[index];
-			return charCode === 0 ? undefined : String.fromCharCode(charCode);
-		  }
-		  return Reflect.get(target, prop, receiver);
+			// Intercept bracket reads like obj[0]
+			return String.fromCharCode(target.innerUint16Array[prop]);
 		},
 
 		set(target, prop, value, receiver) {
-		  // Intercept bracket writes like obj[0] = 'g'
-		  if (typeof prop === 'string' && !isNaN(prop)) {
-			const index = Number(prop);
-			if (typeof value === 'string' && value.length > 0) {
-			  target.innerUint16Array[index] = value.charCodeAt(0);
-			} else if (typeof value === 'number') {
-			  target.innerUint16Array[index] = value;
-			}
+			// Intercept bracket writes like obj[0] = 'g'
+			target.innerUint16Array[prop] = value.charCodeAt(0);
 			return true;
-		  }
-		  return Reflect.set(target, prop, value, receiver);
 		}
 	  });
 	},
