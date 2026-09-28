@@ -1,5 +1,8 @@
 export {_r, _rh};
 
+import {game, brightness, player} from './main-game-engine.js';
+import {_debugOutput, screen, map} from './main-io.js';
+
 /*
 	original top level funcs:
 		_getSamplePixel
@@ -50,7 +53,7 @@ let _r = {
 
 		if( texture.texture == "DIRECTIONAL" ){
 		  // Different Texture based on viewport
-		  if( fPlayerA > 0 && fPlayerA < Math.PI ){
+		  if( player.ang > 0 && player.ang < Math.PI ){
 			texpixels = texture.S;
 		  } else {
 			texpixels = texture.N;
@@ -105,13 +108,13 @@ let _r = {
    */
   fPrepareFrame: function(oInput, oOverlay, eTarget){
     var oOverlay = oOverlay || false;
-    var eTarget  = eTarget || eScreen;
+    var eTarget  = eTarget || screen.output;
     var sOutput = [];
 
 // NOTE TODO i think this is where the skewing can be improved
 
     // this is the maximum of variation created by the lookup timer, aka the final lookmodifier value
-    var neverMoreThan = Math.round(nScreenHeight / _skipEveryXrow(fLooktimer) - 1);
+    var neverMoreThan = Math.round(screen.height / _skipEveryXrow(game.fLooktimer) - 1);
 
     // used to skew the image
     var globalPrintIndex = 0;
@@ -119,17 +122,17 @@ let _r = {
 
     // if looking up, the starting point is the max number of pixesl to indent,
     // which will be decremented, otherwise it remains 0, which will be incremented
-    if( fLooktimer > 0 && isFinite(neverMoreThan) ){
+    if( game.fLooktimer > 0 && isFinite(neverMoreThan) ){
       fLookModifier = neverMoreThan;
     }
 
     // interate each row at a time
-    for(var row = 0; row < nScreenHeight; row++){
+    for(var row = 0; row < screen.height; row++){
 
       // increment the fLookModifier every time it needs to grow (grows per row)
-      if ( _everyAofB(row, _skipEveryXrow(fLooktimer)) ) {
+      if ( _everyAofB(row, _skipEveryXrow(game.fLooktimer)) ) {
 						// looking up
-          fLooktimer > 0 ? fLookModifier-- : fLookModifier++;
+          game.fLooktimer > 0 ? fLookModifier-- : fLookModifier++;
       }
 
       // print filler pixels
@@ -143,7 +146,7 @@ let _r = {
       //  make a new array that contains the indices of the elements to print
       // (removes X amount of elements from array)
       var items = [];
-      for (var i=0; i<= nScreenWidth; i++) {
+      for (var i=0; i<= screen.width; i++) {
         items.push(i);
       }
 
@@ -154,7 +157,7 @@ let _r = {
       removeFrom = _evenlyPickItemsFromArray(items, toBeRemoved);
 
       // loops through each rows of pixels
-      for(var rpix = 0; rpix < nScreenWidth; rpix++){
+      for(var rpix = 0; rpix < screen.width; rpix++){
 
         // print only if the pixel is in the list of pixels to print
         if( removeFrom.includes(rpix) ){
@@ -181,24 +184,24 @@ let _r = {
   fDrawFrame: function(screen, overlayscreen, target) {
     var frame = _r.fPrepareFrame(screen, overlayscreen);
 // 	var frame = screen;		// DEBUG uncomment to remove skew from look up/down rendering
-    var target = target || eScreen;
+    var target = target || screen.output;
 
     var sOutput = "";
 
     // interates over each row again, and omits the first and last 30 pixels, to disguise the skewing!
     var printIndex = 0;
-    var removePixels = nScreenHeight / 2;
-    for(var row = 0; row < nScreenHeight; row++){
-      for(var pix = 0; pix < nScreenWidth; pix++){
+    var removePixels = screen.height / 2;
+    for(var row = 0; row < screen.height; row++){
+      for(var pix = 0; pix < screen.width; pix++){
 
         // H-blank based on screen-width
-        if(printIndex % (nScreenWidth) == 0){
+        if(printIndex % (screen.width) == 0){
           sOutput += "<br>";
         }
 
         if( pix < removePixels ){
           sOutput += "";
-        } else if( pix > nScreenWidth - removePixels ) {
+        } else if( pix > screen.width - removePixels ) {
           sOutput += "";
         } else {
           sOutput += frame[printIndex];
@@ -217,7 +220,7 @@ let _r = {
   moveSprites: function() {
 
     // for each sprite object
-	for (const sprite of Object.values(oLevelSprites)) {
+	for (const sprite of Object.values(map.sprites)) {
       // if the sprite"s move flag is set
       if( sprite.move ){
         // var fMovementSpeed = 0.01;
@@ -235,7 +238,7 @@ let _r = {
         var fCollideY2 = +(sprite.y) + 0.425; // 0.25
         var fCollideX2 = +(sprite.x) - 0.65; //0.5
 
-        if( map[ ~~(fCollideY) * nMapWidth + ~~(fCollideX)] != "." || map[ ~~(fCollideY2) * nMapWidth + ~~(fCollideX2)] != "." ){
+        if( map.tiles[ ~~(fCollideY) * map.width + ~~(fCollideX)] != "." || map.tiles[ ~~(fCollideY2) * map.width + ~~(fCollideX2)] != "." ){
 
           sprite.stuckcounter++;
 
@@ -281,8 +284,8 @@ let _r = {
 //         }
 
         // TODO: sprites hitting each other
-        // for(var sj=0; sj < Object.keys(oLevelSprites).length; sj++ ){
-        //   var jsprite = oLevelSprites[Object.keys(oLevelSprites)[sj]];
+        // for(var sj=0; sj < Object.keys(map.sprites).length; sj++ ){
+        //   var jsprite = map.sprites[Object.keys(map.sprites)[sj]];
         //   if( jsprite.z - sprite.z > 2 ){
         //     jsprite.r = (+(sprite.r) + +(Math.PI * 1.5) ) % +(Math.PI * 2.0);
         //   }
@@ -299,10 +302,10 @@ let _r = {
    updateSpriteBuffer: function() {
 
     	// converts object of objects to list
-    oLevelSprites = {
-    	...(Object.values(oLevelSprites).map(sprite => {
+    map.sprites = {
+    	...(Object.values(map.sprites).map(sprite => {
     		    // calculates the distance to the player
-    		sprite.z = Math.sqrt((sprite.x - fPlayerX) ** 2 + (sprite.y - fPlayerY) ** 2);
+    		sprite.z = Math.sqrt((sprite.x - player.x) ** 2 + (sprite.y - player.y) ** 2);
     		return sprite;
     	}).sort(_sortSpriteList))    // sorts the list
     };		    // make object from array again
@@ -311,16 +314,16 @@ let _r = {
 
   drawSprites: function() {
       // draw sprites	// TODO change this to an array of objects probably
-	  for (const sprite of Object.values(oLevelSprites)) {
+	  for (const sprite of Object.values(map.sprites)) {
 
-		let spriteTileIndex = ~~sprite.y * nMapWidth + ~~sprite.x;
+		let spriteTileIndex = ~~sprite.y * map.width + ~~sprite.x;
 
 // 		let spriteTileAdjacentCardinals = [spriteTileIndex, spriteTileIndex + 1, spriteTileIndex - 1,
-// 											spriteTileIndex + nMapWidth, spriteTileIndex + nMapWidth + 1, spriteTileIndex + nMapWidth - 1,
-// 											spriteTileIndex - nMapWidth, spriteTileIndex - nMapWidth + 1, spriteTileIndex - nMapWidth - 1];
+// 											spriteTileIndex + map.width, spriteTileIndex + map.width + 1, spriteTileIndex + map.width - 1,
+// 											spriteTileIndex - map.width, spriteTileIndex - map.width + 1, spriteTileIndex - map.width - 1];
 		let spriteTileAdjacentCardinals = [spriteTileIndex];
 
-		let spriteTileNotVisited = spriteTileAdjacentCardinals.some(tileIndex => visitedTiles[tileIndex] !== currentFrame);
+		let spriteTileNotVisited = spriteTileAdjacentCardinals.some(tileIndex => map.visitedTiles[tileIndex] !== game.currentFrame);
 
 		if(spriteTileNotVisited) {
 // 			_debugOutput(`STV: ${!spriteTileNotVisited}`, 'debug2');
@@ -331,15 +334,15 @@ let _r = {
         var currentSpriteObject = allSprites[sprite.name];
 
 		// Translate sprite position relative to the player
-        let playerToSpriteX = sprite.x - fPlayerX;
-        let playerToSpriteY = sprite.y - fPlayerY;
+        let playerToSpriteX = sprite.x - player.x;
+        let playerToSpriteY = sprite.y - player.y;
 
         // Rotate sprite into player's local space using your view angles
-	    let invDet = 1.0 / (planeX * viewY - viewX * planeY);
+	    let invDet = 1.0 / (planeX * player.viewY - player.viewX * planeY);
 	    // Transform sprite position into camera space using the inverse matrix
 			// spriteViewX is the lateral (left/right) offset on the screen plane
 			// fSpriteDist is the depth
-		let spriteViewX = invDet * (viewY * playerToSpriteX - viewX * playerToSpriteY);
+		let spriteViewX = invDet * (player.viewY * playerToSpriteX - player.viewX * playerToSpriteY);
 		let fSpriteDist = invDet * (-planeY * playerToSpriteX + planeX * playerToSpriteY);
 
         if (fSpriteDist < MIN_DIST) {
@@ -348,10 +351,10 @@ let _r = {
         }
 
         // project onto screen
-        let spriteScreenX = (nScreenWidth / 2) * (1 + spriteViewX / fSpriteDist);
+        let spriteScreenX = (screen.width / 2) * (1 + spriteViewX / fSpriteDist);
 
         		// TODO add constant for wall height, 16
-        let fSpriteHeight = nScreenHeight / fSpriteDist;
+        let fSpriteHeight = screen.height / fSpriteDist;
 
         let bInPlayerView = true;		// NOTE this should be removed at some point, we'll only have visible sprites at this point
 
@@ -361,10 +364,10 @@ let _r = {
 
           // very similar operation to background floor and ceiling.
           // Sprite height is default 1, but we can adjust with the factor passed in the sprite object/
-//           var fSpriteCeiling = +(nScreenHeight / ((2 - nJumptimer * 0.15) - fLooktimer * 0.15)) - nScreenHeight / (+(fSpriteDist) ) * currentSpriteObject.hghtFctr;
-//           var fSpriteFloor = +(screenSkew) + nScreenHeight / (+(fSpriteDist) );
+//           var fSpriteCeiling = +(screen.height / ((2 - game.nJumptimer * 0.15) - game.fLooktimer * 0.15)) - screen.height / (+(fSpriteDist) ) * currentSpriteObject.hghtFctr;
+//           var fSpriteFloor = +(screen.skew) + screen.height / (+(fSpriteDist) );
 
-          var fSpriteCeiling = screenSkew - fSpriteHeight / 2 * currentSpriteObject.hghtFctr;	// NOTE TODO why did I add screenSkew to this?
+          var fSpriteCeiling = screen.skew - fSpriteHeight / 2 * currentSpriteObject.hghtFctr;	// NOTE TODO why did I add screen.skew to this?
 		  var fSpriteFloor = fSpriteCeiling - fSpriteHeight;
 
 // 		  _debugOutput(`SprDist: ${fSpriteDist}; SprH: ${fSpriteHeight}; SprCeil: ${fSpriteCeiling}; SprFlr: ${fSpriteFloor}`, 'debug2');
@@ -382,7 +385,7 @@ let _r = {
           var fMiddleOfSprite = spriteScreenX;
 
           // The angle the sprite is facing relative to the player
-          var fSpriteBeautyAngle = fPlayerA - sprite.r + Math.PI / 4.0;
+          var fSpriteBeautyAngle = player.ang - sprite.r + Math.PI / 4.0;
           // normalize
           if (fSpriteBeautyAngle < 0){
             fSpriteBeautyAngle += +(Math.PI * 2.0);
@@ -407,11 +410,11 @@ let _r = {
               // animation-cycle available, determine the current cycle
               // TODO: randomize cycle position
               if( sprite.move && "walkframes" in currentSpriteObject ){
-                if( animationTimer < 5 ){
+                if( game.animationTimer < 5 ){
                   sAnimationFrame = "W1";
-                } else if( animationTimer >= 5 && animationTimer < 10 ) {
+                } else if( game.animationTimer >= 5 && game.animationTimer < 10 ) {
                   sAnimationFrame = "W2";
-                } else if( animationTimer >= 10 ) {
+                } else if( game.animationTimer >= 10 ) {
                   sAnimationFrame = false;
                 }
               }
@@ -445,7 +448,7 @@ let _r = {
 
 
               // assign based on render mode
-              if( nRenderMode == 2 || nRenderMode == 0 ){
+              if( sceen.nRenderMode == 2 || sceen.nRenderMode == 0 ){
                 sSpriteGlyph = _rh.renderWall( fSpriteDist, "W", sSamplePixel );
               } else {
                 sSpriteGlyph = sSamplePixel;
@@ -454,15 +457,15 @@ let _r = {
 
               var nSpriteColumn = ~~((fMiddleOfSprite + sx - (fSpriteWidth / 2)));
 
-              if (nSpriteColumn >= 0 && nSpriteColumn < nScreenWidth){
+              if (nSpriteColumn >= 0 && nSpriteColumn < screen.width){
                 // only render the sprite pixel if it is not a . or a space, and if the sprite is far enough from the player
-                if (sSpriteGlyph != "." && sSpriteGlyph != brightness[0] && fDepthBuffer[nSpriteColumn] >= fSpriteDist ){
+                if (sSpriteGlyph != "." && sSpriteGlyph != brightness[0] && screen.depthBuffer[nSpriteColumn] >= fSpriteDist ){
 
                   // render pixels to screen
                   var yccord = fSpriteCeiling + sy;
                   var xccord = nSpriteColumn;
-                  screen[ yccord * nScreenWidth + xccord ] = sSpriteGlyph;
-                  fDepthBuffer[nSpriteColumn] = fSpriteDist;
+                  screen.buffer[yccord * screen.width + xccord] = sSpriteGlyph;
+                  screen.depthBuffer[nSpriteColumn] = fSpriteDist;
                 }
               }
             }
@@ -471,7 +474,7 @@ let _r = {
 
         // player was hit
         else{
-          // clearInterval(gameRun);
+          // clearInterval(game.timer);
         }
 
       }
@@ -497,7 +500,7 @@ let _r = {
 
       if( sWallFaceDirection === "N" || sWallFaceDirection === "S" ){
 
-        if(fDistanceToWall < fDepth / 5.5 ){
+        if(fDistanceToWall < screen.depth / 5.5 ){
 
           if( pixel === "#" ){
             fill = brightness[4];
@@ -509,7 +512,7 @@ let _r = {
             fill = brightness[1];
           }
 
-        } else if(fDistanceToWall < fDepth / 3.66 ) {
+        } else if(fDistanceToWall < screen.depth / 3.66 ) {
 
           if( pixel === "#" ){
             fill = brightness[3];
@@ -521,7 +524,7 @@ let _r = {
             fill = brightness[0];
           }
 
-        } else if(fDistanceToWall < fDepth / 2.33 ) {
+        } else if(fDistanceToWall < screen.depth / 2.33 ) {
 
           if( pixel === "#" ){
             fill = brightness[2];
@@ -533,7 +536,7 @@ let _r = {
             fill = brightness[0];
           }
 
-        } else if(fDistanceToWall < fDepth / 1 ) {
+        } else if(fDistanceToWall < screen.depth / 1 ) {
 
           if( pixel === "#" ){
             fill = brightness[1];
@@ -553,7 +556,7 @@ let _r = {
       // walldirection W/E
       else{
 
-        if(fDistanceToWall < fDepth / 5.5 ){
+        if(fDistanceToWall < screen.depth / 5.5 ){
 
           if( pixel === "#" ){
             fill = brightness[3];
@@ -565,7 +568,7 @@ let _r = {
             fill = brightness[0];
           }
 
-        } else if(fDistanceToWall < fDepth / 3.66 ) {
+        } else if(fDistanceToWall < screen.depth / 3.66 ) {
 
           if( pixel === "#" ){
             fill = brightness[2];
@@ -577,7 +580,7 @@ let _r = {
             fill = brightness[0];
           }
 
-        } else if(fDistanceToWall < fDepth / 2.33 ) {
+        } else if(fDistanceToWall < screen.depth / 2.33 ) {
 
           if( pixel === "#" ){
             fill = brightness[2];
@@ -589,7 +592,7 @@ let _r = {
             fill = brightness[0];
           }
 
-        } else if(fDistanceToWall < fDepth / 1 ) {
+        } else if(fDistanceToWall < screen.depth / 1 ) {
 
           if( pixel === "#" ){
             fill = brightness[1];
@@ -613,26 +616,26 @@ let _r = {
     renderSolidWall: function(fDistanceToWall, isBoundary) {
       var fill = brightness[1];
 
-      if(fDistanceToWall < fDepth / 6.5 ){
+      if(fDistanceToWall < screen.depth / 6.5 ){
         fill = brightness[4];
-      } else if(fDistanceToWall < fDepth / 4.66 ) {
+      } else if(fDistanceToWall < screen.depth / 4.66 ) {
         fill = brightness[3];
-      } else if(fDistanceToWall < fDepth / 3.33 ) {
+      } else if(fDistanceToWall < screen.depth / 3.33 ) {
         fill = brightness[2];
-      } else if(fDistanceToWall < fDepth / 1 ) {
+      } else if(fDistanceToWall < screen.depth / 1 ) {
         fill = brightness[1];
       } else {
         fill = brightness[0];
       }
 
       if( isBoundary ){
-        if(fDistanceToWall < fDepth / 6.5 ){
+        if(fDistanceToWall < screen.depth / 6.5 ){
           fill = brightness[1];
-        } else if(fDistanceToWall < fDepth / 4.66 ) {
+        } else if(fDistanceToWall < screen.depth / 4.66 ) {
           fill = brightness[1];
-        } else if(fDistanceToWall < fDepth / 3.33 ) {
+        } else if(fDistanceToWall < screen.depth / 3.33 ) {
           fill = brightness[0];
-        } else if(fDistanceToWall < fDepth / 1 ) {
+        } else if(fDistanceToWall < screen.depth / 1 ) {
           fill = brightness[0];
         } else {
           fill = brightness[0];
@@ -647,13 +650,13 @@ let _r = {
       var fill = "X";
 
       if( screenRow < nDoorFrameTop) {
-        if(fDistanceToWall < fDepth / 4) {
+        if(fDistanceToWall < screen.depth / 4) {
           fill = "&boxH;";
         } else {
           fill = "=";
         }
       } else {
-        if(fDistanceToWall < fDepth / 4) {
+        if(fDistanceToWall < screen.depth / 4) {
           fill = "&boxV;";
         } else {
           fill = "|";
@@ -665,9 +668,10 @@ let _r = {
     renderFloor: function(j) {
       var fill = "`";
 
+			// TODO do something different with this
       // draw floor, in different shades
-      b = 1 - (j -nScreenHeight / 2) / (nScreenHeight / 2);
-      b = 1 - (j -nScreenHeight / (2- fLooktimer * 0.15)) / (nScreenHeight / (2 - fLooktimer * 0.15));
+      let b = 1 - (j -screen.height / 2) / (screen.height / 2);
+      b = 1 - (j -screen.height / (2- game.fLooktimer * 0.15)) / (screen.height / (2 - game.fLooktimer * 0.15));
 
       if(b < 0.25){
         fill = "x";
@@ -688,7 +692,7 @@ let _r = {
       var fill = "`";
 
       // draw ceiling, in different shades
-      b = 1 - (j -nScreenHeight / 2) / (nScreenHeight / 2);
+      b = 1 - (j -screen.height / 2) / (screen.height / 2);
       if(b < 0.25){
         fill = "`";
       } else if(b < 0.5) {

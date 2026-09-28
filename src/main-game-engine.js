@@ -1,5 +1,7 @@
+export {game, brightness, main, player};
+
 import {_rh} from './main-renderer.js';
-import {_loadLevel, _debugOutput, _mh, init} from './main-io.js';
+import {_debugOutput, _mh, screen} from './main-io.js';
 import {raycaster} from './main-raycaster.js';
 
 /**
@@ -38,42 +40,18 @@ var gameEngineJS = (function(){
 
   // setup variables
 
-  var nScreenWidth = 320;
-  var nScreenHeight = 80;
 
 
 //   const screenProjection = (nScreenWidth / 2) / Math.tan(fFOV / 2);
 
-  var fDepth = 16.0; // viewport depth
   var nLookLimit = 8;
 
-  var bTurnLeft;
-  var bTurnRight;
-  var bStrafeLeft;
-  var bStrafeRight;
-  var bMoveForward;
-  var bMoveBackward;
-  var bJumping;
-  var bFalling;
-  var bRunning;
-  var bPaused;
-  var bPlayerMayMoveForward = true;
-
-  let bPlayerMoving = () => (bTurnLeft || bTurnRight || bStrafeLeft || bStrafeRight
-  							|| (bMoveForward && bPlayerMayMoveForward) || bMoveBackward
-  							|| bJumping || bFalling || bRunning) && !bPaused;
 
   var nJumptimer = 0;
   var fLooktimer = 0;
 
-  var fDepthBuffer = [];
 
-  // defaults
-  var fPlayerX = 14.0;
-  var fPlayerY = 1.0;
-  var fPlayerA = 1.5;
 //   var nDegrees = 0;
-  var nRenderMode = 2;
 
   var nMapHeight = 16;
   var nMapWidth = 16;
@@ -153,18 +131,54 @@ var gameEngineJS = (function(){
 
 
 
+const player = {
+	x: 14.0,		// io, raycaster, and renderer
+	y: 1.0,	// io, raycaster, and renderer
+	ang: 1.5,		// used in io and renderer, probably could replace all of these with the playerX/Y vectors
+
+	bTurnLeft: false,		// probably, these are only used in IO
+	bTurnRight: false,
+	bStrafeLeft: false,
+	bStrafeRight: false,		// NOTE i don't like these being in here
+	bMoveForward: false,
+	bMoveBackward: false,
+	bJumping: false,
+	bFalling: false,
+	bRunning: false,
+	bPaused: false,
+	bPlayerMayMoveForward: true,	// this is also used in renderer, when we determin if player is too close to sprite
+	// NOTE oh, might should bPlayerMoving be in _mh?
+	bPlayerMoving: function() {
+		(this.bTurnLeft || this.bTurnRight || this.bStrafeLeft || this.bStrafeRight
+			|| (this.bMoveForward && this.bPlayerMayMoveForward) || this.bMoveBackward
+			|| this.bJumping || this.bFalling || this.bRunning) && !this.bPaused
+		},		// HERE, should probably move this into io, it's only used to determine if to call the _mh.move() function
+							// i think i implemented this as a way to block movement when paused
+							// but there's probably a better way to do that /in/ the io movement functions instead of the game loop
+	get viewX() { return Math.cos(this.ang) },		// NOTE these are used all over the place for player movement, maybe share
+	get viewY() { return Math.sin(this.ang) },	// NOTE this and the planeX/Y should probably be in renderer
+};
+
+const game = {
+	timer: {},		// here and io, holds setInterval that controls game time/speed
+	currentFrame: 0, 	// here in main loop, raycaster, and renderer
+	animationTimer: 0,		// here and renderer
+	nJumptimer: 0,	// only HERE, but this should probably be moved into io....well is movement io or is it game logic?
+	fLooktimer: 0,	// HERE in screen.skew (which should move), also in io and renderer			// eh first put it together in io, then we can decide to split that up
+	nRenderMode: 2,	// used in renderer and raycaster, but the raycaster stuff should probably be moved into renderer
+
+};
 
 
 
   /**
    * The basic game loop
    */
-  var main = function(){
-    gameRun = setInterval(gameLoop, 33);
+  let main = function(){
+    game.timer = setInterval(gameLoop, 33);
     function gameLoop(){
 //       _debugOutput('clear', 'debug2');
 
-	  currentFrame++;
 
 	  let viewX = Math.cos(fPlayerA);		// NOTE these are used all over the place for player movement, maybe share
 	  let viewY = Math.sin(fPlayerA);
@@ -172,14 +186,15 @@ var gameEngineJS = (function(){
 	  // camera plane
 	  let planeX = -viewY * 0.66;		// initially 0.8391, based on tan(FOV/2), TODO make constant
 	  let planeY = viewX * 0.66;		// smaller will be more wider
+	  game.currentFrame++;
 
       /**
        * Game-function related
        */
 
-      animationTimer++;
-      if(animationTimer > 15){
-        animationTimer = 0;
+      game.animationTimer++;				// here and renderer, and a commented out section of raycaster
+      if(game.animationTimer > 15){
+        game.animationTimer = 0;
       }
 
       _rh.updateSpriteBuffer();		// NOTE also, why do we sort the sprites and then move them?
@@ -190,34 +205,34 @@ var gameEngineJS = (function(){
        * Player-movement related
        */
 
-	  if (bPlayerMoving()) {
-	    _mh.move(viewX, viewY);
+	  if (player.bPlayerMoving()) {
+	    player.move(player.viewX, player.viewY);
 	  }
 
       // normalize player angle		// this should probably be in io/movement
-      if (fPlayerA < 0){
-        fPlayerA += +(Math.PI * 2.0);
+      if (player.ang < 0){
+        player.ang += +(Math.PI * 2.0);
       }
-      if (fPlayerA > +(Math.PI * 2.0)){
-        fPlayerA -= +(Math.PI * 2.0);
+      if (player.ang > +(Math.PI * 2.0)){
+        player.ang -= +(Math.PI * 2.0);
       }
 
       // allows jumping for only a certain amount of time
-      if(bJumping){
-        nJumptimer++
+      if(player.bJumping){
+        game.nJumptimer++
       }
-      if( nJumptimer > 6 ){
-        bFalling = true;
-        bJumping = false;
-        nJumptimer = 6;
+      if( game.nJumptimer > 6 ){
+        player.bFalling = true;
+        player.bJumping = false;
+        game.nJumptimer = 6;
       }
 
       // falling back down after jump
-      if(bFalling){
-        nJumptimer--;
+      if(player.bFalling){
+        game.nJumptimer--;
       }
-      if( nJumptimer < 1 ){
-        bFalling = false;
+      if( game.nJumptimer < 1 ){
+        player.bFalling = false;
       }
 
       let screenSkew = nScreenHeight / (2 - nJumptimer * 0.15 - fLooktimer * 0.15);
@@ -240,12 +255,9 @@ var gameEngineJS = (function(){
 		let doorEndDist = 0;
 		let prevTile = '';		// DEBUG only
 
-		let midFrameInfoMsg = '';		// DEBUG only
-		let endDoorInfoMsg = '';		// DEBUG only
-
 
      // Converts player turn position into degrees (used for texturing)
-//       nDegrees = ~~( fPlayerA * (180/Math.PI)) % 360;
+//       nDegrees = ~~( player.ang * (180/Math.PI)) % 360;
 // 	  _debugOutput(`nDegrees: ${nDegrees}`, 'debug2');
 
 

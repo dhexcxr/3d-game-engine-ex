@@ -1,9 +1,32 @@
 // main i/o
 
-export {_loadLevel, _debugOutput, _mh, init};
+export {_debugOutput, _mh, init, screen, map};
+
+import {game, brightness, main, player} from './main-game-engine.js';
 
   var eScreen;	// HERE and io._createTestScreen & io._testScreenSizeAndStartTheGame
+  let screen = {
+  	width: 320,		// HERE to calc screen.skew, but thats only used in raycaster (but should probably be in renderer)
+  	height: 80,			// also used in io, raycaster, and renderer
+//   	nScreenCenter = screen.width / 2,		// not used
+	depth: 16.0, // viewport depth, max ray/draw dist		// raycaster and renderer
+	depthBuffer: [],		// raycaster and renderer	// TODO double check what this is used for, is it necessary?
 
+	output: '',
+
+// 	buffer: {
+// 		pixels: new Uint8Array(this.width * this.height),
+// 		add: function(index, character) { pixels[index = character.charCodeAt(0)]; },
+// 	},
+
+	nRenderMode: 2,	// used in renderer and raycaster, but the raycaster stuff should probably be moved into renderer
+
+	get skew() { return this.height / (2 - game.nJumptimer * 0.15 - game.fLooktimer * 0.15) },	// mostly used in raycaster, but I think that might should be in rendere instead
+
+	// camera plane
+	get planeX() { return -player.viewY * 0.66 },		// initially 0.8391, based on tan(FOV/2), TODO make constant
+	get planeY() { return player.viewX * 0.66 },		// smaller will be more wider
+  };
 
   // leaving the console for errors, logging seems to kill performance
   var _debugOutput = function(input, elementId, append = false){
@@ -27,7 +50,7 @@ export {_loadLevel, _debugOutput, _mh, init};
    */
   var _loadLevel = function(level){
 
-    clearInterval(gameRun);
+    clearInterval(game.timer);
 
     sLevelstring = level.replace(".map", ""); // sets global string
 
@@ -52,33 +75,35 @@ export {_loadLevel, _debugOutput, _mh, init};
 
     levelLoaded.then(function(){
       // updates the level map and dimensions
-      map = window[sLevelstring].map;
-      nMapHeight = window[sLevelstring].nMapHeight;
-      nMapWidth = window[sLevelstring].nMapWidth;
+      map = window[sLevelstring];
+	  // keep track of map tiles visited by the rays, help cull sprites without trig
+      map.visitedTiles = new Uint32Array(map.width * map.height);	// renderer and raycaster
+//       nMapHeight = map.height;
+//       nMapWidth = map.width;
 
       // places the player at the map starting point
-      fPlayerX = window[sLevelstring].fPlayerX;
-      fPlayerY = window[sLevelstring].fPlayerY;
-      fPlayerA = window[sLevelstring].fPlayerA;
+      player.x = map.playerStartX;
+      player.y = map.playerStartY;
+      player.ang = map.playerStartA;
 
       // load sprites
-      oLevelSprites = window[sLevelstring].sprites;
+//       oLevelSprites = map.sprites;
 
 
-// 	oLevelSprites = '';		// DEBUG uncomment to disable
-      if( oLevelSprites == "autogen" ){
-        oLevelSprites = _generateRandomSprites();
+// 	map.sprites = '';		// DEBUG uncomment to disable
+      if( map.sprites == "autogen" ){
+        map.sprites = _generateRandomSprites();
       }
 
-      document.querySelector("body").style.color = window[sLevelstring].color;
-      document.querySelector("body").style.background = window[sLevelstring].background;
+      document.querySelector("body").style.color = map.color;
+      document.querySelector("body").style.background = map.background;
     });
 
 
     // pauses, then starts the game loop
     _testScreenSizeAndStartTheGame();
     window.addEventListener("resize", function(){
-      clearInterval(gameRun);
+      clearInterval(game.timer);
       _testScreenSizeAndStartTheGame();
     });
   };
@@ -104,65 +129,65 @@ export {_loadLevel, _debugOutput, _mh, init};
 
 
         if (e.which == 80) { // p
-          if( bPaused ){		// TODO do not respond to mouselook when paused
+          if( player.bPaused ){		// TODO do not respond to mouselook when paused
             _testScreenSizeAndStartTheGame();
-            bPaused = false;
+            player.bPaused = false;
           } else {
-            clearInterval(gameRun);
-            bPaused = true;
+            clearInterval(game.timer);
+            player.bPaused = true;
           }
         }
 
-        if (bPaused) return;
+        if (player.bPaused) return;
 
         // movement based conditions
 
         // DEBUG movement
 		if (e.which === 49) {		// 1, lock lookup/down to center
 			LockLook = !LockLook;
-			fLooktimer = 0;
+			game.fLooktimer = 0;
 		}
 		if (e.which === 50) {		// 2, go to cardinal direction N
-			fPlayerA = +(Math.PI * 0.5);
+			player.ang = +(Math.PI * 0.5);
 			hitSideCheck = 1;
 		}
 		if (e.which === 51) {		// 3, go to cardinal direction E
-			fPlayerA = Math.PI;
+			player.ang = Math.PI;
 			hitSideCheck = 0;
 		}
 		if (e.which === 52) {		// 4, go to cardinal direction S
-			fPlayerA = +(Math.PI * 1.5);
+			player.ang = +(Math.PI * 1.5);
 			hitSideCheck = 1;
 		}
 		if (e.which === 53) {		// 5, go to cardinal direction W
-			fPlayerA = +(Math.PI * 2.0);
+			player.ang = +(Math.PI * 2.0);
 			hitSideCheck = 0;
 		}
 
         // normal movement
         if (e.which == 16) { // shift
-          bRunning = true;
+          player.bRunning = true;
         }
         if (e.which == 32) { // space
-          bJumping = true;
+          player.bJumping = true;
         }
         if (e.which == 65) { // a
-          bStrafeLeft = true;
+          player.bStrafeLeft = true;
         }
         if (e.which == 68) { // d
-          bStrafeRight = true;
+          player.bStrafeRight = true;
         }
         if (e.which == 81 || e.which == 37) { // q or left
-          bTurnLeft = true;
+          player.bTurnLeft = true;
         }
         if (e.which == 69 || e.which == 39) { // e or right
-          bTurnRight = true;
+          player.bTurnRight = true;
         }
         if (e.which == 87 || e.which == 38) { // w or up
-          bMoveForward = true;
+          player.bMoveForward = true;
         }
         if (e.which == 83 || e.which == 40) { // s or down
-          bMoveBackward = true;
+          player.bMoveBackward = true;
         }
 
         printPlayerLoc();		// DEBUG only
@@ -171,29 +196,29 @@ export {_loadLevel, _debugOutput, _mh, init};
       window.onkeyup = function(e) {
 
         if (e.which == 16) { // shift
-          bRunning = false;
+          player.bRunning = false;
         }
         if (e.which == 32) { // space
-          bJumping = false;
-          bFalling = true;
+          player.bJumping = false;
+          player.bFalling = true;
         }
         if (e.which == 65) { // a
-          bStrafeLeft = false;
+          player.bStrafeLeft = false;
         }
         if (e.which == 68) { // d
-          bStrafeRight = false;
+          player.bStrafeRight = false;
         }
         if (e.which == 81 || e.which == 37) { // q or left
-          bTurnLeft = false;
+          player.bTurnLeft = false;
         }
         if (e.which == 69 || e.which == 39) { // e or right
-          bTurnRight = false;
+          player.bTurnRight = false;
         }
         if (e.which == 87 || e.which == 38) { // w or up
-          bMoveForward = false;
+          player.bMoveForward = false;
         }
         if (e.which == 83 || e.which == 40) { // s or down
-          bMoveBackward = false;
+          player.bMoveBackward = false;
         }
 
         printPlayerLoc();		// DEBUG only
@@ -207,7 +232,7 @@ export {_loadLevel, _debugOutput, _mh, init};
      * @param  {float}  fMoveInput   the movement from touch or mouse-input
      * @param  {float}  fMoveFactor  factor by which to multiply the recieved input
      *
-     * Ultimately modifies the `fLooktimer` variable, which is global :)
+     * Ultimately modifies the `game.fLooktimer` variable, which is global :) -- NOT ANYMORE
      */
     yMoveUpdate: function(fMoveInput, fMoveFactor ){
 
@@ -216,15 +241,15 @@ export {_loadLevel, _debugOutput, _mh, init};
       var fYMoveBy = fMoveInput * fMoveFactor;
 
       // if the looktimer is negative (looking down), increase the speed
-      if( fLooktimer < 0 ){
+      if( game.fLooktimer < 0 ){
         fYMoveBy = fYMoveBy * 4;
       }
 
       // the reason for the increased speed is that looking “down” becomes expotentially less,
       // so we are artificially increasing the down-factor. it's a hack, but it works okay!
-      fLooktimer -= fYMoveBy;
-      if( fLooktimer > nLookLimit * 0.7 || fLooktimer < -nLookLimit * 2 ){
-        fLooktimer += fYMoveBy;
+      game.fLooktimer -= fYMoveBy;
+      if( game.fLooktimer > nLookLimit * 0.7 || game.fLooktimer < -nLookLimit * 2 ){
+        game.fLooktimer += fYMoveBy;
       }
     },
 
@@ -236,10 +261,10 @@ export {_loadLevel, _debugOutput, _mh, init};
       document.body.requestPointerLock();
       document.onmousemove = function (e) {
 		// Ignore the event if the window is not currently active or paused
-  		if (!isWindowActive || bPaused) return;
+  		if (!isWindowActive || player.bPaused) return;
 
         // look left/right
-        fPlayerA   += ( (e.movementX * fMouseLookFactor) || (e.mozMovementX * fMouseLookFactor) || (e.webkitMovementX * fMouseLookFactor) || 0);
+        player.ang   += ( (e.movementX * fMouseLookFactor) || (e.mozMovementX * fMouseLookFactor) || (e.webkitMovementX * fMouseLookFactor) || 0);
 
         // look up and down
         _mh.yMoveUpdate( ( e.movementY || e.mozMovementY || e.webkitMovementY || 0), 0.05 );
@@ -302,7 +327,7 @@ export {_loadLevel, _debugOutput, _mh, init};
       // look (left hand of screen)
       eTouchLook.addEventListener("touchmove", function(e){
 		// Ignore the event if the window is not currently active or is paused
-  		if (!isWindowActive || bPaused) return;
+  		if (!isWindowActive || player.bPaused) return;
 
         // fetches differences from input
         var oDifferences = _mh.touchCalculate( _mh.oTouch.look, e);
@@ -315,7 +340,7 @@ export {_loadLevel, _debugOutput, _mh, init};
         if( !_mh.oTouch.look.bFirstTouch ){
 
           // left and right
-          fPlayerA += oDifferences.x * 0.005;
+          player.ang += oDifferences.x * 0.005;
 
           // up and down
           _mh.yMoveUpdate(oDifferences.y, 0.1);
@@ -332,7 +357,7 @@ export {_loadLevel, _debugOutput, _mh, init};
       // move (right hand of screen)
       eTouchMove.addEventListener("touchmove", function(e){
         // Ignore the event if the window is not currently active or is paused
-  		if (!isWindowActive || bPaused) return;
+  		if (!isWindowActive || player.bPaused) return;
 
         var oDifferences = _mh.touchCalculate( _mh.oTouch.move, e);
 
@@ -345,25 +370,25 @@ export {_loadLevel, _debugOutput, _mh, init};
         if( !_mh.oTouch.move.bFirstTouch ){
 
           // walk		// TODO rewrite these touch funcs without all the trig
-          fPlayerX -= ( Math.sin(fPlayerA) + 5.0 * 0.0051 ) * oDifferences.x * 0.05;
-          fPlayerY += ( Math.cos(fPlayerA) + 5.0 * 0.0051 ) * oDifferences.x * 0.05;
+          player.x -= ( Math.sin(player.ang) + 5.0 * 0.0051 ) * oDifferences.x * 0.05;
+          player.y += ( Math.cos(player.ang) + 5.0 * 0.0051 ) * oDifferences.x * 0.05;
 
           // converts coordinates into integer space and check if it is a wall (!.), if so, reverse
-          if(map[~~(fPlayerY) * nMapWidth + ~~(fPlayerX)] != "."){
+          if(map.tiles[~~(player.y) * map.width + ~~(g)] != "."){
             _mh.checkExit();
-            fPlayerX += ( Math.sin(fPlayerA) + 5.0 * 0.0051 ) * oDifferences.x * 0.05;
-            fPlayerY -= ( Math.cos(fPlayerA) + 5.0 * 0.0051 ) * oDifferences.x * 0.05;
+            player.x += ( Math.sin(player.ang) + 5.0 * 0.0051 ) * oDifferences.x * 0.05;
+            player.y -= ( Math.cos(player.ang) + 5.0 * 0.0051 ) * oDifferences.x * 0.05;
           }
 
           // strafe
-          fPlayerX += ( Math.cos(fPlayerA) + 5.0 * 0.0051 ) * -oDifferences.y * 0.05;
-          fPlayerY += ( Math.sin(fPlayerA) + 5.0 * 0.0051 ) * -oDifferences.y * 0.05;
+          player.x += ( Math.cos(player.ang) + 5.0 * 0.0051 ) * -oDifferences.y * 0.05;
+          player.y += ( Math.sin(player.ang) + 5.0 * 0.0051 ) * -oDifferences.y * 0.05;
 
           // converts coordinates into integer space and check if it is a wall (!.), if so, reverse
-          if(map[~~(fPlayerY) * nMapWidth + ~~(fPlayerX)] != "."){
+          if(map.tiles[~~(player.y) * map.width + ~~(player.x)] != "."){
             _mh.checkExit();
-            fPlayerX -= ( Math.cos(fPlayerA) + 5.0 * 0.0051 ) * -oDifferences.y * 0.05;
-            fPlayerY -= ( Math.sin(fPlayerA) + 5.0 * 0.0051 ) * -oDifferences.y * 0.05;
+            player.x -= ( Math.cos(player.ang) + 5.0 * 0.0051 ) * -oDifferences.y * 0.05;
+            player.y -= ( Math.sin(player.ang) + 5.0 * 0.0051 ) * -oDifferences.y * 0.05;
           }
         }
       });
@@ -379,28 +404,28 @@ export {_loadLevel, _debugOutput, _mh, init};
 
     checkExit: function(){
       // if we hit an exit
-      if(map[~~(fPlayerY) * nMapWidth + ~~(fPlayerX)] == "X"){
-        _loadLevel( window[sLevelstring].exitsto );
+      if(map.tiles[~~(player.y) * map.width + ~~(player.x)] == "X"){
+        _loadLevel( map.exitsto );
       }
     },
 
     // called once per frame, handles movement computation
     move: function(viewX, viewY){
 
-      if(bTurnLeft){
-        fPlayerA -= 0.05;
+      if(player.bTurnLeft){
+        player.ang -= 0.05;
       }
 
-      if(bTurnRight){
-        fPlayerA += 0.05;
+      if(player.bTurnRight){
+        player.ang += 0.05;
       }
 
 //       var fMoveFactor = 0.1;
-//       if(bRunning){
+//       if(player.bRunning){
 //         fMoveFactor = 0.2;
 //       }
 
-      let fMoveFactor = bRunning ? 0.2 : 0.1;
+      let fMoveFactor = player.bRunning ? 0.2 : 0.1;
 
 
       let deltaXDir = 0;
@@ -411,9 +436,9 @@ export {_loadLevel, _debugOutput, _mh, init};
       let totalY = 0;
 
 
-      if(bStrafeLeft ^ bStrafeRight) {		// TODO continue optimizing this
+      if(player.bStrafeLeft ^ player.bStrafeRight) {		// TODO continue optimizing this
       	let [straifDeltaX, straifDeltaY] = [deltaY, deltaX];
-      	if(bStrafeLeft) {
+      	if(player.bStrafeLeft) {
       		deltaXDir = 1;
         	deltaYDir = -1;
       	} else {
@@ -427,8 +452,8 @@ export {_loadLevel, _debugOutput, _mh, init};
       }
 
 
-      if((bMoveForward && bPlayerMayMoveForward) ^ bMoveBackward) {
-        if(bMoveForward) {
+      if((player.bMoveForward && player.bPlayerMayMoveForward) ^ player.bMoveBackward) {
+        if(player.bMoveForward) {
       	  deltaXDir = 1;
           deltaYDir = 1;
       	} else {
@@ -440,51 +465,62 @@ export {_loadLevel, _debugOutput, _mh, init};
         totalY += deltaY * deltaYDir;
       }
 
-      let newX = fPlayerX + totalX;
-      let newY = fPlayerY + totalY;
+      let newX = player.x + totalX;
+      let newY = player.y + totalY;
 
 
       // TODO i think i need the direction the door faces, if the player stays on that side of the door then all movement should be allowed
       	// that will fix the issue with only being allowed to move normal to the door
       let checkX = (totalX > 0) ? (newX + PLAYER_RADIUS) : (newX - PLAYER_RADIUS);
 
-      if (map[~~fPlayerY * nMapWidth + ~~checkX] === '.') {
-      	fPlayerX = newX;
-	  } else if (map[~~fPlayerY * nMapWidth + ~~checkX] === 'X'		// check for door tiles so we can go half way into the tile
+      if (map.tiles[~~player.y * map.width + ~~checkX] === '.') {
+      	player.x = newX;
+	  } else if (map.tiles[~~player.y * map.width + ~~checkX] === 'X'		// check for door tiles so we can go half way into the tile
 	  		&& ((Math.sign(totalX) <= 0 && checkX - ~~checkX > 0.5) || (Math.sign(totalX) >= 0 && checkX - ~~checkX < 0.5))) {
-	  	fPlayerX = newX;
+	  	player.x = newX;
 	  }
 
       let checkY = (totalY > 0) ? (newY + PLAYER_RADIUS) : (newY - PLAYER_RADIUS);
 
-      if (map[~~checkY * nMapWidth + ~~fPlayerX] === '.') {
-      	fPlayerY = newY;
-	  } else if (map[~~checkY * nMapWidth + ~~fPlayerX] === 'X'
+      if (map.tiles[~~checkY * map.width + ~~player.x] === '.') {
+      	player.y = newY;
+	  } else if (map.tiles[~~checkY * map.width + ~~player.x] === 'X'
 	  		&& ((Math.sign(totalY) >= 0 && checkY - ~~checkY < 0.5) || (Math.sign(totalY) <= 0 && checkY - ~~checkY > 0.5))) {
-	  	fPlayerY = newY;
+	  	player.y = newY;
 	  }
 
 
 
 //       _debugOutput(`dX: ${deltaX}; dDirX: ${deltaXDir}; totX: ${totalX}; dY: ${deltaY}; dDirY: ${deltaYDir}; totY: ${totalY}`, 'debug2');
 	  },
+
   };
 
+  // init() called from HTML
     var init = function( input ) {
     // prep document
-    eScreen = document.getElementById("display");
-    eScreen2 = document.getElementById("seconddisplay");
+    screen.output = document.getElementById("display");
+//     eScreen2 = document.getElementById("seconddisplay");
     eTouchLook = document.getElementById("touchinputlook");
     eTouchMove = document.getElementById("touchinputmove");
+
+//     screen.buffer = {
+// 		pixels: new Uint8Array(screen.width * screen.height),
+// 		add: function(index, character) { this.pixels[index = character.charCodeAt(0)]; },
+// 		blank: function() { this.pixels.fill(32); }, 	  // Clear screen with spaces (ASCII code 32)
+// 	};
+
+	screen.buffer = [];
+
 
     _mh.keylisten();
     _mh.mouseinit();
     _mh.touchinit();
 
     // TODO: move to in-game menu
-    document.getElementById("solid").addEventListener("click", function(){ nRenderMode = 0 });
-    document.getElementById("texture").addEventListener("click", function(){ nRenderMode = 1 });
-    document.getElementById("shader").addEventListener("click", function(){ nRenderMode = 2 });
+    document.getElementById("solid").addEventListener("click", function(){ sceen.nRenderMode = 0 });
+    document.getElementById("texture").addEventListener("click", function(){ sceen.nRenderMode = 1 });
+    document.getElementById("shader").addEventListener("click", function(){ sceen.nRenderMode = 2 });
 
     // initial gameload
     _loadLevel("mylevelfile1.map");
@@ -506,12 +542,12 @@ export {_loadLevel, _debugOutput, _mh, init};
   // generates only pogels that can be placed
   var _generateRandomCoordinates = function(){
 
-    var x = +(_randomIntFromInterval(0, nMapWidth)) + 0;
-    var y = +(_randomIntFromInterval(0, nMapHeight)) - 0;
+    var x = +(_randomIntFromInterval(0, map.width)) + 0;
+    var y = +(_randomIntFromInterval(0, map.height)) - 0;
 
-    while( map[ ~~(y) * nMapWidth + ~~(x)] != "." ){
-      x = +(_randomIntFromInterval(0, nMapWidth)) + 1;
-      y = +(_randomIntFromInterval(0, nMapHeight)) - 1;
+    while( map.tiles[ ~~(y) * map.width + ~~(x)] != "." ){
+      x = +(_randomIntFromInterval(0, map.width)) + 1;
+      y = +(_randomIntFromInterval(0, map.height)) - 1;
     }
 
     var oCoordinates = {
@@ -525,7 +561,7 @@ export {_loadLevel, _debugOutput, _mh, init};
 
   // generate random Sprites
   var _generateRandomSprites = function( nNumberOfSprites ){		// NOTE this (along with generateRandomCoordinates and randomIntFromInterval) should go somewhere else, it is currently only called by _loadLevel, when picking random places to put sprites, but that (and this) should be in a "build world" or main engine module probably, it doesn't really interact with the "real world"
-    nNumberOfSprites = nNumberOfSprites || Math.round( nMapWidth * nMapWidth / 15 );
+    nNumberOfSprites = nNumberOfSprites || Math.round( map.width * map.width / 15 );
     // generates random Pogels or Obetrls! :oooo
     var oRandomLevelSprites = {};	// NOTE so this is an object.....
     for( var m = 0; m < nNumberOfSprites; m++){
@@ -548,16 +584,16 @@ export {_loadLevel, _debugOutput, _mh, init};
 
 
 
-  // for every row make a nScreenWidth amount of pixels
+  // for every row make a screen.width amount of pixels
   var _createTestScreen = function(){
     var sOutput = "";
-    for(var screnCol = 0; screnCol < nScreenHeight; screnCol++){
-      for(var screenRow = 0; screenRow < nScreenWidth; screenRow++){
+    for(var screnCol = 0; screnCol < screen.height; screnCol++){
+      for(var screenRow = 0; screenRow < screen.width; screenRow++){
         sOutput += brightness[0];
       }
       sOutput += "<br>";
     }
-    eScreen.innerHTML = sOutput;
+    screen.output.innerHTML = sOutput;
   };
 
 
@@ -585,15 +621,15 @@ export {_loadLevel, _debugOutput, _mh, init};
     // render a static test screen
     _createTestScreen();
 
-    var widthOfDisplay   = eScreen.offsetWidth;
+    var widthOfDisplay   = screen.output.offsetWidth;
     var widthOfViewport  = _getWidth();
     var heightOfViewPort = _getHeight();
     var viewPortAspect   = heightOfViewPort / widthOfViewport;
 
     // check if the amount of pixels to be rendered fit, if not, repeat
     if(widthOfDisplay > widthOfViewport + 120){
-      nScreenWidth = nScreenWidth - 1;
-      // nScreenHeight = nScreenWidth * 0.22
+      screen.width = screen.width - 1;
+      // screen.height = screen.width * 0.22
 
 
       // try no more than nTrymax times (in case of some error)
@@ -615,7 +651,7 @@ export {_loadLevel, _debugOutput, _mh, init};
         fAdjustedAspectRatio = 0.266;
       }
 
-      nScreenHeight = nScreenWidth * fAdjustedAspectRatio;
+      screen.height = screen.width * fAdjustedAspectRatio;
       main();
     }
   };
