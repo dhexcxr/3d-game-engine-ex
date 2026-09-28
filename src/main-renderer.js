@@ -1,224 +1,33 @@
-export {_rh};
+export {_r, _rh};
 
-  // various shaders for walls, ceilings, objects
-  // _renderHelpers
-  //
-  // each texture has 4 values: 3 hues plus black
-  // each value can be rendered with 5 shades (4 plus black)
-  var _rh = {		// TODO this should probably be a class, then it can hold all its "global" variables as well
+/*
+	original top level funcs:
+		_getSamplePixel
+		_printCompositPixel
+		_fPrepareFrame
+		_fDrawFrame
+		_moveSprites
+		_updateSpriteBuffer
 
-    renderWall: function(fDistanceToWall, sWallFaceDirection, pixel){
+	original _rh funcs:
+		renderWall
+		renderSolidWall
+		renderGate
+		renderFloor
+		renderCeiling
 
-      var fill = "";
+	originally in gameLoop()
+		drawSprites
+*/
 
-      if( sWallFaceDirection === "N" || sWallFaceDirection === "S" ){
 
-        if(fDistanceToWall < fDepth / 5.5 ){
+/*
+	functions in _r:
+		getSamplePixel|printCompositPixel|fPrepareFrame|fDrawFrame|moveSprites|updateSpriteBuffer|drawSprites
 
-          if( pixel === "#" ){
-            fill = brightness[4];
-          } else if( pixel === "7" ) {
-            fill = brightness[3];
-          } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[2];
-          } else {
-            fill = brightness[1];
-          }
+*/
 
-        } else if(fDistanceToWall < fDepth / 3.66 ) {
-
-          if( pixel === "#" ){
-            fill = brightness[3];
-          } else if( pixel === "7" ) {
-            fill = brightness[2];
-          } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[1];
-          } else {
-            fill = brightness[0];
-          }
-
-        } else if(fDistanceToWall < fDepth / 2.33 ) {
-
-          if( pixel === "#" ){
-            fill = brightness[2];
-          } else if( pixel === "7" ) {
-            fill = brightness[1];
-          } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[1];
-          } else {
-            fill = brightness[0];
-          }
-
-        } else if(fDistanceToWall < fDepth / 1 ) {
-
-          if( pixel === "#" ){
-            fill = brightness[1];
-          } else if( pixel === "7" ) {
-            fill = brightness[1];
-          } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[1];
-          } else {
-            fill = brightness[0];
-          }
-
-        } else {
-          fill = brightness[0];
-        }
-      }
-
-      // walldirection W/E
-      else{
-
-        if(fDistanceToWall < fDepth / 5.5 ){
-
-          if( pixel === "#" ){
-            fill = brightness[3];
-          } else if( pixel === "7" ) {
-            fill = brightness[2];
-          } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[1];
-          } else {
-            fill = brightness[0];
-          }
-
-        } else if(fDistanceToWall < fDepth / 3.66 ) {
-
-          if( pixel === "#" ){
-            fill = brightness[2];
-          } else if( pixel === "7" ) {
-            fill = brightness[2];
-          } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[1];
-          } else {
-            fill = brightness[0];
-          }
-
-        } else if(fDistanceToWall < fDepth / 2.33 ) {
-
-          if( pixel === "#" ){
-            fill = brightness[2];
-          } else if( pixel === "7" ) {
-            fill = brightness[1];
-          } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[1];
-          } else {
-            fill = brightness[0];
-          }
-
-        } else if(fDistanceToWall < fDepth / 1 ) {
-
-          if( pixel === "#" ){
-            fill = brightness[1];
-          } else if( pixel === "7" ) {
-            fill = brightness[1];
-          } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[0];
-          } else {
-            fill = brightness[0];
-          }
-
-        } else {
-          fill = brightness[0];
-        }
-      }
-
-      return fill;
-    },
-
-    // figures out shading for given section
-    renderSolidWall: function(fDistanceToWall, isBoundary){
-      var fill = brightness[1];
-
-      if(fDistanceToWall < fDepth / 6.5 ){
-        fill = brightness[4];
-      } else if(fDistanceToWall < fDepth / 4.66 ) {
-        fill = brightness[3];
-      } else if(fDistanceToWall < fDepth / 3.33 ) {
-        fill = brightness[2];
-      } else if(fDistanceToWall < fDepth / 1 ) {
-        fill = brightness[1];
-      } else {
-        fill = brightness[0];
-      }
-
-      if( isBoundary ){
-        if(fDistanceToWall < fDepth / 6.5 ){
-          fill = brightness[1];
-        } else if(fDistanceToWall < fDepth / 4.66 ) {
-          fill = brightness[1];
-        } else if(fDistanceToWall < fDepth / 3.33 ) {
-          fill = brightness[0];
-        } else if(fDistanceToWall < fDepth / 1 ) {
-          fill = brightness[0];
-        } else {
-          fill = brightness[0];
-        }
-      }
-
-      return fill;
-    },
-
-    // shading and sectionals for gate
-    renderGate: function(screenRow, fDistanceToWall, nDoorFrameTop, nCeiling) {
-      var fill = "X";
-
-      if( screenRow < nDoorFrameTop) {
-        if(fDistanceToWall < fDepth / 4) {
-          fill = "&boxH;";
-        } else {
-          fill = "=";
-        }
-      } else {
-        if(fDistanceToWall < fDepth / 4) {
-          fill = "&boxV;";
-        } else {
-          fill = "|";
-        }
-      }
-      return fill;
-    },
-
-    renderFloor: function(j){
-      var fill = "`";
-
-      // draw floor, in different shades
-      b = 1 - (j -nScreenHeight / 2) / (nScreenHeight / 2);
-      b = 1 - (j -nScreenHeight / (2- fLooktimer * 0.15)) / (nScreenHeight / (2 - fLooktimer * 0.15));
-
-      if(b < 0.25){
-        fill = "x";
-      } else if(b < 0.5) {
-        fill = "=";
-      } else if(b < 0.75) {
-        fill = "-";
-      } else if(b < 0.9) {
-        fill = "`";
-      } else {
-        fill = brightness[0];
-      }
-
-      return fill;
-    },
-
-    renderCeiling: function(j){
-      var fill = "`";
-
-      // draw ceiling, in different shades
-      b = 1 - (j -nScreenHeight / 2) / (nScreenHeight / 2);
-      if(b < 0.25){
-        fill = "`";
-      } else if(b < 0.5) {
-        fill = "-";
-      } else if(b < 0.75) {
-        fill = "=";
-      } else if(b < 0.9) {
-        fill = "x";
-      } else {
-        fill = "#";
-      }
-
-      return fill;
-    },
+let _r = {
 
       /**
 	   * Function will get the pixel to be sampled from the sprite
@@ -352,7 +161,7 @@ export {_rh};
           // don"t print
         } else {
           // print
-          sOutput.push( _printCompositPixel(oInput, oOverlay, globalPrintIndex) );
+          sOutput.push( _r.printCompositPixel(oInput, oOverlay, globalPrintIndex) );
         }
 
         globalPrintIndex++;
@@ -369,8 +178,8 @@ export {_rh};
   },
 
 
-  fDrawFrame = function(screen, overlayscreen, target){
-    var frame = _rh.fPrepareFrame(screen, overlayscreen);
+  fDrawFrame: function(screen, overlayscreen, target) {
+    var frame = _r.fPrepareFrame(screen, overlayscreen);
 // 	var frame = screen;		// DEBUG uncomment to remove skew from look up/down rendering
     var target = target || eScreen;
 
@@ -405,7 +214,7 @@ export {_rh};
   /**
    * Function that handles movement of all sprites
    */
-  var moveSprites = function(){
+  moveSprites: function() {
 
     // for each sprite object
 	for (const sprite of Object.values(oLevelSprites)) {
@@ -487,7 +296,7 @@ export {_rh};
   /**
    * Sorts the Sprite list based on distance from the player
    */
-   updateSpriteBuffer = function(){
+   updateSpriteBuffer: function() {
 
     	// converts object of objects to list
     oLevelSprites = {
@@ -498,8 +307,9 @@ export {_rh};
     	}).sort(_sortSpriteList))    // sorts the list
     };		    // make object from array again
   },
-  
-  drawSprites = function() {
+
+
+  drawSprites: function() {
       // draw sprites	// TODO change this to an array of objects probably
 	  for (const sprite of Object.values(oLevelSprites)) {
 
@@ -553,8 +363,8 @@ export {_rh};
           // Sprite height is default 1, but we can adjust with the factor passed in the sprite object/
 //           var fSpriteCeiling = +(nScreenHeight / ((2 - nJumptimer * 0.15) - fLooktimer * 0.15)) - nScreenHeight / (+(fSpriteDist) ) * currentSpriteObject.hghtFctr;
 //           var fSpriteFloor = +(screenSkew) + nScreenHeight / (+(fSpriteDist) );
-          var fSpriteCeiling = screenSkew - fSpriteHeight / 2 * currentSpriteObject.hghtFctr;
 
+          var fSpriteCeiling = screenSkew - fSpriteHeight / 2 * currentSpriteObject.hghtFctr;	// NOTE TODO why did I add screenSkew to this?
 		  var fSpriteFloor = fSpriteCeiling - fSpriteHeight;
 
 // 		  _debugOutput(`SprDist: ${fSpriteDist}; SprH: ${fSpriteHeight}; SprCeil: ${fSpriteCeiling}; SprFlr: ${fSpriteFloor}`, 'debug2');
@@ -623,14 +433,14 @@ export {_rh};
 
               // check if object has both, angles, or animations
               if( sprite.a && sAnimationFrame ) {
-                sSamplePixel = _rh.getSamplePixel(currentSpriteObject.angles[sprite.a][sAnimationFrame], fSampleX, fSampleY);
+                sSamplePixel = _r.getSamplePixel(currentSpriteObject.angles[sprite.a][sAnimationFrame], fSampleX, fSampleY);
               } else if( sprite.a ) {
-                sSamplePixel = _rh.getSamplePixel(currentSpriteObject.angles[sprite.a], fSampleX, fSampleY);
+                sSamplePixel = _r.getSamplePixel(currentSpriteObject.angles[sprite.a], fSampleX, fSampleY);
               } else if( sAnimationFrame ) {
-                sSamplePixel = _rh.getSamplePixel(currentSpriteObject[sAnimationFrame], fSampleX, fSampleY);
+                sSamplePixel = _r.getSamplePixel(currentSpriteObject[sAnimationFrame], fSampleX, fSampleY);
               } else {
                 // if not, use basic sprite
-                sSamplePixel = _rh.getSamplePixel(currentSpriteObject, fSampleX, fSampleY);
+                sSamplePixel = _r.getSamplePixel(currentSpriteObject, fSampleX, fSampleY);
               }
 
 
@@ -665,6 +475,233 @@ export {_rh};
         }
 
       }
+    }
+
+}
+
+/*
+	functions in _rh:
+		renderWall|renderSolidWall|renderGate|renderFloor|renderCeiling|drawSprites
+*/
+
+  // various shaders for walls, ceilings, objects
+  // _renderHelpers
+  //
+  // each texture has 4 values: 3 hues plus black
+  // each value can be rendered with 5 shades (4 plus black)
+  var _rh = {		// TODO this should probably be a class, then it can hold all its "global" variables as well
+
+    renderWall: function(fDistanceToWall, sWallFaceDirection, pixel) {
+
+      var fill = "";
+
+      if( sWallFaceDirection === "N" || sWallFaceDirection === "S" ){
+
+        if(fDistanceToWall < fDepth / 5.5 ){
+
+          if( pixel === "#" ){
+            fill = brightness[4];
+          } else if( pixel === "7" ) {
+            fill = brightness[3];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[2];
+          } else {
+            fill = brightness[1];
+          }
+
+        } else if(fDistanceToWall < fDepth / 3.66 ) {
+
+          if( pixel === "#" ){
+            fill = brightness[3];
+          } else if( pixel === "7" ) {
+            fill = brightness[2];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[1];
+          } else {
+            fill = brightness[0];
+          }
+
+        } else if(fDistanceToWall < fDepth / 2.33 ) {
+
+          if( pixel === "#" ){
+            fill = brightness[2];
+          } else if( pixel === "7" ) {
+            fill = brightness[1];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[1];
+          } else {
+            fill = brightness[0];
+          }
+
+        } else if(fDistanceToWall < fDepth / 1 ) {
+
+          if( pixel === "#" ){
+            fill = brightness[1];
+          } else if( pixel === "7" ) {
+            fill = brightness[1];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[1];
+          } else {
+            fill = brightness[0];
+          }
+
+        } else {
+          fill = brightness[0];
+        }
+      }
+
+      // walldirection W/E
+      else{
+
+        if(fDistanceToWall < fDepth / 5.5 ){
+
+          if( pixel === "#" ){
+            fill = brightness[3];
+          } else if( pixel === "7" ) {
+            fill = brightness[2];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[1];
+          } else {
+            fill = brightness[0];
+          }
+
+        } else if(fDistanceToWall < fDepth / 3.66 ) {
+
+          if( pixel === "#" ){
+            fill = brightness[2];
+          } else if( pixel === "7" ) {
+            fill = brightness[2];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[1];
+          } else {
+            fill = brightness[0];
+          }
+
+        } else if(fDistanceToWall < fDepth / 2.33 ) {
+
+          if( pixel === "#" ){
+            fill = brightness[2];
+          } else if( pixel === "7" ) {
+            fill = brightness[1];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[1];
+          } else {
+            fill = brightness[0];
+          }
+
+        } else if(fDistanceToWall < fDepth / 1 ) {
+
+          if( pixel === "#" ){
+            fill = brightness[1];
+          } else if( pixel === "7" ) {
+            fill = brightness[1];
+          } else if( pixel === "*" || pixel === "o") {
+            fill = brightness[0];
+          } else {
+            fill = brightness[0];
+          }
+
+        } else {
+          fill = brightness[0];
+        }
+      }
+
+      return fill;
+    },
+
+    // figures out shading for given section
+    renderSolidWall: function(fDistanceToWall, isBoundary) {
+      var fill = brightness[1];
+
+      if(fDistanceToWall < fDepth / 6.5 ){
+        fill = brightness[4];
+      } else if(fDistanceToWall < fDepth / 4.66 ) {
+        fill = brightness[3];
+      } else if(fDistanceToWall < fDepth / 3.33 ) {
+        fill = brightness[2];
+      } else if(fDistanceToWall < fDepth / 1 ) {
+        fill = brightness[1];
+      } else {
+        fill = brightness[0];
+      }
+
+      if( isBoundary ){
+        if(fDistanceToWall < fDepth / 6.5 ){
+          fill = brightness[1];
+        } else if(fDistanceToWall < fDepth / 4.66 ) {
+          fill = brightness[1];
+        } else if(fDistanceToWall < fDepth / 3.33 ) {
+          fill = brightness[0];
+        } else if(fDistanceToWall < fDepth / 1 ) {
+          fill = brightness[0];
+        } else {
+          fill = brightness[0];
+        }
+      }
+
+      return fill;
+    },
+
+    // shading and sectionals for gate
+    renderGate: function(screenRow, fDistanceToWall, nDoorFrameTop, nCeiling) {
+      var fill = "X";
+
+      if( screenRow < nDoorFrameTop) {
+        if(fDistanceToWall < fDepth / 4) {
+          fill = "&boxH;";
+        } else {
+          fill = "=";
+        }
+      } else {
+        if(fDistanceToWall < fDepth / 4) {
+          fill = "&boxV;";
+        } else {
+          fill = "|";
+        }
+      }
+      return fill;
+    },
+
+    renderFloor: function(j) {
+      var fill = "`";
+
+      // draw floor, in different shades
+      b = 1 - (j -nScreenHeight / 2) / (nScreenHeight / 2);
+      b = 1 - (j -nScreenHeight / (2- fLooktimer * 0.15)) / (nScreenHeight / (2 - fLooktimer * 0.15));
+
+      if(b < 0.25){
+        fill = "x";
+      } else if(b < 0.5) {
+        fill = "=";
+      } else if(b < 0.75) {
+        fill = "-";
+      } else if(b < 0.9) {
+        fill = "`";
+      } else {
+        fill = brightness[0];
+      }
+
+      return fill;
+    },
+
+    renderCeiling: function(j) {
+      var fill = "`";
+
+      // draw ceiling, in different shades
+      b = 1 - (j -nScreenHeight / 2) / (nScreenHeight / 2);
+      if(b < 0.25){
+        fill = "`";
+      } else if(b < 0.5) {
+        fill = "-";
+      } else if(b < 0.75) {
+        fill = "=";
+      } else if(b < 0.9) {
+        fill = "x";
+      } else {
+        fill = "#";
+      }
+
+      return fill;
     }
 
 };

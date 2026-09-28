@@ -251,9 +251,9 @@ var gameEngineJS = (function(){
 
       raycaster();
 
-	  _rh.drawSprites();
+	  _r.drawSprites();
 
-      _rh.fDrawFrame(screen, false);
+      _r.fDrawFrame(screen, false);
 
     }
   };
