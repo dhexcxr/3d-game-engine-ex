@@ -28,6 +28,8 @@ const nLookLimit = 8;
 let LockLook = false;		// IO only, DEBUG only
 let hitSideCheck = 0;		// DEBUG only, only in [io
 
+let hiRes = false;
+
 
 //   var eScreen;	// HERE and io._createTestScreen & io._testScreenSizeAndStartTheGame
   let eTouchLook;
@@ -346,7 +348,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
         fYMoveBy = fYMoveBy * 4;
       }
 
-      // the reason for the increased speed is that looking “down” becomes expotentially less,
+      // the reason for the increased speed is that looking down becomes expotentially less,
       // so we are artificially increasing the down-factor. it's a hack, but it works okay!
       game.fLooktimer -= fYMoveBy;
       if( game.fLooktimer > nLookLimit * 0.7 || game.fLooktimer < -nLookLimit * 2 ){
@@ -763,10 +765,13 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     // and start the game
     else{
       var fAdjustedAspectRatio = viewPortAspect / 2.82;		// TODO figure out what all these magic number are
+// 		var fAdjustedAspectRatio = viewPortAspect / 2.4522;		// default resolution * 1.15
       _debugOutput(fAdjustedAspectRatio, 'debug');
 
-      if( fAdjustedAspectRatio < 0.266 ){
+      if( fAdjustedAspectRatio < 0.266 ){	// this is ~3.7594 (e.g., 1/0.266), for default ~85.12 row resolution
         fAdjustedAspectRatio = 0.266;
+//       if( fAdjustedAspectRatio < 0.3059 ){		// default row res * 1.15 (which allows for more square font) = 97.888
+//         fAdjustedAspectRatio = 0.3059;			// aspect ratio is 3.269, which is 0.3059
       }
 			// NOTE TODO this version (with Unit16Array) is rendering one row shorter than old, combined version
 				// when looking up/down a small partial line is being rendered on the very bottom
@@ -809,3 +814,4 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       main();
     }
   };
+
