@@ -5,6 +5,15 @@ export {raycaster};
 import {brightness, player} from './main-game-engine.js';
 import {_debugOutput, screen, map} from './main-io.js';
 import {_r, _rh} from './main-renderer.js';
+
+const absSign = (x) => (x === 0 ? 1 : Math.sign(x));	// RENDERER only
+const edgeThreshold = 0.01;		// control thickness of border in flat renderer, also holes	// RAYCASTER only
+
+let midFrameInfoMsg = '';		// DEBUG only
+let endDoorInfoMsg = '';		// DEBUG only
+
+// let sco = screen;
+
 function raycaster() {
 // for the length of the screenwidth (one frame)
       for(var screenColumn = 1; screenColumn <= screen.width; screenColumn++){

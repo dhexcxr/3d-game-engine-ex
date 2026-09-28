@@ -3,6 +3,7 @@ export {game, brightness, main, player};
 import {_rh} from './main-renderer.js';
 import {_debugOutput, _mh, screen} from './main-io.js';
 import {raycaster} from './main-raycaster.js';
+import {_r} from './main-renderer.js';
 
 /**
  * Some Performance enhancers:
@@ -17,119 +18,12 @@ import {raycaster} from './main-raycaster.js';
  *  - TODO: Limit Object Access in high-frequency loops
  */
 
-var gameEngineJS = (function(){
-
-	global.gameEngineJS = gameEngineJS;
-
-  let isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
-
-  // Update status when the user switches tabs or minimizes the window
-  document.addEventListener('visibilitychange', () => {
-    isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
-  });
-
-  // Update status when the window gains or loses OS focus
-  window.addEventListener('focus', () => {
-    isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
-  });
-
-  window.addEventListener('blur', () => {
-    isWindowActive = false;
-  });
-
-
-  // setup variables
-
-
-
-//   const screenProjection = (nScreenWidth / 2) / Math.tan(fFOV / 2);
-
-  var nLookLimit = 8;
-
-
-  var nJumptimer = 0;
-  var fLooktimer = 0;
-
-
-//   var nDegrees = 0;
-
-  var nMapHeight = 16;
-  var nMapWidth = 16;
-  var map = "";
-  var sLevelstring = "";
-
-
-  let hitSideCheck = 0;		// DEBUG only
-
-
-  // keep track of map tiles visited by the rays, help cull sprites without trig
-  let visitedTiles = new Uint32Array(nMapWidth * nMapHeight);
-  let currentFrame = 0;
-
-  var gameRun;
-  var animationTimer = 0;
-
-  const edgeThreshold = 0.01;		// control thickness of border in flat renderer, also holes
-
-  const MIN_DIST = 0.1; // Prevent division by zero if standing exactly on a sprite
-
-  const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls
-
-  const absSign = (x) => (x === 0 ? 1 : Math.sign(x));
-
-  let LockLook = false;
-  let printedScreenRays = false;
-  let rayObs = new Array();		// DEBUG ONLY object to hold details of rays
-  							// column, ray angle, height of wall
-  class RayOb {
-  	column = 0;
-  	angle = 0;
-  	wallDistance = 0;
-  	wallHeight = 0;
-  	ceilHeight = 0;
-  	floorHeight = 0;
-  	lookSkew = 0;
-  	tileType = '';
-
-
-  	constructor (column, angle, wallDistance, wallHeight, ceilRow, floorRow, lookSkew, tileType) {
-  		this.column = column;
-  		this.angle = angle;
-  		this.wallDistance = wallDistance;
-  		this.wallHeight = wallHeight;
-  		this.ceilRow = ceilRow;
-  		this.floorRow = floorRow;
-  		this.lookSkew = lookSkew;
-  		this.tileType = tileType;
-  	}
-
-  	toString() {
-  		return `Col: ${this.column}; RayAng: ${this.angle}; WallDist: ${this.wallDistance};
-  		WallH: ${this.wallHeight}; CeilH: ${this.ceilRow}; FloorH: ${this.floorRow}
-  		Skew: ${this.lookSkew}; Tile: ${this.tileType}`;
-  	}
-  }
-
-  function printRayObs () {
-  	rayObs.forEach(rayOb => console.log(rayOb.toString()));
-  }
-
 
   // █
   // ▓
   // ▒
   // ░
   const brightness = ["&nbsp;", "&#9617;", "&#9618;", "&#9619;", "&#9608;"];
-
-
-
-  function printPlayerLoc() {
-	   _debugOutput(`Ang: ${fPlayerA}; x: ${fPlayerX}; y: ${fPlayerY}
-	   Look: ${fLooktimer}; Tile: ${map[~~fPlayerY * nMapWidth + ~~fPlayerX]}`, 'debug');
-  }
-
-
-
 
 const player = {
 	x: 14.0,		// io, raycaster, and renderer
@@ -173,19 +67,13 @@ const game = {
 
   /**
    * The basic game loop
+   * main() called from io._testScreenSizeAndStartTheGame
    */
   let main = function(){
     game.timer = setInterval(gameLoop, 33);
     function gameLoop(){
 //       _debugOutput('clear', 'debug2');
 
-
-	  let viewX = Math.cos(fPlayerA);		// NOTE these are used all over the place for player movement, maybe share
-	  let viewY = Math.sin(fPlayerA);
-
-	  // camera plane
-	  let planeX = -viewY * 0.66;		// initially 0.8391, based on tan(FOV/2), TODO make constant
-	  let planeY = viewX * 0.66;		// smaller will be more wider
 	  game.currentFrame++;
 
       /**
@@ -197,8 +85,8 @@ const game = {
         game.animationTimer = 0;
       }
 
-      _rh.updateSpriteBuffer();		// NOTE also, why do we sort the sprites and then move them?
-//       _rh.moveSprites();		// DEBUG don't move sprites while I work on better render logic
+      _r.updateSpriteBuffer();		// NOTE also, why do we sort the sprites and then move them?
+//       _r.moveSprites();		// DEBUG don't move sprites while I work on better render logic
 
 
       /**
@@ -235,8 +123,6 @@ const game = {
         player.bFalling = false;
       }
 
-      let screenSkew = nScreenHeight / (2 - nJumptimer * 0.15 - fLooktimer * 0.15);
-
 
       /**
        * Drawing related
@@ -244,7 +130,7 @@ const game = {
 
 
       // holds the frames we're going to send to the renderer
-      var screen = [];
+      var screenBuf = [];
       var spritescreen = [];
       var overlayscreen = [];
 
@@ -270,9 +156,63 @@ const game = {
     }
   };
 
+var gameEngineJS = function(){
 
 
-  return{
-    init: init,
+  // setup variables
+
+
+//   var fFOV = Math.PI / 2.25; // (Math.PI / 4.0 originally)	// not used
+
+//   const screenProjection = (screen.width / 2) / Math.tan(fFOV / 2);
+
+  // defaults
+//   var nDegrees = 0;
+
+
+//   var nMapHeight = 16;	// here, raycaster, and io
+//   var nMapWidth = 16;
+  var map = "";		// io, raycaster, and renderer
+
+
+
+//   let printedScreenRays = false;	// NOT used
+  let rayObs = new Array();		// DEBUG ONLY object to hold details of rays
+  							// column, ray angle, height of wall	// RAYCASTER only
+  class RayOb {
+  	column = 0;
+  	angle = 0;
+  	wallDistance = 0;
+  	wallHeight = 0;
+  	ceilHeight = 0;
+  	floorHeight = 0;
+  	lookSkew = 0;
+  	tileType = '';
+
+
+  	constructor (column, angle, wallDistance, wallHeight, ceilRow, floorRow, lookSkew, tileType) {
+  		this.column = column;
+  		this.angle = angle;
+  		this.wallDistance = wallDistance;
+  		this.wallHeight = wallHeight;
+  		this.ceilRow = ceilRow;
+  		this.floorRow = floorRow;
+  		this.lookSkew = lookSkew;
+  		this.tileType = tileType;
   }
-})();
+
+  	toString() {
+  		return `Col: ${this.column}; RayAng: ${this.angle}; WallDist: ${this.wallDistance};
+  		WallH: ${this.wallHeight}; CeilH: ${this.ceilRow}; FloorH: ${this.floorRow}
+  		Skew: ${this.lookSkew}; Tile: ${this.tileType}`;
+  	}
+  }
+
+  function printRayObs () {
+  	rayObs.forEach(rayOb => console.log(rayOb.toString()));
+  }
+
+  return // {
+//     init: init,
+//   }
+}();		// NOTE why does this need to be an immediate or whatever this is called?

@@ -30,6 +30,10 @@ import {_debugOutput, screen, map} from './main-io.js';
 
 */
 
+const MIN_DIST = 0.1; // Prevent division by zero if standing exactly on a sprite	// RENDERER only
+
+
+
 let _r = {
 
       /**
@@ -484,7 +488,7 @@ let _r = {
 
 /*
 	functions in _rh:
-		renderWall|renderSolidWall|renderGate|renderFloor|renderCeiling|drawSprites
+		renderWall|renderSolidWall|renderGate|renderFloor|renderCeiling
 */
 
   // various shaders for walls, ceilings, objects

@@ -4,7 +4,37 @@ export {_debugOutput, _mh, init, screen, map};
 
 import {game, brightness, main, player} from './main-game-engine.js';
 
-  var eScreen;	// HERE and io._createTestScreen & io._testScreenSizeAndStartTheGame
+
+let isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
+
+// Update status when the user switches tabs or minimizes the window
+document.addEventListener('visibilitychange', () => {
+	isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
+});
+
+// Update status when the window gains or loses OS focus
+window.addEventListener('focus', () => {
+	isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
+});
+
+window.addEventListener('blur', () => {
+	isWindowActive = false;
+});
+
+
+
+
+const nLookLimit = 8;
+let LockLook = false;		// IO only, DEBUG only
+let hitSideCheck = 0;		// DEBUG only, only in [io
+
+
+//   var eScreen;	// HERE and io._createTestScreen & io._testScreenSizeAndStartTheGame
+  let eTouchLook;
+  let eTouchMove;
+
+  let sLevelstring = "";	// only here IO
+
   let screen = {
   	width: 320,		// HERE to calc screen.skew, but thats only used in raycaster (but should probably be in renderer)
   	height: 80,			// also used in io, raycaster, and renderer
@@ -28,6 +58,14 @@ import {game, brightness, main, player} from './main-game-engine.js';
 	get planeY() { return player.viewX * 0.66 },		// smaller will be more wider
   };
 
+
+  let map = {};
+//   let oLevelSprites = {};
+
+const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO only
+
+
+
   // leaving the console for errors, logging seems to kill performance
   var _debugOutput = function(input, elementId, append = false){
   	let debugEl = document.getElementById(elementId)
@@ -47,6 +85,8 @@ import {game, brightness, main, player} from './main-game-engine.js';
    * Loads
    * @param  {[string]} level The Level file
    * @return {[type]}       [description]
+   *
+   * _loadLevel() called from init()
    */
   var _loadLevel = function(level){
 
@@ -73,7 +113,10 @@ import {game, brightness, main, player} from './main-game-engine.js';
 
     var levelLoaded = loadScriptAsync(level, sLevelstring);
 
-    levelLoaded.then(function(){
+    levelLoaded.then(function(){		// NOTE TODO this module should just interact with the real world
+    										// this func for example, just load the map/level data
+    										// then a system module will take that data and set the player X/Y/Ang
+    										// generate the proper sprites coordinates, etc
       // updates the level map and dimensions
       map = window[sLevelstring];
 	  // keep track of map tiles visited by the rays, help cull sprites without trig
@@ -531,6 +574,13 @@ import {game, brightness, main, player} from './main-game-engine.js';
 
 // "private" helper functions only used here
 
+
+
+  function printPlayerLoc() {		// DEBUG only
+    _debugOutput(`Ang: ${player.ang}; x: ${player.x}; y: ${player.y}
+	Look: ${game.fLooktimer}; Tile: ${map.tiles[~~player.y * map.width + ~~player.x]}`, 'debug');
+  }
+
   var _randomIntFromInterval = function(min, max) { // min and max included
     return ~~(Math.random() * (max - min + 1) + min);
   };
@@ -616,6 +666,7 @@ import {game, brightness, main, player} from './main-game-engine.js';
 
 
   var nTrymax = 512;
+  // _testScreenSizeAndStartTheGame() called from _loadLevel()
   var _testScreenSizeAndStartTheGame = function(){
 
     // render a static test screen
