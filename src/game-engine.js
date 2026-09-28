@@ -1538,10 +1538,10 @@ var gameEngineJS = (function(){
 
 		if (fSampleX <= edgeThreshold || fSampleX >= 1.0 - edgeThreshold) {
 			if(hit_NS_wall) {
-				tileCheckLocDif = sWallFaceDirection === 'W' ? -1 : 1;
+				let tileCheckLocDif = sWallFaceDirection === 'W' ? -1 : 1;
 				isBoundary = sWalltype !== map[(map_y + tileCheckLocDif) * nMapWidth + map_x];
 			} else {
-				tileCheckLocDif = sWallFaceDirection === 'S' ? -1 : 1;
+				let tileCheckLocDif = sWallFaceDirection === 'S' ? -1 : 1;
 				isBoundary = sWalltype !== map[map_y * nMapWidth + map_x + tileCheckLocDif];
 			}
 		}
