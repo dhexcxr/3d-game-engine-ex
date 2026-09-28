@@ -35,20 +35,8 @@ var gameEngineJS = (function(){
     isWindowActive = false;
   });
 
-  // constants
-  const PI___    = +(Math.PI);
-  const PI_0     = 0.0;
-  const PIx0_25  = +(PI___ * 0.25);
-  const PIx05    = +(PI___ * 0.5);
-  const PIx0_75  = +(PI___ * 0.75);
-  const PIx1     = PI___;
-  const PIx1_5   = +(PI___ * 1.5);
-  const PIx2     = +(PI___ * 2.0);
-  const I80divPI = (180/PI___)
-  const PIdiv4   = PI___ / 4.0
 
   // setup variables
-  var eScreen;
 
   var nScreenWidth = 320;
   var nScreenHeight = 80;
@@ -206,12 +194,12 @@ var gameEngineJS = (function(){
 	    _mh.move(viewX, viewY);
 	  }
 
-      // normalize player angle
+      // normalize player angle		// this should probably be in io/movement
       if (fPlayerA < 0){
-        fPlayerA += PIx2;
+        fPlayerA += +(Math.PI * 2.0);
       }
-      if (fPlayerA > PIx2){
-        fPlayerA -= PIx2;
+      if (fPlayerA > +(Math.PI * 2.0)){
+        fPlayerA -= +(Math.PI * 2.0);
       }
 
       // allows jumping for only a certain amount of time
@@ -257,7 +245,7 @@ var gameEngineJS = (function(){
 
 
      // Converts player turn position into degrees (used for texturing)
-//       nDegrees = ~~( fPlayerA * I80divPI) % 360;
+//       nDegrees = ~~( fPlayerA * (180/Math.PI)) % 360;
 // 	  _debugOutput(`nDegrees: ${nDegrees}`, 'debug2');
 
 

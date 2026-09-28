@@ -241,7 +241,7 @@ export {_rh};
 
 		if( texture.texture == "DIRECTIONAL" ){
 		  // Different Texture based on viewport
-		  if( fPlayerA > 0 && fPlayerA < PI___ ){
+		  if( fPlayerA > 0 && fPlayerA < Math.PI ){
 			texpixels = texture.S;
 		  } else {
 			texpixels = texture.N;
@@ -443,7 +443,7 @@ export {_rh};
 
 
           // change the angle and visible angle
-          sprite.r = (+(sprite.r) + PIx1_5 ) % PIx2; // TODO: sometimes buggy
+          sprite.r = (+(sprite.r) + +(Math.PI * 1.5) ) % +(Math.PI * 2.0); // TODO: sometimes buggy
 
           // if sprite keeps getting stuck, shove it outta there
           if( sprite.stuckcounter > 10 ){
@@ -461,7 +461,7 @@ export {_rh};
 
         // if sprite is close to the player, and facing the player, turn around
         if( sprite.z < 1 && sprite.a !== "B" ){
-          sprite.r = (+(sprite.r) + PIx1_5 ) % PIx2;
+          sprite.r = (+(sprite.r) + +(Math.PI * 1.5) ) % +(Math.PI * 2.0);
         }
     // remove this for now 'cause it's frustrating
         // // if player hits sprite, prevent moving
@@ -475,7 +475,7 @@ export {_rh};
         // for(var sj=0; sj < Object.keys(oLevelSprites).length; sj++ ){
         //   var jsprite = oLevelSprites[Object.keys(oLevelSprites)[sj]];
         //   if( jsprite.z - sprite.z > 2 ){
-        //     jsprite.r = (+(sprite.r) + PIx1_5 ) % PIx2;
+        //     jsprite.r = (+(sprite.r) + +(Math.PI * 1.5) ) % +(Math.PI * 2.0);
         //   }
         // }
 
@@ -502,9 +502,9 @@ export {_rh};
   drawSprites = function() {
       // draw sprites	// TODO change this to an array of objects probably
 	  for (const sprite of Object.values(oLevelSprites)) {
-	  
+
 		let spriteTileIndex = ~~sprite.y * nMapWidth + ~~sprite.x;
-		
+
 // 		let spriteTileAdjacentCardinals = [spriteTileIndex, spriteTileIndex + 1, spriteTileIndex - 1,
 // 											spriteTileIndex + nMapWidth, spriteTileIndex + nMapWidth + 1, spriteTileIndex + nMapWidth - 1,
 // 											spriteTileIndex - nMapWidth, spriteTileIndex - nMapWidth + 1, spriteTileIndex - nMapWidth - 1];
@@ -516,10 +516,10 @@ export {_rh};
 // 			_debugOutput(`STV: ${!spriteTileNotVisited}`, 'debug2');
 			continue;
 		}
-		
+
 		// reference to the global-side sprite
         var currentSpriteObject = allSprites[sprite.name];
-        
+
 		// Translate sprite position relative to the player
         let playerToSpriteX = sprite.x - fPlayerX;
         let playerToSpriteY = sprite.y - fPlayerY;
@@ -536,13 +536,13 @@ export {_rh};
 //         	_debugOutput(`STV: ${!spriteTileNotVisited}; STC: ${fSpriteDist < MIN_DIST}`, 'debug2');
             continue; // Sprite is directly behind or on top of the player
         }
-        
+
         // project onto screen
         let spriteScreenX = (nScreenWidth / 2) * (1 + spriteViewX / fSpriteDist);
-        
+
         		// TODO add constant for wall height, 16
         let fSpriteHeight = nScreenHeight / fSpriteDist;
-        
+
         let bInPlayerView = true;		// NOTE this should be removed at some point, we'll only have visible sprites at this point
 
 
@@ -553,10 +553,10 @@ export {_rh};
           // Sprite height is default 1, but we can adjust with the factor passed in the sprite object/
 //           var fSpriteCeiling = +(nScreenHeight / ((2 - nJumptimer * 0.15) - fLooktimer * 0.15)) - nScreenHeight / (+(fSpriteDist) ) * currentSpriteObject.hghtFctr;
 //           var fSpriteFloor = +(screenSkew) + nScreenHeight / (+(fSpriteDist) );
-          
           var fSpriteCeiling = screenSkew - fSpriteHeight / 2 * currentSpriteObject.hghtFctr;
+
 		  var fSpriteFloor = fSpriteCeiling - fSpriteHeight;
-		  
+
 // 		  _debugOutput(`SprDist: ${fSpriteDist}; SprH: ${fSpriteHeight}; SprCeil: ${fSpriteCeiling}; SprFlr: ${fSpriteFloor}`, 'debug2');
 
 // 		  var fSpriteFloor = nFloor;
@@ -572,13 +572,13 @@ export {_rh};
           var fMiddleOfSprite = spriteScreenX;
 
           // The angle the sprite is facing relative to the player
-          var fSpriteBeautyAngle = fPlayerA - sprite.r + PIdiv4;
+          var fSpriteBeautyAngle = fPlayerA - sprite.r + Math.PI / 4.0;
           // normalize
           if (fSpriteBeautyAngle < 0){
-            fSpriteBeautyAngle += PIx2;
+            fSpriteBeautyAngle += +(Math.PI * 2.0);
           }
-          if (fSpriteBeautyAngle > PIx2){
-            fSpriteBeautyAngle -= PIx2;
+          if (fSpriteBeautyAngle > +(Math.PI * 2.0)){
+            fSpriteBeautyAngle -= +(Math.PI * 2.0);
           }
 
           // loops through the sprite pixels
@@ -609,13 +609,13 @@ export {_rh};
               // sample-angled glyph is available
               if( "angles" in currentSpriteObject ){
 
-                if( fSpriteBeautyAngle >= PI_0 && fSpriteBeautyAngle < PIx05 ){
+                if( fSpriteBeautyAngle >= 0.0 && fSpriteBeautyAngle < +(Math.PI * 0.5) ){
                   sprite.a = "B";
-                } else if( +(fSpriteBeautyAngle) >= +(PIx05) && +(fSpriteBeautyAngle) < +(PIx1) ) {
+                } else if( +(fSpriteBeautyAngle) >= +(+(Math.PI * 0.5)) && +(fSpriteBeautyAngle) < +(Math.PI) ) {
                   sprite.a = "L";
-                } else if( +(fSpriteBeautyAngle) >= +(PIx1) && +(fSpriteBeautyAngle) < +(PIx1_5) ) {
+                } else if( +(fSpriteBeautyAngle) >= +(Math.PI) && +(fSpriteBeautyAngle) < +(+(Math.PI * 1.5)) ) {
                   sprite.a = "F";
-                } else if( +(fSpriteBeautyAngle) >= +(PIx1_5) && +(fSpriteBeautyAngle) < +(PIx2) ) {
+                } else if( +(fSpriteBeautyAngle) >= +(+(Math.PI * 1.5)) && +(fSpriteBeautyAngle) < +(+(Math.PI * 2.0)) ) {
                   sprite.a = "R";
                 }
               }

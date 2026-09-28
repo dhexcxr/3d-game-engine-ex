@@ -123,19 +123,19 @@ export {_loadLevel, _debugOutput, _mh, init};
 			fLooktimer = 0;
 		}
 		if (e.which === 50) {		// 2, go to cardinal direction N
-			fPlayerA = PIx05;
+			fPlayerA = +(Math.PI * 0.5);
 			hitSideCheck = 1;
 		}
 		if (e.which === 51) {		// 3, go to cardinal direction E
-			fPlayerA = PI___;
+			fPlayerA = Math.PI;
 			hitSideCheck = 0;
 		}
 		if (e.which === 52) {		// 4, go to cardinal direction S
-			fPlayerA = PIx1_5;
+			fPlayerA = +(Math.PI * 1.5);
 			hitSideCheck = 1;
 		}
 		if (e.which === 53) {		// 5, go to cardinal direction W
-			fPlayerA = PIx2;
+			fPlayerA = +(Math.PI * 2.0);
 			hitSideCheck = 0;
 		}
 
@@ -489,7 +489,7 @@ export {_loadLevel, _debugOutput, _mh, init};
     // initial gameload
     _loadLevel("mylevelfile1.map");
   };
-  
+
 
 
 
@@ -529,7 +529,7 @@ export {_loadLevel, _debugOutput, _mh, init};
     // generates random Pogels or Obetrls! :oooo
     var oRandomLevelSprites = {};	// NOTE so this is an object.....
     for( var m = 0; m < nNumberOfSprites; m++){
-      var randAngle = _randomIntFromInterval(0, PIx2);
+      var randAngle = _randomIntFromInterval(0, +(Math.PI * 2.0));
       var nSpriteRand = _randomIntFromInterval(0,3);
       var randomCoordinates = _generateRandomCoordinates();
       var oRandomSprite = {
