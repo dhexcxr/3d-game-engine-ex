@@ -4,7 +4,7 @@ export {_debugOutput, _mh, init, viewWindow, map};
 
 import {game, brightness, main, player} from './main-game-engine.js';
 
-
+		// TODO put this inside viewWindow object
 let isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
 
 // Update status when the user switches tabs or minimizes the window
@@ -20,6 +20,18 @@ window.addEventListener('focus', () => {
 window.addEventListener('blur', () => {
 	isWindowActive = false;
 });
+
+function pauseGameClock() {
+	clearInterval(game.timer);
+	player.bPaused = true;
+	_debugOutput(`isWindowActive: ${isWindowActive}; bPaused: ${player.bPaused}`, 'debug2');
+}
+
+function resumeGameClock() {
+	_testScreenSizeAndStartTheGame();
+	player.bPaused = false;
+	_debugOutput(`isWindowActive: ${isWindowActive}; bPaused: ${player.bPaused}`, 'debug2');
+}
 
 
 
@@ -38,6 +50,7 @@ let hiRes = false;
   let sLevelstring = "";	// only here IO
 
   let viewWindow = {
+    isWindowActive: isWindowActive,
   	width: 320,		// HERE to calc viewWindow.skew, but thats only used in raycaster (but should probably be in renderer)
   	height: 80,			// also used in io, raycaster, and renderer
 //   	height: 92,			// allow for more square "pixels"
@@ -215,9 +228,9 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
             _testScreenSizeAndStartTheGame();
             player.bPaused = false;
           } else {
-            clearInterval(game.timer);
-            player.bPaused = true;
-          }
+            clearInterval(game.timer);		// NOTE TODO i think something about my module design is making this
+            player.bPaused = true;				// clearInterval() not work, it isn't pausing as fully as the non-module version
+          }										// try hack with checking for paused or isWindowActive in main loop for now
         }
 
         if (player.bPaused) return;

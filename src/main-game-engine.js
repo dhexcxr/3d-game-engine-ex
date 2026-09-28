@@ -81,6 +81,7 @@ const game = {
 
     function gameLoop(){
 //       _debugOutput('clear', 'debug2');
+	  if (!viewWindow.isWindowActive || player.bPaused) return;
 
 	  const currentTime = performance.now()
 	  const rawDelta = currentTime - lastTime;
