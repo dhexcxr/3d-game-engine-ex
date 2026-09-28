@@ -264,15 +264,15 @@ function raycaster() {
 
                 var fSampleY = ( (screenRow - nTower) / (nCeiling - nTower) );
 
-                screen.buffer.[screenRow * screen.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
+                screen.buffer[screenRow * screen.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
               } else {
-                screen.buffer.[screenRow * screen.width + screenColumn] = brightness[0];
+                screen.buffer[screenRow * screen.width + screenColumn] = brightness[0];
               }
             } else {		// draw ceiling/sky
               if(sWalltype == ",") {
-                screen.buffer.[screenRow * screen.width + screenColumn] = "1";
+                screen.buffer[screenRow * screen.width + screenColumn] = "1";
               } else {
-                screen.buffer.[screenRow * screen.width + screenColumn] = brightness[0];
+                screen.buffer[screenRow * screen.width + screenColumn] = brightness[0];
               }
             }		          // solid block
           } else if( screenRow > nCeiling && screenRow <= nFloor && !(screenRow >= nDoorFrameBot && sWalltype == 'X') ) {
@@ -280,9 +280,9 @@ function raycaster() {
             // Door/exit Walltype
             if(sWalltype == "X"){
 			  if (screenRow > nDoorFrameTop) {
-				screen.buffer.[screenRow * screen.width + screenColumn] = _rh.renderGate(screenRow, fDistToDoor, nDoorFrameTop, nCeiling);
+				screen.buffer[screenRow * screen.width + screenColumn] = _rh.renderGate(screenRow, fDistToDoor, nDoorFrameTop, nCeiling);
               } else {
-                screen.buffer.[screenRow * screen.width + screenColumn] = brightness[0];
+                screen.buffer[screenRow * screen.width + screenColumn] = brightness[0];
               }
             }  else if(sWalltype != "." || sWalltype == "T") {		// Solid Walltype
 
@@ -292,27 +292,27 @@ function raycaster() {
                * animation timer example
                */
               // if( game.animationTimer < 5 ){
-              //   screen.buffer.[screenRow * screen.width + screenColumn] = _r.getSamplePixel(texture, fSampleX, fSampleY);
+              //   screen.buffer[screenRow * screen.width + screenColumn] = _r.getSamplePixel(texture, fSampleX, fSampleY);
               // } else if( game.animationTimer >= 5 && game.animationTimer < 10 ) {
-              //   screen.buffer.[screenRow * screen.width + screenColumn] = _r.getSamplePixel(texture2, fSampleX, fSampleY);
+              //   screen.buffer[screenRow * screen.width + screenColumn] = _r.getSamplePixel(texture2, fSampleX, fSampleY);
               // } else if( game.animationTimer >= 10 ) {
-              //   screen.buffer.[screenRow * screen.width + screenColumn] = _r.getSamplePixel(texture3, fSampleX, fSampleY);
+              //   screen.buffer[screenRow * screen.width + screenColumn] = _r.getSamplePixel(texture3, fSampleX, fSampleY);
               // }
 
 
               // Render Texture Directly
               if( screen.nRenderMode == 1 ){
-                screen.buffer.[screenRow * screen.width + screenColumn] = _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY);
+                screen.buffer[screenRow * screen.width + screenColumn] = _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY);
               } else if( screen.nRenderMode == 2 ) {		// Render Texture with Shading
-                screen.buffer.[screenRow * screen.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
+                screen.buffer[screenRow * screen.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
               } else if( screen.nRenderMode == 0 ) {	// old, solid-style shading
-                screen.buffer.[screenRow * screen.width + screenColumn] = _rh.renderSolidWall(fDistanceToWall, isBoundary);
+                screen.buffer[screenRow * screen.width + screenColumn] = _rh.renderSolidWall(fDistanceToWall, isBoundary);
               }
             } else {		// render whatever char is on the map as walltype
-              screen.buffer.[screenRow * screen.width + screenColumn] = sWalltype;
+              screen.buffer[screenRow * screen.width + screenColumn] = sWalltype;
             }
           } else {		// floor
-            screen.buffer.[screenRow * screen.width + screenColumn] = _rh.renderFloor(screenRow);
+            screen.buffer[screenRow * screen.width + screenColumn] = _rh.renderFloor(screenRow);
           }
         } // end draw column loop
 
@@ -352,7 +352,7 @@ function raycaster() {
           if( y > nObjectCeiling && y <= nObjectFloor ){
             if(sObjectType == "o"){
               if( y >=  nFObjectBackwall ){
-                screen.buffer.[y * screen.width + screenColumn] = _rh.renderSolidWall(fDistanceToObject, isBoundary);
+                screen.buffer[y * screen.width + screenColumn] = _rh.renderSolidWall(fDistanceToObject, isBoundary);
               }
             }
           }
