@@ -156,17 +156,11 @@ const game = {
       var overlayscreen = [];
 
 
-		let doorStartAngle = 0;		// DEBUG only
-		let doorStartDist = 0;
-		let doorEndAngle = 0;		// DEBUG only
-		let doorEndDist = 0;
-		let prevTile = '';		// DEBUG only
-
-
-     // Converts player turn position into degrees (used for texturing)
-//       nDegrees = ~~( player.ang * (180/Math.PI)) % 360;
-// 	  _debugOutput(`nDegrees: ${nDegrees}`, 'debug2');
-
+	  let doorStartAngle = 0;		// DEBUG only
+	  let doorStartDist = 0;
+	  let doorEndAngle = 0;		// DEBUG only
+	  let doorEndDist = 0;
+	  let prevTile = '';		// DEBUG only
 
       raycaster();
 
@@ -179,25 +173,6 @@ const game = {
 
 var gameEngineJS = function(){
 
-
-  // setup variables
-
-
-//   var fFOV = Math.PI / 2.25; // (Math.PI / 4.0 originally)	// not used
-
-//   const screenProjection = (screen.width / 2) / Math.tan(fFOV / 2);
-
-  // defaults
-//   var nDegrees = 0;
-
-
-//   var nMapHeight = 16;	// here, raycaster, and io
-//   var nMapWidth = 16;
-//   var map = "";		// io, raycaster, and renderer
-
-
-
-//   let printedScreenRays = false;	// NOT used
   let rayObs = new Array();		// DEBUG ONLY object to hold details of rays
   							// column, ray angle, height of wall	// RAYCASTER only
   class RayOb {
@@ -233,7 +208,5 @@ var gameEngineJS = function(){
   	rayObs.forEach(rayOb => console.log(rayOb.toString()));
   }
 
-  return // {
-//     init: init,
-//   }
+  return
 }();		// NOTE why does this need to be an immediate or whatever this is called?

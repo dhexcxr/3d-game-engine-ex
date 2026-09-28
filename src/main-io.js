@@ -41,19 +41,11 @@ let hiRes = false;
   	width: 320,		// HERE to calc viewWindow.skew, but thats only used in raycaster (but should probably be in renderer)
   	height: 80,			// also used in io, raycaster, and renderer
 //   	height: 92,			// allow for more square "pixels"
-// 	width: 640,
-// 	height: 160,
 
-//   	nScreenCenter = viewWindow.width / 2,		// not used
 	depth: 16.0, // viewport depth, max ray/draw dist		// raycaster and renderer
 	depthBuffer: [],		// raycaster and renderer	// TODO double check what this is used for, is it necessary?
 
 	output: '',
-
-// 	buffer: {
-// 		pixels: new Uint16Array(this.width * this.height),
-// 		add: function(index, character) { pixels[index = character.charCodeAt(0)]; },
-// 	},
 
 	buffer: {},
 
@@ -118,13 +110,9 @@ let hiRes = false;
 	get planeY() { return player.viewX * 0.66 },		// smaller will be more wider
   };
 
-
   let map = {};
-//   let oLevelSprites = {};
 
 const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO only
-
-
 
   // leaving the console for errors, logging seems to kill performance
   var _debugOutput = function(input, elementId, append = false){
@@ -181,17 +169,11 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       map = window[sLevelstring];
 	  // keep track of map tiles visited by the rays, help cull sprites without trig
       map.visitedTiles = new Uint32Array(map.width * map.height);	// renderer and raycaster
-//       nMapHeight = map.height;
-//       nMapWidth = map.width;
 
       // places the player at the map starting point
       player.x = map.playerStartX;
       player.y = map.playerStartY;
       player.ang = map.playerStartA;
-
-      // load sprites
-//       oLevelSprites = map.sprites;
-
 
 // 	map.sprites = '';		// DEBUG uncomment to disable
       if( map.sprites == "autogen" ){
@@ -201,7 +183,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       document.querySelector("body").style.color = map.color;
       document.querySelector("body").style.background = map.background;
     });
-
 
     // pauses, then starts the game loop
     _testScreenSizeAndStartTheGame();
@@ -224,12 +205,10 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       	// Ignore the event if the window is not currently active
   		if (!isWindowActive) return;
 
-
         console.log(e.which);		// DEBUG ONLY
 		if (e.which === 192) {		// `, print ray details to console
 			printRayObs();
 		}
-
 
         if (e.which == 80) { // p
           if( player.bPaused ){		// TODO do not respond to mouselook when paused
@@ -244,7 +223,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
         if (player.bPaused) return;
 
         // movement based conditions
-
         // DEBUG movement
 		if (e.which === 49) {		// 1, lock lookup/down to center
 			LockLook = !LockLook;
@@ -523,11 +501,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
         player.ang += 0.05;
       }
 
-//       var fMoveFactor = 0.1;
-//       if(player.bRunning){
-//         fMoveFactor = 0.2;
-//       }
-
       let fMoveFactor = player.bRunning ? 0.2 : 0.1;
 
 
@@ -592,9 +565,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 	  	player.y = newY;
 	  }
 
-
-
-//       _debugOutput(`dX: ${deltaX}; dDirX: ${deltaXDir}; totX: ${totalX}; dY: ${deltaY}; dDirY: ${deltaYDir}; totY: ${totalY}`, 'debug2');
 	  },
 
   };
@@ -603,7 +573,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     var init = function( input ) {
     // prep document
     viewWindow.output = document.getElementById("display");
-//     eScreen2 = document.getElementById("seconddisplay");
     eTouchLook = document.getElementById("touchinputlook");
     eTouchMove = document.getElementById("touchinputmove");
 
@@ -614,13 +583,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
   		viewWindow.output.style.fontSize = `${currentFontSize / 2}px`;
 
   	}
-    
-//     viewWindow.buffer = {
-// 		pixels: new Uint16Array(viewWindow.width * viewWindow.height),
-// 		add: function(index, character) { this.pixels[index = character.charCodeAt(0)]; },
-// 		blank: function() { this.pixels.fill(32); }, 	  // Clear viewWindow with spaces (ASCII code 32)
-// 	};
-
 
     _mh.keylisten();
     _mh.mouseinit();
@@ -634,17 +596,11 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     // initial gameload
     _loadLevel("mainlevelfile1.map");
 
-//     	viewWindow.buffer = [];
 	viewWindow.setupScreenBuffer(viewWindow.width * Math.round(viewWindow.height));
   };
 
 
-
-
 // "private" helper functions only used here
-
-
-
   function printPlayerLoc() {		// DEBUG only
     _debugOutput(`Ang: ${player.ang}; x: ${player.x}; y: ${player.y}
 	Look: ${game.fLooktimer}; Tile: ${map.tiles[~~player.y * map.width + ~~player.x]}`, 'debug');
@@ -702,7 +658,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
   };
 
 
-
   // for every row make a viewWindow.width amount of pixels
   var _createTestScreen = function(){
     var sOutput = "";
@@ -750,7 +705,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     if(widthOfDisplay > widthOfViewport + 120){
       viewWindow.width = viewWindow.width - 1;
       // viewWindow.height = viewWindow.width * 0.22
-
 
       // try no more than nTrymax times (in case of some error)
       if( nTrymax > 0 ){

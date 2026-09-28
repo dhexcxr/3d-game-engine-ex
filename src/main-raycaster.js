@@ -52,16 +52,10 @@ function raycaster() {
         var sObjectType = "0";
         let isBoundary = false;
 
-//         var fEyeX = Math.cos(fRayAngle); // I think this determines the line the testing travels along
-//         var fEyeY = Math.sin(fRayAngle);
-
         var fSampleX = 0.0;
         var sWallFaceDirection = "N";
 
         var nRayLength = 0.0;
-
-        // var nGrainControl = 0.1;
-//         var nGrainControl = 0.05;
 
         var map_x = ~~(player.x);	// the player's current map xy coordinates
 	    var map_y = ~~(player.y);	// TODO get all this crap that is constant out of this loop, actually this needs to be reset every ray
@@ -86,7 +80,6 @@ function raycaster() {
       	let playerInsideDoorTile = map.tiles[~~player.y * map.width + ~~player.x] === 'X';
 
 		if (playerInsideDoorTile) {	// NOTE this is not working, just comment out for now
-// 			bHitWall = true;
 
 			fDistanceToWall = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
 
@@ -129,10 +122,7 @@ function raycaster() {
           	if(!bHitObject) fDistanceToObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
             bHitObject = true;
             sObjectType = tileType;
-          } // else if(bHitObject == true && tileType !== "o"){
-//           	if(!bHitBackObject) fDistanceToInverseObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
-//             bHitBackObject = true;
-//           }
+          }
 
           else if (tileType === 'X') {		// exit door
           	bHitWall = true;
@@ -146,7 +136,6 @@ function raycaster() {
 
 			bBreakLoop = map_x === distToDoorX && map_y === distToDoorY;
             sWalltype = tileType;
-//             isBoundary = true;
           }
 
           // Test for walls	// NOTE why is it not....like, testing /for/ walls...
@@ -154,11 +143,7 @@ function raycaster() {
             bHitWall = true;
             fDistanceToWall = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
             bBreakLoop = true;
-
             sWalltype = tileType;
-
-			// var isBoundary = true;		// NOTE i only guessed that this needs to be true, it seemed like it was set when they nieve raytraced rays were found to be close to tile boundary
-// 			isBoundary = true;
           }
 
 	          // save back of object distance as soon as we're out of it
@@ -170,10 +155,6 @@ function raycaster() {
           }
 
         } // end ray casting loop
-
-
-
-// 		nRayLength = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
 
 		if(hit_NS_wall) {		// NS wall	// sin(RayAng) gives normalized Ray Vector
 			fSampleX = player.y + fDistanceToWall * rayDirY;
@@ -216,8 +197,6 @@ function raycaster() {
 			}
 		}
 
-
-
         // at the end of ray casting, we should have the lengths of the rays
         // set to their last value, representing their distances
         // based on the distance to wall, determine how much floor and ceiling to show per column,
@@ -226,9 +205,7 @@ function raycaster() {
         var nCeiling = viewWindow.skew - wallHeight / 2;
 		var nFloor   = viewWindow.skew + wallHeight / 2;
 
-
 // 	    rayObs.push(new RayOb(screenColumn, -1, fDistanceToWall, wallHeight, nCeiling, nFloor, game.fLooktimer, tileType));
-
 
         // similar for towers and gates
         let nTower = viewWindow.skew - wallHeight / 2 - wallHeight;
@@ -244,7 +221,6 @@ function raycaster() {
         var nObjectCeiling = viewWindow.skew - viewWindow.height / fDistanceToObject / 2;
         var nObjectFloor = viewWindow.skew + viewWindow.height / fDistanceToObject / 2;
         var nFObjectBackwall = viewWindow.skew + (viewWindow.height / (fDistanceToInverseObject + 0) /2 ); // 0 makes the object flat, higher the number, the higher the object :)
-
 
         // the spot where the wall was hit
         viewWindow.depthBuffer[screenColumn] = fDistanceToWall;
@@ -299,7 +275,6 @@ function raycaster() {
               //   viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _r.getSamplePixel(texture3, fSampleX, fSampleY);
               // }
 
-
               // Render Texture Directly
               if( viewWindow.nRenderMode == 1 ){
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY);
@@ -316,31 +291,7 @@ function raycaster() {
           }
         } // end draw column loop
 
-
-//     	if(screenColumn === viewWindow.width / 2 && (sWalltype == '#' || sWalltype == 'X')) {
-// /*
- 			// midFrameInfoMsg = `
-// 			fDistToDoor: ${fDistToDoor.toFixed(3)}; nDoorHeight: ${nDoorHeight.toFixed(3)};
-// 			nDoorFrameTop: ${nDoorFrameTop.toFixed(3)}; nDoorFrameBot: ${nDoorFrameBot.toFixed(3)};<br>
-// 			fDistanceToWall: ${fDistanceToWall.toFixed(3)}; wallHeight: ${wallHeight.toFixed(3)};
-// 			nCeiling: ${nCeiling.toFixed(3)}; nFloor: ${nFloor.toFixed(3)};
-// 			`;
-//  */
-//  			// midFrameInfoMsg = `
-// // 			fDistanceToObject: ${fDistanceToObject};
-// // 			nObjectCeiling: ${nObjectCeiling.toFixed(3)};
-// // 			nObjectFloor: ${nObjectFloor.toFixed(3)};
-// // 			fDistanceToInverseObject: ${fDistanceToInverseObject};
-// // 			nFObjectBackwall: ${nFObjectBackwall.toFixed(3)};
-// // 			fDistanceToWall: ${fDistanceToWall};
-// // 			nFloor: ${nFloor}
-// // 			`;
-//
-// 			midFrameInfoMsg = `
-// 			hit_NS_wall: ${hit_NS_wall};
-// 			sWallFaceDirection: ${sWallFaceDirection};
-// 			`;
-//     	}
+//     	if(screenColumn === viewWindow.width / 2 && (sWalltype == '#' || sWalltype == 'X')) {}
 
 // 		if(midFrameInfoMsg !== '' || endDoorInfoMsg !== '') {
 // 			_debugOutput(`${midFrameInfoMsg}<br>${endDoorInfoMsg}`, 'debug2');
