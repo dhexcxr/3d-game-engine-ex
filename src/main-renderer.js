@@ -34,7 +34,6 @@ const MIN_DIST = 0.1; // Prevent division by zero if standing exactly on a sprit
 
 const pfOutput = new Array(viewWindow.width * Math.round(viewWindow.height));
 let removeFrom = [];		// TODO change to Unit8Array
-const items = new Uint16Array();		// TODO change to Unit8Array
 
 
 let _r = {
@@ -132,10 +131,6 @@ let _r = {
       fLookModifier = neverMoreThan;
     }
 
-	//  make a new array that contains the indices of the elements to print
-    for (let i = 0; i < viewWindow.width; i++) {
-	  items[i] = i;
-    }
 
     // interate each row at a time
     for(var row = 0; row < viewWindow.height; row++){
@@ -157,7 +152,7 @@ let _r = {
       // [1,2,3,4,5,6,7,8]
       // [1,2, ,4,5, ,7,8]
       //   [1,2,4,5,7,8]
-      removeFrom = _evenlyPickItemsFromArray(items, toBeRemoved);
+      removeFrom = _evenlyPickItemsFromArray(viewWindow.width, toBeRemoved);
 
       // loops through each rows of pixels
       for(var rpix = 0; rpix < viewWindow.width; rpix++){
@@ -729,26 +724,16 @@ let _r = {
    * @returns {Array}
    */
   // helper function
-  function _toConsumableArray(arr) {
-  	return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
-  }
 
   let result = [];
-  function _evenlyPickItemsFromArray(allItems, neededCount) {
-    if (neededCount >= allItems.length) {
-      return allItems;
-    }
 
-    result.length = 0;
-    var totalItems = allItems.length;
-    var interval = totalItems / neededCount;
 
-    for (var i = 0; i < neededCount; i++) {
-      var evenIndex = ~~(i * interval + interval / 2);
-      result.push(allItems[evenIndex]);
-    }
 
-    return result;
+  function _evenlyPickItemsFromArray(numOfValues, neededCount) {
+
+	let returnValues = Math.min(neededCount, numOfValues);		// NOTE is there every a condition where neededCount > allItems.length?
+	var interval = numOfValues / returnValues;
+	return Uint16Array.from({ length: returnValues }, (_, index) => ~~(index * interval + interval / 2));
   }
 
 
