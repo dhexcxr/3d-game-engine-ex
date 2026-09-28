@@ -151,10 +151,10 @@ const game = {
        */
 
 
-      // holds the frames we're going to send to the renderer
-      var screenBuf = [];
-      var spritescreen = [];
-      var overlayscreen = [];
+//       // holds the frames we're going to send to the renderer
+//       var screenBuf = [];
+//       var spritescreen = [];
+//       var overlayscreen = [];
 
 
 	  let doorStartAngle = 0;		// DEBUG only

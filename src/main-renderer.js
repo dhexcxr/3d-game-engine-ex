@@ -32,6 +32,9 @@ import {_debugOutput, viewWindow, map} from './main-io.js';
 
 const MIN_DIST = 0.1; // Prevent division by zero if standing exactly on a sprite	// RENDERER only
 
+const pfOutput = new Array(viewWindow.width * Math.round(viewWindow.height));
+let removeFrom = [];		// TODO change to Unit8Array
+const items = new Uint16Array();		// TODO change to Unit8Array
 
 
 let _r = {
@@ -92,14 +95,13 @@ let _r = {
    * @return {[string]}         Final Pixel
    */
   printCompositPixel: function(sInput, sOverlay, nIndex){
-    var sOutput = "";
     // if sOverlay !0, appends it to the output instead
     if( sOverlay && sOverlay[nIndex] != 0){
-      sOutput += sOverlay[nIndex];
+	return sOverlay[nIndex];
     } else {
-      sOutput += sInput[nIndex];
+	return String.fromCharCode(sInput[nIndex]);
     }
-    return sOutput;
+    return '';
   },
 
 
@@ -113,7 +115,7 @@ let _r = {
   fPrepareFrame: function(oInput, oOverlay, eTarget){
     var oOverlay = oOverlay || false;
     var eTarget  = eTarget || viewWindow.outputEl;
-    var sOutput = [];
+    pfOutput.length = 0;
 
 // NOTE TODO i think this is where the skewing can be improved
 
@@ -146,7 +148,7 @@ let _r = {
 
       // print filler pixels
       for(var i=0; i<fLookModifier; i++){
-        sOutput.push( "." );
+        pfOutput.push( "." );
       }
 
       var toBeRemoved = (2 * fLookModifier);
@@ -165,7 +167,9 @@ let _r = {
           // don"t print
         } else {
           // print
-          sOutput.push( _r.printCompositPixel(oInput, oOverlay, globalPrintIndex) );
+//           pfOutput.push( _r.printCompositPixel(oInput, oOverlay, globalPrintIndex) );
+//           pfOutput.push( oOverlay && oOverlay[globalPrintIndex] != 0 ? oOverlay[globalPrintIndex] : String.fromCharCode(oInput[globalPrintIndex]) );		// Unit16Array functionality
+          pfOutput.push( oOverlay && oOverlay[globalPrintIndex] != 0 ? oOverlay[globalPrintIndex] : oInput[globalPrintIndex]);
         }
 
         globalPrintIndex++;
@@ -173,12 +177,12 @@ let _r = {
 
       // print filler pixels
       for(var i=0; i<fLookModifier; i++){
-        sOutput.push( "." );
+        pfOutput.push( "." );
       }
 
     } // end for(row
 
-    return sOutput;
+    return pfOutput;
   },
 
 
@@ -189,7 +193,7 @@ let _r = {
     var target = target || viewWindow.outputEl;
 
 
-    var sOutput = "";
+    let sOutput = new Array(viewWindow.buffer.length);
 
     // interates over each row again, and omits the first and last 30 pixels, to disguise the skewing!
     var printIndex = 0;
@@ -200,19 +204,17 @@ let _r = {
 															// implement the skew in a continuous way (a greater number of more granular steps)
         // H-blank based on screen-width				//  add logic to expand the visuals that are being skewed instead of just adding
         if(printIndex % (viewWindow.width) == 0){			// extra dots '.' (this is done in fPrepareFrame() function)
-          sOutput += "<br>";
+          sOutput.push("<br>");
         }
 
-        if( pix < removePixels || pix > viewWindow.width - removePixels) {
-          sOutput += "";
-        } else {
-          sOutput += frame[printIndex];
+        if( !(pix < removePixels || pix > viewWindow.width - removePixels)) {
+		  sOutput.push(frame[printIndex]);
         }
 
         printIndex++;
       }
     }
-    target.innerHTML = sOutput;
+    target.innerHTML = sOutput.join('');
   },
 
 

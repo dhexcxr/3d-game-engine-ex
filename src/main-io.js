@@ -63,9 +63,10 @@ let hiRes = false;
 
 	output: '',
 
-	buffer: {},
+	buffer: [],
 
 	setupScreenBuffer: function(size = 1024) {
+		this.buffer =  new Uint16Array(size);
 
 	  const bufferArray = {	// Uint16Array offers better performance than standard array, contiguous, no GC
 		innerUint16Array: new Uint16Array(size),
@@ -613,7 +614,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     // initial gameload
     _loadLevel("mainlevelfile1.map");
 
-	viewWindow.setupScreenBuffer(viewWindow.width * Math.round(viewWindow.height));
+	viewWindow.setupScreenBuffer(viewWindow.width * Math.round(viewWindow.height));	// this will replace the default array with the Unit16Array
 
   };
 
