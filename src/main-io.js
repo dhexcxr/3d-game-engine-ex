@@ -49,9 +49,63 @@ let hitSideCheck = 0;		// DEBUG only, only in [io
 	output: '',
 
 // 	buffer: {
-// 		pixels: new Uint8Array(this.width * this.height),
+// 		pixels: new Uint16Array(this.width * this.height),
 // 		add: function(index, character) { pixels[index = character.charCodeAt(0)]; },
 // 	},
+
+	buffer: {},
+
+	setupScreenBuffer: function(size = 1024) {
+
+	  const bufferArray = {	// Uint16Array offers better performance than standard array, contiguous, no GC
+		innerUint16Array: new Uint16Array(size),
+
+		toString() {
+		  let result = "";
+		  for (let i = 0; i < this.innerUint16Array.length; i++) {
+			if (this.innerUint16Array[i] === 0) break;
+			result += String.fromCharCode(this.innerUint16Array[i]);
+		  }
+		  return result;
+		},
+
+		clear() {
+		  this.innerUint16Array.fill(0);
+		},
+
+		get length() {
+		  return this.innerUint16Array.length;
+		}
+	  };
+
+	  // co-opt bracket notation to automatically encode chars as numbers for storage in Unit16Array
+	  this.buffer = new Proxy(bufferArray, {
+		get(target, prop, receiver) {
+		  // Intercept bracket reads like obj[0]
+		  if (typeof prop === 'string' && !isNaN(prop)) {
+			const index = Number(prop);
+			const charCode = target.innerUint16Array[index];
+			return charCode === 0 ? undefined : String.fromCharCode(charCode);
+		  }
+		  return Reflect.get(target, prop, receiver);
+		},
+
+		set(target, prop, value, receiver) {
+		  // Intercept bracket writes like obj[0] = 'g'
+		  if (typeof prop === 'string' && !isNaN(prop)) {
+			const index = Number(prop);
+			if (typeof value === 'string' && value.length > 0) {
+			  target.innerUint16Array[index] = value.charCodeAt(0);
+			} else if (typeof value === 'number') {
+			  target.innerUint16Array[index] = value;
+			}
+			return true;
+		  }
+		  return Reflect.set(target, prop, value, receiver);
+		}
+	  });
+	},
+
 
 	nRenderMode: 2,	// used in renderer and raycaster, but the raycaster stuff should probably be moved into renderer
 
