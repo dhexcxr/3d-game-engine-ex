@@ -45,8 +45,8 @@ var gameEngineJS = (function(){
   var eScreen;
   var eDebugOut;
 
-  var nScreenWidth = 320;
-  var nScreenHeight = 80;
+  var nScreenWidth = 640;
+  var nScreenHeight = 160;
   let nScreenCenter = nScreenWidth / 2;
 
   var fFOV = PI___ / 2.25; // (PI___ / 4.0 originally)
@@ -1262,7 +1262,7 @@ var gameEngineJS = (function(){
    * The basic game loop
    */
   var main = function(){
-    gameRun = setInterval(gameLoop, 33);
+    gameRun = setInterval(gameLoop, 16.66667);
     let lastTime = performance.now();
     let smoothedDelta = 33.3333; // Initialize assuming ~30 FPS (1000ms / 60)
 	const alpha = 0.9;         // Higher = smoother/slower, Lower = twitchier
