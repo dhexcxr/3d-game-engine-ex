@@ -10,26 +10,29 @@ let isWindowActive = document.visibilityState === 'visible' && document.hasFocus
 // Update status when the user switches tabs or minimizes the window
 document.addEventListener('visibilitychange', () => {
 	isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
+	isWindowActive ? pauseGameClock() : resumeGameClock();
 });
 
 // Update status when the window gains or loses OS focus
 window.addEventListener('focus', () => {
 	isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
+	isWindowActive && !player.bPaused ? resumeGameClock() : pauseGameClock();
 });
 
 window.addEventListener('blur', () => {
 	isWindowActive = false;
+	isWindowActive && !player.bPaused ? resumeGameClock() : pauseGameClock();
 });
 
 function pauseGameClock() {
 	clearInterval(game.timer);
-	player.bPaused = true;
+// 	player.bPaused = true;
 	_debugOutput(`isWindowActive: ${isWindowActive}; bPaused: ${player.bPaused}`, 'debug2');
 }
 
 function resumeGameClock() {
 	_testScreenSizeAndStartTheGame();
-	player.bPaused = false;
+// 	player.bPaused = false;
 	_debugOutput(`isWindowActive: ${isWindowActive}; bPaused: ${player.bPaused}`, 'debug2');
 }
 
