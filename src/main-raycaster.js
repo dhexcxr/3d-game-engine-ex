@@ -3,7 +3,7 @@
 export {raycaster};
 
 import {brightness, player} from './main-game-engine.js';
-import {_debugOutput, screen, map} from './main-io.js';
+import {_debugOutput, viewWindow, map} from './main-io.js';
 import {_r, _rh} from './main-renderer.js';
 
 const absSign = (x) => (x === 0 ? 1 : Math.sign(x));	// RENDERER only
@@ -16,21 +16,21 @@ let endDoorInfoMsg = '';		// DEBUG only
 
 function raycaster() {
 // for the length of the screenwidth (one frame)
-      for(var screenColumn = 1; screenColumn <= screen.width; screenColumn++){
+      for(var screenColumn = 0; screenColumn < viewWindow.width; screenColumn++){
 
         // calculates the ray angle into the world space
         // take the current player angle, subtract half the field of view
         // and then chop it up into equal little bits of the screen width (at the current column)
-//         var fRayAngle = (player.ang - fFOV / 1.8) + (screenColumn / screen.width) * fFOV;
+//         var fRayAngle = (player.ang - fFOV / 1.8) + (screenColumn / viewWindow.width) * fFOV;
         	// TODO calc first ray angle outside of individual ray loop
         		// then calc interval between rays
         		// then just add interval to original angle on each iteration
         		// see https://tech.nextroll.com/blog/dev/2022/02/02/rustenstein.html
 
 		// cameraX is the vector of the current ray being cast with respect to the camera/screen plane
-		let cameraX = (2 * screenColumn / screen.width) - 1;
-		let rayDirX = player.viewX + (screen.planeX * cameraX);
-		let rayDirY = player.viewY + (screen.planeY * cameraX);
+		let cameraX = (2 * screenColumn / viewWindow.width) - 1;
+		let rayDirX = player.viewX + (viewWindow.planeX * cameraX);
+		let rayDirY = player.viewY + (viewWindow.planeY * cameraX);
 
 
         var bBreakLoop = false;
@@ -102,7 +102,7 @@ function raycaster() {
         /**
          * Ray Casting Loop
          */
-        while(!bBreakLoop && nRayLength < screen.depth * 2){
+        while(!bBreakLoop && nRayLength < viewWindow.depth * 2){
 
 		  if(side_dist_x < side_dist_y) {
 			side_dist_x += delta_x;
@@ -120,7 +120,7 @@ function raycaster() {
           // test if ray hits out of bounds
           if(map_x < 0 || map_x >= map.width || map_y < 0 || map_y >= map.height){
 //             bHitWall = true; // didn't actually, just no wall there, with this enabled we paint a wall, but we can still go through it
-            fDistanceToWall = screen.depth;
+            fDistanceToWall = viewWindow.depth;
             bBreakLoop = true;
           }
 
@@ -222,38 +222,38 @@ function raycaster() {
         // set to their last value, representing their distances
         // based on the distance to wall, determine how much floor and ceiling to show per column,
         // Adding in the recalc for looking (game.fLookTimer) and jumping (game.nJumptimer)
-        var wallHeight = Math.round(screen.height / fDistanceToWall);
-        var nCeiling = screen.skew - wallHeight / 2;
-		var nFloor   = screen.skew + wallHeight / 2;
+        var wallHeight = Math.round(viewWindow.height / fDistanceToWall);
+        var nCeiling = viewWindow.skew - wallHeight / 2;
+		var nFloor   = viewWindow.skew + wallHeight / 2;
 
 
 // 	    rayObs.push(new RayOb(screenColumn, -1, fDistanceToWall, wallHeight, nCeiling, nFloor, game.fLooktimer, tileType));
 
 
         // similar for towers and gates
-        let nTower = screen.skew - wallHeight / 2 - wallHeight;
+        let nTower = viewWindow.skew - wallHeight / 2 - wallHeight;
 
 			// technique from original wolf3d code (I think), and also this guy: https://github.com/permadi-com/ray-cast/blob/master/demo/1/sample1.js
 			// TODO put all these types of calcs in each "hit object" code so it doesn't run all the time
-		let nDoorHeight = Math.round(screen.height / fDistToDoor)	// TODO change the gate render, make the blockV on the left and right edges
-        let nDoorFrameTop = screen.skew - nDoorHeight / 2;			//  (maybe in the center, like striped), and blockH in the center
-        let nDoorFrameBot = screen.skew + nDoorHeight / 2;			// Second, try to actually give it an upper door jamb
+		let nDoorHeight = Math.round(viewWindow.height / fDistToDoor)	// TODO change the gate render, make the blockV on the left and right edges
+        let nDoorFrameTop = viewWindow.skew - nDoorHeight / 2;			//  (maybe in the center, like striped), and blockH in the center
+        let nDoorFrameBot = viewWindow.skew + nDoorHeight / 2;			// Second, try to actually give it an upper door jamb
 				        										// ALSO, standardize Door vs Gate in var and func names
 
         // similar operation for objects		// TODO calc these like we did for walls and doors probably
-        var nObjectCeiling = screen.skew - screen.height / fDistanceToObject / 2;
-        var nObjectFloor = screen.skew + screen.height / fDistanceToObject / 2;
-        var nFObjectBackwall = screen.skew + (screen.height / (fDistanceToInverseObject + 0) /2 ); // 0 makes the object flat, higher the number, the higher the object :)
+        var nObjectCeiling = viewWindow.skew - viewWindow.height / fDistanceToObject / 2;
+        var nObjectFloor = viewWindow.skew + viewWindow.height / fDistanceToObject / 2;
+        var nFObjectBackwall = viewWindow.skew + (viewWindow.height / (fDistanceToInverseObject + 0) /2 ); // 0 makes the object flat, higher the number, the higher the object :)
 
 
         // the spot where the wall was hit
-        screen.depthBuffer[screenColumn] = fDistanceToWall;
+        viewWindow.depthBuffer[screenColumn] = fDistanceToWall;
 
 // DEBUG ONLY print out details on the Tower block, and see why we're painting shader in the sky
 //_debugOutput(`SprDist: ${fSpriteDist}; SprH: ${fSpriteHeight}; SprCeil: ${fSpriteCeiling}; SprFlr: ${fSpriteFloor}`, 'debug2');
 
         // draw the columns one screenheight-pixel at a time
-        for(var screenRow = 0; screenRow < screen.height; screenRow++){
+        for(var screenRow = 0; screenRow < viewWindow.height; screenRow++){
 
           // sky
           if( screenRow < nCeiling){
@@ -264,15 +264,15 @@ function raycaster() {
 
                 var fSampleY = ( (screenRow - nTower) / (nCeiling - nTower) );
 
-                screen.buffer[screenRow * screen.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
+                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
               } else {
-                screen.buffer[screenRow * screen.width + screenColumn] = brightness[0];
+                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = brightness[0];
               }
             } else {		// draw ceiling/sky
               if(sWalltype == ",") {
-                screen.buffer[screenRow * screen.width + screenColumn] = "1";
+                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = "1";
               } else {
-                screen.buffer[screenRow * screen.width + screenColumn] = brightness[0];
+                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = brightness[0];
               }
             }		          // solid block
           } else if( screenRow > nCeiling && screenRow <= nFloor && !(screenRow >= nDoorFrameBot && sWalltype == 'X') ) {
@@ -280,9 +280,9 @@ function raycaster() {
             // Door/exit Walltype
             if(sWalltype == "X"){
 			  if (screenRow > nDoorFrameTop) {
-				screen.buffer[screenRow * screen.width + screenColumn] = _rh.renderGate(screenRow, fDistToDoor, nDoorFrameTop, nCeiling);
+				viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderGate(screenRow, fDistToDoor, nDoorFrameTop, nCeiling);
               } else {
-                screen.buffer[screenRow * screen.width + screenColumn] = brightness[0];
+                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = brightness[0];
               }
             }  else if(sWalltype != "." || sWalltype == "T") {		// Solid Walltype
 
@@ -292,32 +292,31 @@ function raycaster() {
                * animation timer example
                */
               // if( game.animationTimer < 5 ){
-              //   screen.buffer[screenRow * screen.width + screenColumn] = _r.getSamplePixel(texture, fSampleX, fSampleY);
+              //   viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _r.getSamplePixel(texture, fSampleX, fSampleY);
               // } else if( game.animationTimer >= 5 && game.animationTimer < 10 ) {
-              //   screen.buffer[screenRow * screen.width + screenColumn] = _r.getSamplePixel(texture2, fSampleX, fSampleY);
+              //   viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _r.getSamplePixel(texture2, fSampleX, fSampleY);
               // } else if( game.animationTimer >= 10 ) {
-              //   screen.buffer[screenRow * screen.width + screenColumn] = _r.getSamplePixel(texture3, fSampleX, fSampleY);
+              //   viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _r.getSamplePixel(texture3, fSampleX, fSampleY);
               // }
 
 
               // Render Texture Directly
-              if( screen.nRenderMode == 1 ){
-                screen.buffer[screenRow * screen.width + screenColumn] = _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY);
-              } else if( screen.nRenderMode == 2 ) {		// Render Texture with Shading
-                screen.buffer[screenRow * screen.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
-              } else if( screen.nRenderMode == 0 ) {	// old, solid-style shading
-                screen.buffer[screenRow * screen.width + screenColumn] = _rh.renderSolidWall(fDistanceToWall, isBoundary);
+              if( viewWindow.nRenderMode == 1 ){
+                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY);
+              } else if( viewWindow.nRenderMode == 2 ) {		// Render Texture with Shading
+                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
+              } else if( viewWindow.nRenderMode == 0 ) {	// old, solid-style shading
+                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderSolidWall(fDistanceToWall, isBoundary);
               }
             } else {		// render whatever char is on the map as walltype
-              screen.buffer[screenRow * screen.width + screenColumn] = sWalltype;
+              viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = sWalltype;
             }
           } else {		// floor
-            screen.buffer[screenRow * screen.width + screenColumn] = _rh.renderFloor(screenRow);
+            viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderFloor(screenRow);
           }
         } // end draw column loop
 
 
-    	if(screenColumn === screen.width / 2 && (sWalltype == '#' || sWalltype == 'X')) {
 /*
 			midFrameInfoMsg = `
 			fDistToDoor: ${fDistToDoor.toFixed(3)}; nDoorHeight: ${nDoorHeight.toFixed(3)};
@@ -326,6 +325,7 @@ function raycaster() {
 			nCeiling: ${nCeiling.toFixed(3)}; nFloor: ${nFloor.toFixed(3)};
 			`;
  */
+     	if(screenColumn === viewWindow.width / 2 && (sWalltype == '#' || sWalltype == 'X')) {
  			// midFrameInfoMsg = `
 // 			fDistanceToObject: ${fDistanceToObject};
 // 			nObjectCeiling: ${nObjectCeiling.toFixed(3)};
@@ -348,11 +348,11 @@ function raycaster() {
 
 
         // Object-Draw (removed overlayscreen)
-        for(var y = 0; y < screen.height; y++){
+        for(var y = 0; y < viewWindow.height; y++){
           if( y > nObjectCeiling && y <= nObjectFloor ){
             if(sObjectType == "o"){
               if( y >=  nFObjectBackwall ){
-                screen.buffer[y * screen.width + screenColumn] = _rh.renderSolidWall(fDistanceToObject, isBoundary);
+                viewWindow.buffer[y * viewWindow.width + screenColumn] = _rh.renderSolidWall(fDistanceToObject, isBoundary);
               }
             }
           }

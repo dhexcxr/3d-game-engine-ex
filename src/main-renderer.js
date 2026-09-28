@@ -1,7 +1,7 @@
 export {_r, _rh};
 
 import {game, brightness, player} from './main-game-engine.js';
-import {_debugOutput, screen, map} from './main-io.js';
+import {_debugOutput, viewWindow, map} from './main-io.js';
 
 /*
 	original top level funcs:
@@ -112,13 +112,13 @@ let _r = {
    */
   fPrepareFrame: function(oInput, oOverlay, eTarget){
     var oOverlay = oOverlay || false;
-    var eTarget  = eTarget || screen.output;
+    var eTarget  = eTarget || viewWindow.output;
     var sOutput = [];
 
 // NOTE TODO i think this is where the skewing can be improved
 
     // this is the maximum of variation created by the lookup timer, aka the final lookmodifier value
-    var neverMoreThan = Math.round(screen.height / _skipEveryXrow(game.fLooktimer) - 1);
+    var neverMoreThan = Math.round(viewWindow.height / _skipEveryXrow(game.fLooktimer) - 1);
 
     // used to skew the image
     var globalPrintIndex = 0;
@@ -131,7 +131,7 @@ let _r = {
     }
 
     // interate each row at a time
-    for(var row = 0; row < screen.height; row++){
+    for(var row = 0; row < viewWindow.height; row++){
 
       // increment the fLookModifier every time it needs to grow (grows per row)
       if ( _everyAofB(row, _skipEveryXrow(game.fLooktimer)) ) {
@@ -150,7 +150,7 @@ let _r = {
       //  make a new array that contains the indices of the elements to print
       // (removes X amount of elements from array)
       var items = [];
-      for (var i=0; i<= screen.width; i++) {
+      for (var i=0; i < viewWindow.width; i++) {
         items.push(i);
       }
 
@@ -161,7 +161,7 @@ let _r = {
       removeFrom = _evenlyPickItemsFromArray(items, toBeRemoved);
 
       // loops through each rows of pixels
-      for(var rpix = 0; rpix < screen.width; rpix++){
+      for(var rpix = 0; rpix < viewWindow.width; rpix++){
 
         // print only if the pixel is in the list of pixels to print
         if( removeFrom.includes(rpix) ){
@@ -186,26 +186,25 @@ let _r = {
 
 
   fDrawFrame: function(screen, overlayscreen, target) {
-    var frame = _r.fPrepareFrame(screen, overlayscreen);
+    var frame = _r.fPrepareFrame(viewWindow.buffer, overlayscreen);
 // 	var frame = screen;		// DEBUG uncomment to remove skew from look up/down rendering
-    var target = target || screen.output;
+    var target = target || viewWindow.output;
 
     var sOutput = "";
 
     // interates over each row again, and omits the first and last 30 pixels, to disguise the skewing!
     var printIndex = 0;
-    var removePixels = screen.height / 2;
-    for(var row = 0; row < screen.height; row++){
-      for(var pix = 0; pix < screen.width; pix++){
-
-        // H-blank based on screen-width
-        if(printIndex % (screen.width) == 0){
+//     var removePixels = viewWindow.height / 2;		// w/ original 80 height, this was 40 (despite quote of 30 above)
+    var removePixels = 48;		/// TODO to be able to calculate this and actually have nice look up/down skewing
+    for(var row = 0; row < viewWindow.height; row++){	// determine the allowed up/down angle, calc how much that would transform a 90deg line
+      for(var pix = 0; pix < viewWindow.width; pix++){	// build that calc into the skipEveryX() function
+															// implement the skew in a continuous way (a greater number of more granular steps)
+        // H-blank based on screen-width				//  add logic to expand the visuals that are being skewed instead of just adding
+        if(printIndex % (viewWindow.width) == 0){			// extra dots '.' (this is done in fPrepareFrame() function)
           sOutput += "<br>";
         }
 
-        if( pix < removePixels ){
-          sOutput += "";
-        } else if( pix > screen.width - removePixels ) {
+        if( pix < removePixels || pix > viewWindow.width - removePixels) {
           sOutput += "";
         } else {
           sOutput += frame[printIndex];
@@ -355,10 +354,10 @@ let _r = {
         }
 
         // project onto screen
-        let spriteScreenX = (screen.width / 2) * (1 + spriteViewX / fSpriteDist);
+        let spriteScreenX = (viewWindow.width / 2) * (1 + spriteViewX / fSpriteDist);
 
         		// TODO add constant for wall height, 16
-        let fSpriteHeight = screen.height / fSpriteDist;
+        let fSpriteHeight = viewWindow.height / fSpriteDist;
 
         let bInPlayerView = true;		// NOTE this should be removed at some point, we'll only have visible sprites at this point
 
@@ -368,10 +367,10 @@ let _r = {
 
           // very similar operation to background floor and ceiling.
           // Sprite height is default 1, but we can adjust with the factor passed in the sprite object/
-//           var fSpriteCeiling = +(screen.height / ((2 - game.nJumptimer * 0.15) - game.fLooktimer * 0.15)) - screen.height / (+(fSpriteDist) ) * currentSpriteObject.hghtFctr;
-//           var fSpriteFloor = +(screen.skew) + screen.height / (+(fSpriteDist) );
+//           var fSpriteCeiling = +(viewWindow.height / ((2 - game.nJumptimer * 0.15) - game.fLooktimer * 0.15)) - viewWindow.height / (+(fSpriteDist) ) * currentSpriteObject.hghtFctr;
+//           var fSpriteFloor = +(viewWindow.skew) + viewWindow.height / (+(fSpriteDist) );
 
-          var fSpriteCeiling = screen.skew - fSpriteHeight / 2 * currentSpriteObject.hghtFctr;	// NOTE TODO why did I add screen.skew to this?
+          var fSpriteCeiling = viewWindow.skew - fSpriteHeight / 2 * currentSpriteObject.hghtFctr;	// NOTE TODO why did I add viewWindow.skew to this?
 		  var fSpriteFloor = fSpriteCeiling - fSpriteHeight;
 
 // 		  _debugOutput(`SprDist: ${fSpriteDist}; SprH: ${fSpriteHeight}; SprCeil: ${fSpriteCeiling}; SprFlr: ${fSpriteFloor}`, 'debug2');
@@ -461,15 +460,15 @@ let _r = {
 
               var nSpriteColumn = ~~((fMiddleOfSprite + sx - (fSpriteWidth / 2)));
 
-              if (nSpriteColumn >= 0 && nSpriteColumn < screen.width){
+              if (nSpriteColumn >= 0 && nSpriteColumn < viewWindow.width){
                 // only render the sprite pixel if it is not a . or a space, and if the sprite is far enough from the player
-                if (sSpriteGlyph != "." && sSpriteGlyph != brightness[0] && screen.depthBuffer[nSpriteColumn] >= fSpriteDist ){
+                if (sSpriteGlyph != "." && sSpriteGlyph != brightness[0] && viewWindow.depthBuffer[nSpriteColumn] >= fSpriteDist ){
 
                   // render pixels to screen
                   var yccord = fSpriteCeiling + sy;
                   var xccord = nSpriteColumn;
-                  screen.buffer[yccord * screen.width + xccord] = sSpriteGlyph;
-                  screen.depthBuffer[nSpriteColumn] = fSpriteDist;
+                  viewWindow.buffer[yccord * viewWindow.width + xccord] = sSpriteGlyph;
+                  viewWindow.depthBuffer[nSpriteColumn] = fSpriteDist;
                 }
               }
             }
@@ -504,7 +503,7 @@ let _r = {
 
       if( sWallFaceDirection === "N" || sWallFaceDirection === "S" ){
 
-        if(fDistanceToWall < screen.depth / 5.5 ){
+        if(fDistanceToWall < viewWindow.depth / 5.5 ){
 
           if( pixel === "#" ){
             fill = brightness[4];
@@ -516,7 +515,7 @@ let _r = {
             fill = brightness[1];
           }
 
-        } else if(fDistanceToWall < screen.depth / 3.66 ) {
+        } else if(fDistanceToWall < viewWindow.depth / 3.66 ) {
 
           if( pixel === "#" ){
             fill = brightness[3];
@@ -528,7 +527,7 @@ let _r = {
             fill = brightness[0];
           }
 
-        } else if(fDistanceToWall < screen.depth / 2.33 ) {
+        } else if(fDistanceToWall < viewWindow.depth / 2.33 ) {
 
           if( pixel === "#" ){
             fill = brightness[2];
@@ -540,7 +539,7 @@ let _r = {
             fill = brightness[0];
           }
 
-        } else if(fDistanceToWall < screen.depth / 1 ) {
+        } else if(fDistanceToWall < viewWindow.depth / 1 ) {
 
           if( pixel === "#" ){
             fill = brightness[1];
@@ -560,7 +559,7 @@ let _r = {
       // walldirection W/E
       else{
 
-        if(fDistanceToWall < screen.depth / 5.5 ){
+        if(fDistanceToWall < viewWindow.depth / 5.5 ){
 
           if( pixel === "#" ){
             fill = brightness[3];
@@ -572,7 +571,7 @@ let _r = {
             fill = brightness[0];
           }
 
-        } else if(fDistanceToWall < screen.depth / 3.66 ) {
+        } else if(fDistanceToWall < viewWindow.depth / 3.66 ) {
 
           if( pixel === "#" ){
             fill = brightness[2];
@@ -584,7 +583,7 @@ let _r = {
             fill = brightness[0];
           }
 
-        } else if(fDistanceToWall < screen.depth / 2.33 ) {
+        } else if(fDistanceToWall < viewWindow.depth / 2.33 ) {
 
           if( pixel === "#" ){
             fill = brightness[2];
@@ -596,7 +595,7 @@ let _r = {
             fill = brightness[0];
           }
 
-        } else if(fDistanceToWall < screen.depth / 1 ) {
+        } else if(fDistanceToWall < viewWindow.depth / 1 ) {
 
           if( pixel === "#" ){
             fill = brightness[1];
@@ -620,26 +619,26 @@ let _r = {
     renderSolidWall: function(fDistanceToWall, isBoundary) {
       var fill = brightness[1];
 
-      if(fDistanceToWall < screen.depth / 6.5 ){
+      if(fDistanceToWall < viewWindow.depth / 6.5 ){
         fill = brightness[4];
-      } else if(fDistanceToWall < screen.depth / 4.66 ) {
+      } else if(fDistanceToWall < viewWindow.depth / 4.66 ) {
         fill = brightness[3];
-      } else if(fDistanceToWall < screen.depth / 3.33 ) {
+      } else if(fDistanceToWall < viewWindow.depth / 3.33 ) {
         fill = brightness[2];
-      } else if(fDistanceToWall < screen.depth / 1 ) {
+      } else if(fDistanceToWall < viewWindow.depth / 1 ) {
         fill = brightness[1];
       } else {
         fill = brightness[0];
       }
 
       if( isBoundary ){
-        if(fDistanceToWall < screen.depth / 6.5 ){
+        if(fDistanceToWall < viewWindow.depth / 6.5 ){
           fill = brightness[1];
-        } else if(fDistanceToWall < screen.depth / 4.66 ) {
+        } else if(fDistanceToWall < viewWindow.depth / 4.66 ) {
           fill = brightness[1];
-        } else if(fDistanceToWall < screen.depth / 3.33 ) {
+        } else if(fDistanceToWall < viewWindow.depth / 3.33 ) {
           fill = brightness[0];
-        } else if(fDistanceToWall < screen.depth / 1 ) {
+        } else if(fDistanceToWall < viewWindow.depth / 1 ) {
           fill = brightness[0];
         } else {
           fill = brightness[0];
@@ -654,14 +653,14 @@ let _r = {
       var fill = "X";
 
       if( screenRow < nDoorFrameTop) {
-        if(fDistanceToWall < screen.depth / 4) {
-          fill = "&boxH;";
+        if(fDistanceToWall < viewWindow.depth / 4) {
+          fill = "\u2550";		// &boxH;
         } else {
           fill = "=";
         }
       } else {
-        if(fDistanceToWall < screen.depth / 4) {
-          fill = "&boxV;";
+        if(fDistanceToWall < viewWindow.depth / 4) {
+          fill = "\u2551";		// &boxV;
         } else {
           fill = "|";
         }
@@ -672,10 +671,10 @@ let _r = {
     renderFloor: function(j) {
       var fill = "`";
 
-			// TODO do something different with this
+			// TODO do something better with this
       // draw floor, in different shades
-      let b = 1 - (j -screen.height / 2) / (screen.height / 2);
-      b = 1 - (j -screen.height / (2- game.fLooktimer * 0.15)) / (screen.height / (2 - game.fLooktimer * 0.15));
+      let b = 1 - (j -viewWindow.height / 2) / (viewWindow.height / 2);
+      b = 1 - (j -viewWindow.height / (2- game.fLooktimer * 0.15)) / (viewWindow.height / (2 - game.fLooktimer * 0.15));
 
       if(b < 0.25){
         fill = "x";
@@ -696,7 +695,7 @@ let _r = {
       var fill = "`";
 
       // draw ceiling, in different shades
-      b = 1 - (j -screen.height / 2) / (screen.height / 2);
+      b = 1 - (j -viewWindow.height / 2) / (viewWindow.height / 2);
       if(b < 0.25){
         fill = "`";
       } else if(b < 0.5) {

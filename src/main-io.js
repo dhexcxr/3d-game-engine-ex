@@ -1,6 +1,6 @@
 // main i/o
 
-export {_debugOutput, _mh, init, screen, map};
+export {_debugOutput, _mh, init, viewWindow, map};
 
 import {game, brightness, main, player} from './main-game-engine.js';
 
@@ -35,10 +35,14 @@ let hitSideCheck = 0;		// DEBUG only, only in [io
 
   let sLevelstring = "";	// only here IO
 
-  let screen = {
-  	width: 320,		// HERE to calc screen.skew, but thats only used in raycaster (but should probably be in renderer)
+  let viewWindow = {
+  	width: 320,		// HERE to calc viewWindow.skew, but thats only used in raycaster (but should probably be in renderer)
   	height: 80,			// also used in io, raycaster, and renderer
-//   	nScreenCenter = screen.width / 2,		// not used
+//   	height: 92,			// allow for more square "pixels"
+// 	width: 640,
+// 	height: 160,
+
+//   	nScreenCenter = viewWindow.width / 2,		// not used
 	depth: 16.0, // viewport depth, max ray/draw dist		// raycaster and renderer
 	depthBuffer: [],		// raycaster and renderer	// TODO double check what this is used for, is it necessary?
 
@@ -367,7 +371,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     // initialize the touch listeners for walk and move areas
     touchinit: function(){
 
-      // look (left hand of screen)
+      // look (left hand of viewWindow)
       eTouchLook.addEventListener("touchmove", function(e){
 		// Ignore the event if the window is not currently active or is paused
   		if (!isWindowActive || player.bPaused) return;
@@ -397,7 +401,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
         _mh.oTouch.look.bFirstTouch = true;
       });
 
-      // move (right hand of screen)
+      // move (right hand of viewWindow)
       eTouchMove.addEventListener("touchmove", function(e){
         // Ignore the event if the window is not currently active or is paused
   		if (!isWindowActive || player.bPaused) return;
@@ -542,18 +546,24 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
   // init() called from HTML
     var init = function( input ) {
     // prep document
-    screen.output = document.getElementById("display");
+    viewWindow.output = document.getElementById("display");
 //     eScreen2 = document.getElementById("seconddisplay");
     eTouchLook = document.getElementById("touchinputlook");
     eTouchMove = document.getElementById("touchinputmove");
 
-//     screen.buffer = {
-// 		pixels: new Uint8Array(screen.width * screen.height),
-// 		add: function(index, character) { this.pixels[index = character.charCodeAt(0)]; },
-// 		blank: function() { this.pixels.fill(32); }, 	  // Clear screen with spaces (ASCII code 32)
-// 	};
+     if (hiRes) {	// TODO turn into switchable option in game
+  		viewWindow.width = viewWindow.width * 2;
+  		viewWindow.height = viewWindow.height * 2;
+  		let currentFontSize = parseFloat(window.getComputedStyle(viewWindow.output).getPropertyValue('font-size'));
+  		viewWindow.output.style.fontSize = `${currentFontSize / 2}px`;
 
-	screen.buffer = [];
+  	}
+    
+//     viewWindow.buffer = {
+// 		pixels: new Uint16Array(viewWindow.width * viewWindow.height),
+// 		add: function(index, character) { this.pixels[index = character.charCodeAt(0)]; },
+// 		blank: function() { this.pixels.fill(32); }, 	  // Clear viewWindow with spaces (ASCII code 32)
+// 	};
 
 
     _mh.keylisten();
@@ -561,12 +571,15 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     _mh.touchinit();
 
     // TODO: move to in-game menu
-    document.getElementById("solid").addEventListener("click", function(){ sceen.nRenderMode = 0 });
-    document.getElementById("texture").addEventListener("click", function(){ sceen.nRenderMode = 1 });
-    document.getElementById("shader").addEventListener("click", function(){ sceen.nRenderMode = 2 });
+    document.getElementById("solid").addEventListener("click", () => viewWindow.nRenderMode = 0);
+    document.getElementById("texture").addEventListener("click", () => viewWindow.nRenderMode = 1);
+    document.getElementById("shader").addEventListener("click", () => viewWindow.nRenderMode = 2);
 
     // initial gameload
-    _loadLevel("mylevelfile1.map");
+    _loadLevel("mainlevelfile1.map");
+
+//     	viewWindow.buffer = [];
+	viewWindow.setupScreenBuffer(viewWindow.width * Math.round(viewWindow.height));
   };
 
 
@@ -634,16 +647,16 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
 
 
-  // for every row make a screen.width amount of pixels
+  // for every row make a viewWindow.width amount of pixels
   var _createTestScreen = function(){
     var sOutput = "";
-    for(var screnCol = 0; screnCol < screen.height; screnCol++){
-      for(var screenRow = 0; screenRow < screen.width; screenRow++){
+    for(var screnCol = 0; screnCol < viewWindow.height; screnCol++){
+      for(var viewWindowRow = 0; viewWindowRow < viewWindow.width; viewWindowRow++){
         sOutput += brightness[0];
       }
       sOutput += "<br>";
     }
-    screen.output.innerHTML = sOutput;
+    viewWindow.output.innerHTML = sOutput;
   };
 
 
@@ -672,15 +685,15 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     // render a static test screen
     _createTestScreen();
 
-    var widthOfDisplay   = screen.output.offsetWidth;
+    var widthOfDisplay   = viewWindow.output.offsetWidth;
     var widthOfViewport  = _getWidth();
     var heightOfViewPort = _getHeight();
     var viewPortAspect   = heightOfViewPort / widthOfViewport;
 
     // check if the amount of pixels to be rendered fit, if not, repeat
     if(widthOfDisplay > widthOfViewport + 120){
-      screen.width = screen.width - 1;
-      // screen.height = screen.width * 0.22
+      viewWindow.width = viewWindow.width - 1;
+      // viewWindow.height = viewWindow.width * 0.22
 
 
       // try no more than nTrymax times (in case of some error)
@@ -701,8 +714,44 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       if( fAdjustedAspectRatio < 0.266 ){
         fAdjustedAspectRatio = 0.266;
       }
-
-      screen.height = screen.width * fAdjustedAspectRatio;
+			// NOTE TODO this version (with Unit16Array) is rendering one row shorter than old, combined version
+				// when looking up/down a small partial line is being rendered on the very bottom
+				// there is likely somewhere where this is generating a count of rows starting at 0 and <= viewWindow.height
+					// the old version that used standard arrays would simply expand the array
+					// this version cannot
+					// a weird side-effect of the limits in counting causes the lookup index in renderer.printCompositPixel to
+						// look past end of Unit16Array and therefore return undefined values
+					// that can be fixed by adding a Math.round() around this calculation
+						// but that introduces a rendering artifact at the lower borders of wall where they meet the floor
+						// and it's still 1 row too short
+							// adding a + 1 to the Math.round()ed calc create an artifact in faraway rendering
+				// THING TO DO
+					// find where the funny compare is and fix it probably
+				// FOLLOWUP
+					// this version is good, the old version is rendering an extra line
+						// FOLLOWUP to my FOLLOWUP
+							// actually, additional testing shows the artifact still there with the ceil to even numbers
+				// try odd numbers
+				// nope, try just floor
+				// nope, event floor
+					// More Investigation
+						// i think the artifact is happening because the wall texture is not aligned correctly
+						// it is too high and the top is wrapping around to the bottom again
+					// so I fixed this by adding the Math.round() when creating the array
+						// no rendering artifact
+						// and the array is big enough so that we don't get the weird extra half line when looking up/down
+						// add'l info
+							// I think the rendering artifacts are due to the height of the wall not being the right size
+							// and the height is different because the window size is different
+								// and its just the little bit of decimal that is screwing these calcs up
+								// which makes me think the aspect ratio
+									// and "magic numbers" above has something to do with the texture sizes
+      viewWindow.height = viewWindow.width * fAdjustedAspectRatio;
+//       viewWindow.height = Math.round(viewWindow.width * fAdjustedAspectRatio);
+//       viewWindow.height = Math.ceil(viewWindow.width * fAdjustedAspectRatio / 2) * 2;
+// 	  viewWindow.height = Math.ceil((viewWindow.width * fAdjustedAspectRatio - 1) / 2) * 2 + 1;
+// 	viewWindow.height = Math.floor(viewWindow.width * fAdjustedAspectRatio / 2) * 2;
+// 	viewWindow.height = 85;
       main();
     }
   };

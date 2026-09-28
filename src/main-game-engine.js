@@ -1,7 +1,7 @@
 export {game, brightness, main, player};
 
 import {_rh} from './main-renderer.js';
-import {_debugOutput, _mh, screen} from './main-io.js';
+import {_debugOutput, _mh, viewWindow} from './main-io.js';
 import {raycaster} from './main-raycaster.js';
 import {_r} from './main-renderer.js';
 
