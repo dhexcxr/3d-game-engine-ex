@@ -186,20 +186,18 @@ let _r = {
 
 
   fDrawFrame: function(overlayscreen, target) {
-  	_debugOutput(`buffLen_pre: ${viewWindow.buffer.length}`, 'debug2');
 
     var frame = _r.fPrepareFrame(viewWindow.buffer, overlayscreen);
 // 	var frame = screen;		// DEBUG uncomment to remove skew from look up/down rendering
     var target = target || viewWindow.output;
 
-	_debugOutput(`buffLen_post: ${viewWindow.buffer.length}`, 'debug2', true);
 
     var sOutput = "";
 
     // interates over each row again, and omits the first and last 30 pixels, to disguise the skewing!
     var printIndex = 0;
-//     var removePixels = viewWindow.height / 2;		// w/ original 80 height, this was 40 (despite quote of 30 above)
-    var removePixels = 48;		/// TODO to be able to calculate this and actually have nice look up/down skewing
+    var removePixels = viewWindow.height / 2;		// w/ original 80 height, this was 40 (despite quote of 30 above)
+//     var removePixels = 48;		/// TODO to be able to calculate this and actually have nice look up/down skewing
     for(var row = 0; row < viewWindow.height; row++){	// determine the allowed up/down angle, calc how much that would transform a 90deg line
       for(var pix = 0; pix < viewWindow.width; pix++){	// build that calc into the skipEveryX() function
 															// implement the skew in a continuous way (a greater number of more granular steps)
