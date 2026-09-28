@@ -208,10 +208,10 @@ function raycaster() {
 
 		if (fSampleX <= edgeThreshold || fSampleX >= 1.0 - edgeThreshold) {
 			if(hit_NS_wall) {
-				tileCheckLocDif = sWallFaceDirection === 'W' ? -1 : 1;
+				let tileCheckLocDif = sWallFaceDirection === 'W' ? -1 : 1;
 				isBoundary = sWalltype !== map.tiles[(map_y + tileCheckLocDif) * map.width + map_x];
 			} else {
-				tileCheckLocDif = sWallFaceDirection === 'S' ? -1 : 1;
+				let tileCheckLocDif = sWallFaceDirection === 'S' ? -1 : 1;
 				isBoundary = sWalltype !== map.tiles[map_y * map.width + map_x + tileCheckLocDif];
 			}
 		}
