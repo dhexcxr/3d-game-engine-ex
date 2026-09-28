@@ -1,0 +1,72 @@
+var map = "";
+map += "#############.X#";
+map += "#...........U..#";
+map += "#...C.......X..#";
+map += "#...W.......U..#";
+map += "#...W..........X";
+map += "#...W..........#";
+map += "#...C........#X#";
+map += "#......##......#";
+map += "#......##....TT#";
+map += "#..............#";
+map += "#..............#";
+map += "#oooo.....$$$$$#";
+map += "#..............#";
+map += "X..............#";
+map += "#....TXT....T.T#";
+map += "########....#X##";
+
+mainlevelfile1 = {
+  height: 16,
+  width: 16,
+  tiles: map,
+  playerStartX: 14.5,
+  playerStartY: 1.5,
+  playerStartA: 2.0,
+  // fPlayerA: 4.7,
+  exitsto: "levelfile2.map",
+  color: "white",
+  background: "black",
+  sprites: {
+    "1": {
+      "x": "12.75",
+      "y": "3.5",
+      "r": "1.5",
+      "name": "O",
+      "move": true,
+      "stuckcounter": 0
+    },
+    "o1": {
+      "x": "10.75",
+      "y": "5.5",
+      "r": "4.5",
+      "name": "O",
+      "move": false,
+      "stuckcounter": 0
+    },
+    "2": {
+      "x": "3.5",
+      "y": "3.5",
+      "r": "0.1",
+      "name": "P",
+      "move": true,
+      "stuckcounter": 0
+    },
+    "3": {
+      "x": "3.5",
+      "y": "3.5",
+      "r": "0.1",
+      "name": "P",
+      "move": true,
+      "stuckcounter": 0
+    },
+    "4": {
+      "x": "2",
+      "y": "8",
+      "r": "1.1",
+      "name": "O",
+      "stuckcounter": 0
+    },
+  },
+  sprites: "autogen",
+};
