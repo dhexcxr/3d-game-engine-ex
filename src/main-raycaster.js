@@ -2,7 +2,7 @@
 
 export {raycaster};
 
-import {brightness, player} from './main-game-engine.js';
+import {brightness, player, memoize} from './main-game-engine.js';
 import {_debugOutput, viewWindow, map} from './main-io.js';
 import {_r, _rh} from './main-renderer.js';
 
@@ -13,6 +13,8 @@ let midFrameInfoMsg = '';		// DEBUG only
 let endDoorInfoMsg = '';		// DEBUG only
 
 // let sco = screen;
+const getRayX = memoize((vX, pX, cX) => vX + (pX * cX));
+const getRayY = memoize((vY, pY, cY) => vY + (pY * cY));
 
 function raycaster() {
 // for the length of the screenwidth (one frame)
@@ -29,8 +31,10 @@ function raycaster() {
 
 		// cameraX is the vector of the current ray being cast with respect to the camera/screen plane
 		let cameraX = (2 * screenColumn / viewWindow.width) - 1;
-		let rayDirX = player.viewX + (viewWindow.planeX * cameraX);
-		let rayDirY = player.viewY + (viewWindow.planeY * cameraX);
+// 		let rayDirX = player.viewX + (viewWindow.planeX * cameraX);
+// 		let rayDirY = player.viewY + (viewWindow.planeY * cameraX);
+		let rayDirX = getRayX(player.viewX, viewWindow.planeX, cameraX);
+		let rayDirY = getRayY(player.viewY, viewWindow.planeY,  cameraX);
 
 
         var bBreakLoop = false;
