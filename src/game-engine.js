@@ -1263,8 +1263,22 @@ var gameEngineJS = (function(){
    */
   var main = function(){
     gameRun = setInterval(gameLoop, 33);
+    let lastTime = performance.now();
+    let smoothedDelta = 33.3333; // Initialize assuming ~30 FPS (1000ms / 60)
+	const alpha = 0.9;         // Higher = smoother/slower, Lower = twitchier
     function gameLoop(){
 //       _debugOutput('clear', 'debug2');
+	  const currentTime = performance.now()
+	  const rawDelta = currentTime - lastTime;
+	  lastTime = currentTime;
+
+	  // Guard against edge cases (e.g., background tab pauses, heavy hitching)
+	  if (rawDelta > 0) {
+		smoothedDelta = (smoothedDelta * alpha) + (rawDelta * (1 - alpha));			// Exponential Moving Average (EMA)
+	  }
+
+	  const smoothedFPS = 1000 / smoothedDelta;
+	  _debugOutput(`FPS: ${Math.round(smoothedFPS)}`, 'fps');
 
 	  currentFrame++;
 
