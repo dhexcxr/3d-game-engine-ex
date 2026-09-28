@@ -1,6 +1,8 @@
 // main i/o
 
-export {_loadLevel, _debugOutput, _mh};
+export {_loadLevel, _debugOutput, _mh, init};
+
+  var eScreen;	// HERE and io._createTestScreen & io._testScreenSizeAndStartTheGame
 
 
   // leaving the console for errors, logging seems to kill performance
@@ -468,6 +470,26 @@ export {_loadLevel, _debugOutput, _mh};
 	  },
   };
 
+    var init = function( input ) {
+    // prep document
+    eScreen = document.getElementById("display");
+    eScreen2 = document.getElementById("seconddisplay");
+    eTouchLook = document.getElementById("touchinputlook");
+    eTouchMove = document.getElementById("touchinputmove");
+
+    _mh.keylisten();
+    _mh.mouseinit();
+    _mh.touchinit();
+
+    // TODO: move to in-game menu
+    document.getElementById("solid").addEventListener("click", function(){ nRenderMode = 0 });
+    document.getElementById("texture").addEventListener("click", function(){ nRenderMode = 1 });
+    document.getElementById("shader").addEventListener("click", function(){ nRenderMode = 2 });
+
+    // initial gameload
+    _loadLevel("mylevelfile1.map");
+  };
+  
 
 
 
@@ -522,4 +544,78 @@ export {_loadLevel, _debugOutput, _mh};
       oRandomLevelSprites[m] = oRandomSprite ;	// and it holds more objects that are referenced by an integer
     }												// TODO we should probably change to an array of some type
     return oRandomLevelSprites;
+  };
+
+
+
+  // for every row make a nScreenWidth amount of pixels
+  var _createTestScreen = function(){
+    var sOutput = "";
+    for(var screnCol = 0; screnCol < nScreenHeight; screnCol++){
+      for(var screenRow = 0; screenRow < nScreenWidth; screenRow++){
+        sOutput += brightness[0];
+      }
+      sOutput += "<br>";
+    }
+    eScreen.innerHTML = sOutput;
+  };
+
+
+  var _getWidth = function() {
+    if (self.innerWidth) {
+      return self.innerWidth;
+    }
+    if (document.documentElement && document.documentElement.clientWidth) {
+      return document.documentElement.clientWidth;
+    }
+    if (document.body) {
+      return document.body.clientWidth;
+    }
+  };
+
+
+  var _getHeight = function() {
+    return Math.max(document.documentElement.clientHeight || 0, window.innerHeight || 0);
+  };
+
+
+  var nTrymax = 512;
+  var _testScreenSizeAndStartTheGame = function(){
+
+    // render a static test screen
+    _createTestScreen();
+
+    var widthOfDisplay   = eScreen.offsetWidth;
+    var widthOfViewport  = _getWidth();
+    var heightOfViewPort = _getHeight();
+    var viewPortAspect   = heightOfViewPort / widthOfViewport;
+
+    // check if the amount of pixels to be rendered fit, if not, repeat
+    if(widthOfDisplay > widthOfViewport + 120){
+      nScreenWidth = nScreenWidth - 1;
+      // nScreenHeight = nScreenWidth * 0.22
+
+
+      // try no more than nTrymax times (in case of some error)
+      if( nTrymax > 0 ){
+        nTrymax--;
+        _testScreenSizeAndStartTheGame();
+      } else {
+        _debugOutput("Trymax exceeded", 'debug');
+      }
+
+    }
+    // if it does, set aspect-ratio-based height
+    // and start the game
+    else{
+      var fAdjustedAspectRatio = viewPortAspect / 2.82;		// TODO figure out what all these magic number are
+      _debugOutput(fAdjustedAspectRatio, 'debug');
+
+      if( fAdjustedAspectRatio < 0.266 ){
+        fAdjustedAspectRatio = 0.266;
+      }
+
+      nScreenHeight = nScreenWidth * fAdjustedAspectRatio;
+      main();
+    }
   };

@@ -1,5 +1,5 @@
 import {_rh} from './main-renderer.js';
-import {_loadLevel, _debugOutput, _mh} from './main-io.js';
+import {_loadLevel, _debugOutput, _mh, init} from './main-io.js';
 import {raycaster} from './main-raycaster.js';
 
 /**
@@ -16,6 +16,8 @@ import {raycaster} from './main-raycaster.js';
  */
 
 var gameEngineJS = (function(){
+
+	global.gameEngineJS = gameEngineJS;
 
   let isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
 
@@ -47,13 +49,10 @@ var gameEngineJS = (function(){
 
   // setup variables
   var eScreen;
-  var eDebugOut;
 
   var nScreenWidth = 320;
   var nScreenHeight = 80;
-  let nScreenCenter = nScreenWidth / 2;
 
-  var fFOV = PI___ / 2.25; // (PI___ / 4.0 originally)
 
 //   const screenProjection = (nScreenWidth / 2) / Math.tan(fFOV / 2);
 
@@ -271,29 +270,6 @@ var gameEngineJS = (function(){
     }
   };
 
-
-
-  var init = function( input )
-  {
-    // prep document
-    eScreen = document.getElementById("display");
-    eScreen2 = document.getElementById("seconddisplay");
-//     eDebugOut = document.getElementById("debug");
-    eTouchLook = document.getElementById("touchinputlook");
-    eTouchMove = document.getElementById("touchinputmove");
-
-    _mh.keylisten();
-    _mh.mouseinit();
-    _mh.touchinit();
-
-    // TODO: move to in-game menu
-    document.getElementById("solid").addEventListener("click", function(){ nRenderMode = 0 });
-    document.getElementById("texture").addEventListener("click", function(){ nRenderMode = 1 });
-    document.getElementById("shader").addEventListener("click", function(){ nRenderMode = 2 });
-
-    // initial gameload
-    _loadLevel("mylevelfile1.map");
-  };
 
 
   return{
