@@ -43,7 +43,7 @@ const player = {
 	bPlayerMayMoveForward: true,	// this is also used in renderer, when we determin if player is too close to sprite
 	// NOTE oh, might should bPlayerMoving be in _mh?
 	bPlayerMoving: function() {
-		(this.bTurnLeft || this.bTurnRight || this.bStrafeLeft || this.bStrafeRight
+		return (this.bTurnLeft || this.bTurnRight || this.bStrafeLeft || this.bStrafeRight
 			|| (this.bMoveForward && this.bPlayerMayMoveForward) || this.bMoveBackward
 			|| this.bJumping || this.bFalling || this.bRunning) && !this.bPaused
 		},		// HERE, should probably move this into io, it's only used to determine if to call the _mh.move() function
@@ -93,7 +93,7 @@ const game = {
        */
 
 	  if (player.bPlayerMoving()) {
-	    player.move(player.viewX, player.viewY);
+	    _mh.move(player.viewX, player.viewY);
 	  }
 
       // normalize player angle		// this should probably be in io/movement
