@@ -594,6 +594,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
   		viewWindow.height = viewWindow.height * 2;
   		let currentFontSize = parseFloat(window.getComputedStyle(viewWindow.output).getPropertyValue('font-size'));
   		viewWindow.output.style.fontSize = `${currentFontSize / 2}px`;
+  		viewWindow.output.style.lineHeight = 1.168;		// no weird horizontal line artifacts
 
   	}
 
@@ -733,7 +734,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     else{
       var fAdjustedAspectRatio = viewPortAspect / 2.82;		// TODO figure out what all these magic number are
 // 		var fAdjustedAspectRatio = viewPortAspect / 2.4522;		// default resolution * 1.15
-      _debugOutput(fAdjustedAspectRatio, 'debug');
 
       if( fAdjustedAspectRatio < 0.266 ){	// this is ~3.7594 (e.g., 1/0.266), for default ~85.12 row resolution
         fAdjustedAspectRatio = 0.266;
