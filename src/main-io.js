@@ -614,6 +614,17 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     _loadLevel("mainlevelfile1.map");
 
 	viewWindow.setupScreenBuffer(viewWindow.width * Math.round(viewWindow.height));
+
+  };
+
+  function _convertAssetsToUnicode(asset) {
+  	if(Array.isArray(asset)) {
+  		for (let i = 0; i < asset.length; i++) {
+  			asset[i] = asset[i].codePointAt(0);
+  		}
+  	} else if (typeof asset === 'string' || asset instanceof String) {
+  		return [...asset].map(char => char.codePointAt(0));
+  	}
   };
 
 
