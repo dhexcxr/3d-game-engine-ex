@@ -497,7 +497,175 @@ export {_rh};
     		return sprite;
     	}).sort(_sortSpriteList))    // sorts the list
     };		    // make object from array again
-  };
+  },
+  
+  drawSprites = function() {
+      // draw sprites	// TODO change this to an array of objects probably
+	  for (const sprite of Object.values(oLevelSprites)) {
+	  
+		let spriteTileIndex = ~~sprite.y * nMapWidth + ~~sprite.x;
+		
+// 		let spriteTileAdjacentCardinals = [spriteTileIndex, spriteTileIndex + 1, spriteTileIndex - 1,
+// 											spriteTileIndex + nMapWidth, spriteTileIndex + nMapWidth + 1, spriteTileIndex + nMapWidth - 1,
+// 											spriteTileIndex - nMapWidth, spriteTileIndex - nMapWidth + 1, spriteTileIndex - nMapWidth - 1];
+		let spriteTileAdjacentCardinals = [spriteTileIndex];
+
+		let spriteTileNotVisited = spriteTileAdjacentCardinals.some(tileIndex => visitedTiles[tileIndex] !== currentFrame);
+
+		if(spriteTileNotVisited) {
+// 			_debugOutput(`STV: ${!spriteTileNotVisited}`, 'debug2');
+			continue;
+		}
+		
+		// reference to the global-side sprite
+        var currentSpriteObject = allSprites[sprite.name];
+        
+		// Translate sprite position relative to the player
+        let playerToSpriteX = sprite.x - fPlayerX;
+        let playerToSpriteY = sprite.y - fPlayerY;
+
+        // Rotate sprite into player's local space using your view angles
+	    let invDet = 1.0 / (planeX * viewY - viewX * planeY);
+	    // Transform sprite position into camera space using the inverse matrix
+			// spriteViewX is the lateral (left/right) offset on the screen plane
+			// fSpriteDist is the depth
+		let spriteViewX = invDet * (viewY * playerToSpriteX - viewX * playerToSpriteY);
+		let fSpriteDist = invDet * (-planeY * playerToSpriteX + planeX * playerToSpriteY);
+
+        if (fSpriteDist < MIN_DIST) {
+//         	_debugOutput(`STV: ${!spriteTileNotVisited}; STC: ${fSpriteDist < MIN_DIST}`, 'debug2');
+            continue; // Sprite is directly behind or on top of the player
+        }
+        
+        // project onto screen
+        let spriteScreenX = (nScreenWidth / 2) * (1 + spriteViewX / fSpriteDist);
+        
+        		// TODO add constant for wall height, 16
+        let fSpriteHeight = nScreenHeight / fSpriteDist;
+        
+        let bInPlayerView = true;		// NOTE this should be removed at some point, we'll only have visible sprites at this point
+
+
+        // only proceed if sprite is visible
+        if( bInPlayerView && fSpriteDist >= 0.5 ){
+
+          // very similar operation to background floor and ceiling.
+          // Sprite height is default 1, but we can adjust with the factor passed in the sprite object/
+//           var fSpriteCeiling = +(nScreenHeight / ((2 - nJumptimer * 0.15) - fLooktimer * 0.15)) - nScreenHeight / (+(fSpriteDist) ) * currentSpriteObject.hghtFctr;
+//           var fSpriteFloor = +(screenSkew) + nScreenHeight / (+(fSpriteDist) );
+          
+          var fSpriteCeiling = screenSkew - fSpriteHeight / 2 * currentSpriteObject.hghtFctr;
+		  var fSpriteFloor = fSpriteCeiling - fSpriteHeight;
+		  
+// 		  _debugOutput(`SprDist: ${fSpriteDist}; SprH: ${fSpriteHeight}; SprCeil: ${fSpriteCeiling}; SprFlr: ${fSpriteFloor}`, 'debug2');
+
+// 		  var fSpriteFloor = nFloor;
+//           var fSpriteCeiling = nFloor + fSpriteHeight;
+
+				// NOTE does this need rounding? try without sometime, or ~~
+          var fSpriteCeiling = Math.round(fSpriteCeiling);
+          var fSpriteFloor = Math.round(fSpriteFloor);
+
+//           var fSpriteHeight = fSpriteFloor - fSpriteCeiling;
+          var fSpriteAspectRatio = +(currentSpriteObject.height) / +(currentSpriteObject.width * currentSpriteObject.aspctRt);
+          var fSpriteWidth = fSpriteHeight / fSpriteAspectRatio;
+          var fMiddleOfSprite = spriteScreenX;
+
+          // The angle the sprite is facing relative to the player
+          var fSpriteBeautyAngle = fPlayerA - sprite.r + PIdiv4;
+          // normalize
+          if (fSpriteBeautyAngle < 0){
+            fSpriteBeautyAngle += PIx2;
+          }
+          if (fSpriteBeautyAngle > PIx2){
+            fSpriteBeautyAngle -= PIx2;
+          }
+
+          // loops through the sprite pixels
+          for(var sx = 0; sx < fSpriteWidth; sx++ ){
+            for(var sy = 0; sy < fSpriteHeight; sy++){
+
+              // sample sprite
+              var fSampleX = sx / fSpriteWidth;
+              var fSampleY = sy / fSpriteHeight;
+
+              var sSamplePixel = "";
+
+              // var sSpAngle = false;
+              var sAnimationFrame = false;
+
+              // animation-cycle available, determine the current cycle
+              // TODO: randomize cycle position
+              if( sprite.move && "walkframes" in currentSpriteObject ){
+                if( animationTimer < 5 ){
+                  sAnimationFrame = "W1";
+                } else if( animationTimer >= 5 && animationTimer < 10 ) {
+                  sAnimationFrame = "W2";
+                } else if( animationTimer >= 10 ) {
+                  sAnimationFrame = false;
+                }
+              }
+
+              // sample-angled glyph is available
+              if( "angles" in currentSpriteObject ){
+
+                if( fSpriteBeautyAngle >= PI_0 && fSpriteBeautyAngle < PIx05 ){
+                  sprite.a = "B";
+                } else if( +(fSpriteBeautyAngle) >= +(PIx05) && +(fSpriteBeautyAngle) < +(PIx1) ) {
+                  sprite.a = "L";
+                } else if( +(fSpriteBeautyAngle) >= +(PIx1) && +(fSpriteBeautyAngle) < +(PIx1_5) ) {
+                  sprite.a = "F";
+                } else if( +(fSpriteBeautyAngle) >= +(PIx1_5) && +(fSpriteBeautyAngle) < +(PIx2) ) {
+                  sprite.a = "R";
+                }
+              }
+
+
+              // check if object has both, angles, or animations
+              if( sprite.a && sAnimationFrame ) {
+                sSamplePixel = _rh.getSamplePixel(currentSpriteObject.angles[sprite.a][sAnimationFrame], fSampleX, fSampleY);
+              } else if( sprite.a ) {
+                sSamplePixel = _rh.getSamplePixel(currentSpriteObject.angles[sprite.a], fSampleX, fSampleY);
+              } else if( sAnimationFrame ) {
+                sSamplePixel = _rh.getSamplePixel(currentSpriteObject[sAnimationFrame], fSampleX, fSampleY);
+              } else {
+                // if not, use basic sprite
+                sSamplePixel = _rh.getSamplePixel(currentSpriteObject, fSampleX, fSampleY);
+              }
+
+
+              // assign based on render mode
+              if( nRenderMode == 2 || nRenderMode == 0 ){
+                sSpriteGlyph = _rh.renderWall( fSpriteDist, "W", sSamplePixel );
+              } else {
+                sSpriteGlyph = sSamplePixel;
+              }
+
+
+              var nSpriteColumn = ~~((fMiddleOfSprite + sx - (fSpriteWidth / 2)));
+
+              if (nSpriteColumn >= 0 && nSpriteColumn < nScreenWidth){
+                // only render the sprite pixel if it is not a . or a space, and if the sprite is far enough from the player
+                if (sSpriteGlyph != "." && sSpriteGlyph != brightness[0] && fDepthBuffer[nSpriteColumn] >= fSpriteDist ){
+
+                  // render pixels to screen
+                  var yccord = fSpriteCeiling + sy;
+                  var xccord = nSpriteColumn;
+                  screen[ yccord * nScreenWidth + xccord ] = sSpriteGlyph;
+                  fDepthBuffer[nSpriteColumn] = fSpriteDist;
+                }
+              }
+            }
+          }
+        } // end if
+
+        // player was hit
+        else{
+          // clearInterval(gameRun);
+        }
+
+      }
+    }
 
 };
 
