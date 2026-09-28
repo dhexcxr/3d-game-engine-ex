@@ -130,6 +130,11 @@ let _r = {
       fLookModifier = neverMoreThan;
     }
 
+	//  make a new array that contains the indices of the elements to print
+    for (let i = 0; i < viewWindow.width; i++) {
+	  items[i] = i;
+    }
+
     // interate each row at a time
     for(var row = 0; row < viewWindow.height; row++){
 
@@ -145,14 +150,6 @@ let _r = {
       }
 
       var toBeRemoved = (2 * fLookModifier);
-      var removeFrom = [];		// TODO change to Unit8Array
-
-      //  make a new array that contains the indices of the elements to print
-      // (removes X amount of elements from array)
-      var items = [];		// TODO change to Unit8Array
-      for (var i=0; i < viewWindow.width; i++) {
-        items.push(i);
-      }
 
       // list to be removed from each row:
       // [1,2,3,4,5,6,7,8]
@@ -734,12 +731,13 @@ let _r = {
   	return _arrayWithoutHoles(arr) || _iterableToArray(arr) || _unsupportedIterableToArray(arr) || _nonIterableSpread();
   }
 
+  let result = [];
   function _evenlyPickItemsFromArray(allItems, neededCount) {
     if (neededCount >= allItems.length) {
       return _toConsumableArray(allItems);
     }
 
-    var result = [];
+    result.length = 0;
     var totalItems = allItems.length;
     var interval = totalItems / neededCount;
 
