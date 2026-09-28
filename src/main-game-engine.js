@@ -23,7 +23,7 @@ import {_r} from './main-renderer.js';
   // ▓
   // ▒
   // ░
-  const brightness = ["&nbsp;", "&#9617;", "&#9618;", "&#9619;", "&#9608;"];
+const brightness = ["\u00A0", "░", "▒", "▓", "█"];
 
 const player = {
 	x: 14.0,		// io, raycaster, and renderer
