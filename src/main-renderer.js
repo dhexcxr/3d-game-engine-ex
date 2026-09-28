@@ -734,7 +734,7 @@ let _r = {
   let result = [];
   function _evenlyPickItemsFromArray(allItems, neededCount) {
     if (neededCount >= allItems.length) {
-      return _toConsumableArray(allItems);
+      return allItems;
     }
 
     result.length = 0;
