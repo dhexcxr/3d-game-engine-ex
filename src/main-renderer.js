@@ -310,7 +310,7 @@ let _r = {
 
     	// converts object of objects to list
     map.sprites = {
-    	...(Object.values(map.sprites).map(sprite => {
+    	...(Object.values(map?.sprites).map(sprite => {
     		    // calculates the distance to the player
     		sprite.z = Math.sqrt((sprite.x - player.x) ** 2 + (sprite.y - player.y) ** 2);
     		return sprite;
