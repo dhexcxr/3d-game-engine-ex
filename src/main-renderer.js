@@ -112,7 +112,7 @@ let _r = {
    */
   fPrepareFrame: function(oInput, oOverlay, eTarget){
     var oOverlay = oOverlay || false;
-    var eTarget  = eTarget || viewWindow.output;
+    var eTarget  = eTarget || viewWindow.outputEl;
     var sOutput = [];
 
 // NOTE TODO i think this is where the skewing can be improved
@@ -189,7 +189,7 @@ let _r = {
 
     var frame = _r.fPrepareFrame(viewWindow.buffer, overlayscreen);
 // 	var frame = screen;		// DEBUG uncomment to remove skew from look up/down rendering
-    var target = target || viewWindow.output;
+    var target = target || viewWindow.outputEl;
 
 
     var sOutput = "";

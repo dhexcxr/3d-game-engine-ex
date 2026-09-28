@@ -588,16 +588,16 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
   // init() called from HTML
     var init = function( input ) {
     // prep document
-    viewWindow.output = document.getElementById("display");
+    viewWindow.outputEl = document.getElementById("display");
     eTouchLook = document.getElementById("touchinputlook");
     eTouchMove = document.getElementById("touchinputmove");
 
      if (hiRes) {	// TODO turn into switchable option in game
   		viewWindow.width = viewWindow.width * 2;
   		viewWindow.height = viewWindow.height * 2;
-  		let currentFontSize = parseFloat(window.getComputedStyle(viewWindow.output).getPropertyValue('font-size'));
-  		viewWindow.output.style.fontSize = `${currentFontSize / 2}px`;
-  		viewWindow.output.style.lineHeight = 1.168;		// no weird horizontal line artifacts
+  		let currentFontSize = parseFloat(window.getComputedStyle(viewWindow.outputEl).getPropertyValue('font-size'));
+  		viewWindow.outputEl.style.fontSize = `${currentFontSize / 2}px`;
+  		viewWindow.outputEl.style.lineHeight = 1.168;		// no weird horizontal line artifacts
 
   	}
 
@@ -684,7 +684,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       }
       sOutput += "<br>";
     }
-    viewWindow.output.innerHTML = sOutput;
+    viewWindow.outputEl.innerHTML = sOutput;
   };
 
 
@@ -713,7 +713,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     // render a static test screen
     _createTestScreen();
 
-    var widthOfDisplay   = viewWindow.output.offsetWidth;
+    var widthOfDisplay   = viewWindow.outputEl.offsetWidth;
     var widthOfViewport  = _getWidth();
     var heightOfViewPort = _getHeight();
     var viewPortAspect   = heightOfViewPort / widthOfViewport;
