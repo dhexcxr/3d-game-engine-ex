@@ -43,7 +43,8 @@ const nLookLimit = 8;
 let LockLook = false;		// IO only, DEBUG only
 let hitSideCheck = 0;		// DEBUG only, only in [io
 
-let hiRes = false;
+let hiRes = true;
+let resModifier = 2;
 
 
 //   var eScreen;	// HERE and io._createTestScreen & io._testScreenSizeAndStartTheGame
@@ -594,10 +595,10 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     eTouchMove = document.getElementById("touchinputmove");
 
      if (hiRes) {	// TODO turn into switchable option in game
-  		viewWindow.width = viewWindow.width * 2;
-  		viewWindow.height = viewWindow.height * 2;
+  		viewWindow.width = viewWindow.width * resModifier;
+  		viewWindow.height = viewWindow.height * resModifier;
   		let currentFontSize = parseFloat(window.getComputedStyle(viewWindow.outputEl).getPropertyValue('font-size'));
-  		viewWindow.outputEl.style.fontSize = `${currentFontSize / 2}px`;
+  		viewWindow.outputEl.style.fontSize = `${currentFontSize / resModifier}px`;
   		viewWindow.outputEl.style.lineHeight = 1.168;		// no weird horizontal line artifacts
 
   	}
