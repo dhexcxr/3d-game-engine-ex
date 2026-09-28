@@ -76,12 +76,12 @@ const game = {
     													// TODO update to rely on time between ticks
 
     let lastTime = performance.now();
-    let smoothedDelta = 33.3333; // Initialize assuming ~30 FPS (1000ms / 60)
+    let smoothedDelta = 10; // Initialize assuming ~30 FPS (1000ms / 60)
 	const alpha = 0.9;         // Higher = smoother/slower, Lower = twitchier
 
     function gameLoop(){
 //       _debugOutput('clear', 'debug2');
-	  if (!viewWindow.isWindowActive || player.bPaused) return;
+// 	  if (!viewWindow.isWindowActive || player.bPaused) return;
 
 	  const currentTime = performance.now()
 	  const rawDelta = currentTime - lastTime;
