@@ -59,7 +59,6 @@ const game = {
 	animationTimer: 0,		// here and renderer
 	nJumptimer: 0,	// only HERE, but this should probably be moved into io....well is movement io or is it game logic?
 	fLooktimer: 0,	// HERE in screen.skew (which should move), also in io and renderer			// eh first put it together in io, then we can decide to split that up
-	nRenderMode: 2,	// used in renderer and raycaster, but the raycaster stuff should probably be moved into renderer
 
 };
 
@@ -151,7 +150,7 @@ const game = {
 
 	  _r.drawSprites();
 
-      _r.fDrawFrame(screen, false);
+      _r.fDrawFrame();
 
     }
   };
@@ -172,7 +171,7 @@ var gameEngineJS = function(){
 
 //   var nMapHeight = 16;	// here, raycaster, and io
 //   var nMapWidth = 16;
-  var map = "";		// io, raycaster, and renderer
+//   var map = "";		// io, raycaster, and renderer
 
 
 

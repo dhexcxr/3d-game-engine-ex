@@ -1738,7 +1738,7 @@ var gameEngineJS = (function(){
 
           // very similar operation to background floor and ceiling.
           // Sprite height is default 1, but we can adjust with the factor passed in the sprite object/
-	      var fSpriteCeiling = screenSkew - fSpriteHeight / 2 * currentSpriteObject.hghtFctr;
+	      var fSpriteCeiling = screenSkew - fSpriteHeight / 2 * currentSpriteObject.hghtFctr;// TODO try without screenSkew
 		  var fSpriteFloor = fSpriteCeiling - fSpriteHeight;
 
 // 		  _debugOutput(`SprDist: ${fSpriteDist}; SprH: ${fSpriteHeight}; SprCeil: ${fSpriteCeiling}; SprFlr: ${fSpriteFloor}`, 'debug2');

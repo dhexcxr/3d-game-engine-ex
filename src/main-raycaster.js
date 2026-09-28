@@ -317,34 +317,34 @@ function raycaster() {
         } // end draw column loop
 
 
-/*
-			midFrameInfoMsg = `
-			fDistToDoor: ${fDistToDoor.toFixed(3)}; nDoorHeight: ${nDoorHeight.toFixed(3)};
-			nDoorFrameTop: ${nDoorFrameTop.toFixed(3)}; nDoorFrameBot: ${nDoorFrameBot.toFixed(3)};<br>
-			fDistanceToWall: ${fDistanceToWall.toFixed(3)}; wallHeight: ${wallHeight.toFixed(3)};
-			nCeiling: ${nCeiling.toFixed(3)}; nFloor: ${nFloor.toFixed(3)};
-			`;
- */
-     	if(screenColumn === viewWindow.width / 2 && (sWalltype == '#' || sWalltype == 'X')) {
+//     	if(screenColumn === viewWindow.width / 2 && (sWalltype == '#' || sWalltype == 'X')) {
+// /*
  			// midFrameInfoMsg = `
-// 			fDistanceToObject: ${fDistanceToObject};
-// 			nObjectCeiling: ${nObjectCeiling.toFixed(3)};
-// 			nObjectFloor: ${nObjectFloor.toFixed(3)};
-// 			fDistanceToInverseObject: ${fDistanceToInverseObject};
-// 			nFObjectBackwall: ${nFObjectBackwall.toFixed(3)};
-// 			fDistanceToWall: ${fDistanceToWall};
-// 			nFloor: ${nFloor}
+// 			fDistToDoor: ${fDistToDoor.toFixed(3)}; nDoorHeight: ${nDoorHeight.toFixed(3)};
+// 			nDoorFrameTop: ${nDoorFrameTop.toFixed(3)}; nDoorFrameBot: ${nDoorFrameBot.toFixed(3)};<br>
+// 			fDistanceToWall: ${fDistanceToWall.toFixed(3)}; wallHeight: ${wallHeight.toFixed(3)};
+// 			nCeiling: ${nCeiling.toFixed(3)}; nFloor: ${nFloor.toFixed(3)};
 // 			`;
+//  */
+//  			// midFrameInfoMsg = `
+// // 			fDistanceToObject: ${fDistanceToObject};
+// // 			nObjectCeiling: ${nObjectCeiling.toFixed(3)};
+// // 			nObjectFloor: ${nObjectFloor.toFixed(3)};
+// // 			fDistanceToInverseObject: ${fDistanceToInverseObject};
+// // 			nFObjectBackwall: ${nFObjectBackwall.toFixed(3)};
+// // 			fDistanceToWall: ${fDistanceToWall};
+// // 			nFloor: ${nFloor}
+// // 			`;
+//
+// 			midFrameInfoMsg = `
+// 			hit_NS_wall: ${hit_NS_wall};
+// 			sWallFaceDirection: ${sWallFaceDirection};
+// 			`;
+//     	}
 
-			midFrameInfoMsg = `
-			hit_NS_wall: ${hit_NS_wall};
-			sWallFaceDirection: ${sWallFaceDirection};
-			`;
-    	}
-
-		if(midFrameInfoMsg !== '' || endDoorInfoMsg !== '') {
-			_debugOutput(`${midFrameInfoMsg}<br>${endDoorInfoMsg}`, 'debug2');
-		}
+// 		if(midFrameInfoMsg !== '' || endDoorInfoMsg !== '') {
+// 			_debugOutput(`${midFrameInfoMsg}<br>${endDoorInfoMsg}`, 'debug2');
+// 		}
 
 
         // Object-Draw (removed overlayscreen)

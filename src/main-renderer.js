@@ -145,11 +145,11 @@ let _r = {
       }
 
       var toBeRemoved = (2 * fLookModifier);
-      var removeFrom = [];
+      var removeFrom = [];		// TODO change to Unit8Array
 
       //  make a new array that contains the indices of the elements to print
       // (removes X amount of elements from array)
-      var items = [];
+      var items = [];		// TODO change to Unit8Array
       for (var i=0; i < viewWindow.width; i++) {
         items.push(i);
       }
@@ -185,10 +185,14 @@ let _r = {
   },
 
 
-  fDrawFrame: function(screen, overlayscreen, target) {
+  fDrawFrame: function(overlayscreen, target) {
+  	_debugOutput(`buffLen_pre: ${viewWindow.buffer.length}`, 'debug2');
+
     var frame = _r.fPrepareFrame(viewWindow.buffer, overlayscreen);
 // 	var frame = screen;		// DEBUG uncomment to remove skew from look up/down rendering
     var target = target || viewWindow.output;
+
+	_debugOutput(`buffLen_post: ${viewWindow.buffer.length}`, 'debug2', true);
 
     var sOutput = "";
 
