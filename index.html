@@ -15,8 +15,8 @@
         background: black;
         color: white;
         font-family: 'Consolas',Courier, monospace;
-        font-size: 6px;
-        line-height: 1.15em;
+        font-size: 6px;		/* nice hi-res is 3 or 4px, 1em line-height */
+        line-height: 1.15;
         overflow: hidden;
         text-align: center;
         touch-action: none;
@@ -27,6 +27,8 @@
       #display{
         display: inline-block;
         pointer-events: none;
+/*        font-size: 3px;		
+        line-height: 1.168;/* nice hi-res is 3 or 4px, 1em line-height */
       }
       #seconddisplay{
         position: absolute;

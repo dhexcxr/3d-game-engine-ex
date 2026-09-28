@@ -107,7 +107,7 @@ var gameEngineJS = (function(){
 
   let LockLook = false;
   let printedScreenRays = false;
-  let rayObs = new Array();		// debug object to hold details of rays
+  let rayObs = new Array();		// DEBUG ONLY object to hold details of rays
   							// column, ray angle, height of wall
   class RayOb {
   	column = 0;
@@ -1362,7 +1362,7 @@ var gameEngineJS = (function(){
 
 
       // for the length of the screenwidth (one frame)
-      for(var screenColumn = 1; screenColumn <= nScreenWidth; screenColumn++) {
+      for(var screenColumn = 0; screenColumn < nScreenWidth; screenColumn++){
 
         // calculates the ray angle into the world space
         // take the current player angle, subtract half the field of view
@@ -1752,7 +1752,7 @@ var gameEngineJS = (function(){
 
           // very similar operation to background floor and ceiling.
           // Sprite height is default 1, but we can adjust with the factor passed in the sprite object/
-	      var fSpriteCeiling = screenSkew - fSpriteHeight / 2 * currentSpriteObject.hghtFctr;// TODO try without screenSkew
+          var fSpriteCeiling = screenSkew - fSpriteHeight / 2 * currentSpriteObject.hghtFctr;
 		  var fSpriteFloor = fSpriteCeiling - fSpriteHeight;
 
 // 		  _debugOutput(`SprDist: ${fSpriteDist}; SprH: ${fSpriteHeight}; SprCeil: ${fSpriteCeiling}; SprFlr: ${fSpriteFloor}`, 'debug2');
