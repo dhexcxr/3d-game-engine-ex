@@ -37,6 +37,32 @@ const dfOutput = new Array(viewWindow.width * Math.round(viewWindow.height));
 let removeFrom = [];		// TODO change to Unit8Array
 
 
+const canvas = document.getElementById("canvDisp");
+const canvasContext = canvas.getContext("2d", { alpha: false });
+
+// correct canvas size for HiDPI
+// Get the DPR and size of the canvas
+const dpr = window.devicePixelRatio;
+const rect = canvas.getBoundingClientRect();
+
+// Set the "actual" size of the canvas
+canvas.width = rect.width * dpr / 1.168;
+canvas.height = rect.height * dpr / 1.168;		// the 1.168 compensates for the original line-height in the display element
+
+// Scale the context to ensure correct drawing operations
+canvasContext.scale(dpr, dpr);
+
+// Set the "drawn" size of the canvas
+canvas.style.width = `${rect.width}px`;
+canvas.style.height = `${rect.height}px`;
+
+// set some nice/required options
+canvasContext.fillStyle = 'white';
+canvasContext.strokeStyle = 'white';
+canvasContext.textRendering = "auto";
+canvasContext.imageSmoothingEnabled = true;
+canvasContext.font = "3px Consolas, Courier, monospace";
+// canvasContext.globalCompositeOperation = "xor";
 let _r = {
 
       /**
@@ -171,6 +197,7 @@ let _r = {
   },
 
 
+		// this might be better in io, named drawToScreen
   fDrawFrame: function(overlayscreen, target) {
 
     var frame = _r.fPrepareFrame(viewWindow.buffer, overlayscreen);
@@ -178,13 +205,14 @@ let _r = {
     var target = target || viewWindow.outputEl;
 
 	dfOutput.length = 0;
+	canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+	let fontHeight = 3;		// TODO get real font height
+	let lineheight = fontHeight * 1;
 
     // interates over each row again, and omits the first and last 30 pixels, to disguise the skewing!
     var printIndex = 0;		// w/ original 80 height, removePixels was 40 (despite quote of 30 above)
     var removePixels = viewWindow.height / 2;			// TODO to be able to calculate this and actually have nice look up/down skewing
     for(var row = 0; row < viewWindow.height; row++){	// determine the allowed up/down angle, calc how much that would transform a 90deg
-      dfOutput.push("<br>");	// innerHTML version		// line, build that calc into the skipEveryX() function
-//       dfOutput.push("\n");	// textContent version
       for(var pix = 0; pix < viewWindow.width; pix++){		// implement the skew in a continuous way (a greater number of more granular steps)
 															// add logic to expand the visuals that are being skewed instead of just adding	
 																// extra dots '.' (which is done in fPrepareFrame() function)
@@ -195,9 +223,15 @@ let _r = {
 
         printIndex++;
       }
+      //       dfOutput.push("<br>");	// innerHTML version		// line, build that calc into the skipEveryX() function
+      dfOutput.push("\n");	// textContent or canvas version
+	  canvasContext.fillText(dfOutput.slice(row * (viewWindow.width - ~~removePixels * 2), (row + 1) * (viewWindow.width - ~~removePixels * 2)).join(''), 0, lineheight * row + lineheight);
     }
-    target.innerHTML = dfOutput.join('');		// TODO change this to a Canvas
-//     target.textContent = dfOutput.join('');
+//     target.innerHTML = dfOutput.join('');		// TODO change this to a Canvas
+    target.textContent = dfOutput.join('');
+//     canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+// 	canvasContext.fillText(dfOutput.join('') + ' (optimizeSpeed)', 0, 10);
+// 	canvasContext.fillText('THIISIIiiiiiIIIIIIIIssssss\nthat\nttttttt (optimizeSpeed)', 10, 10);
   },
 
 

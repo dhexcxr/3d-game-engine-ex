@@ -4,6 +4,8 @@ export {_debugOutput, _mh, init, viewWindow, map, charLookup};
 
 import {game, brightness, main, player} from './main-game-engine.js';
 
+const canvas = document.getElementById("canvDisp");
+const cannvasContext = canvas.getContext("2d");
 let gameResumeGuardOn = false;
 
 const secondDisplay = document.querySelector('#seconddisplay')	// used for overlay/menus
@@ -652,7 +654,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       _testScreenSizeAndStartTheGame();
     });
     // NOTE must be called after _testScreenSizeAndStartTheGame, because that sets up final screen height
-	viewWindow.buffer = new Uint16Array(viewWindow.width * Math.round(viewWindow.height));
+	viewWindow.buffer = new Uint16Array(viewWindow.width * Math.ceil(viewWindow.height));
   };
 
   function _convertAssetsToUnicode(asset) {
@@ -742,7 +744,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     var sOutput = new Array(viewWindow.buffer.length);
     for(var screnCol = 0; screnCol < viewWindow.height; screnCol++){
       for(var viewWindowRow = 0; viewWindowRow < viewWindow.width; viewWindowRow++){
-        sOutput.push(String.fromCharCode(brightness[0]));		// TODO is this after charLookup creation? swap to it if so
+        sOutput.push(charLookup.get(brightness[0]));		// TODO is this after charLookup creation? swap to it if so
       }
       sOutput.push("<br>");
     }
