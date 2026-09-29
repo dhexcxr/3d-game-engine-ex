@@ -214,22 +214,44 @@ var gameEngineJS = function(){
 }();		// NOTE why does this need to be an immediate or whatever this is called?
 // util functions - could probably be a new module
 
-// cheap/easy memoize from stackoverflow
-function memoize(func) {
-  const cache = new Map(); // Use a Map to store cached results
+// cheap/easy memoize from Google AI
+	// it's own key resolver must be defined unless there is only one arg
+
+/**
+ * A fast, capped memoization function for game loops.
+ * 
+ * @param {Function} fn - The function to memoize
+ * @param {number} maxCacheSize - Max number of unique arguments to cache (LRU-like eviction)
+ * @param {Function} resolver - Optional function to generate a strict cache key from arguments
+ * @returns {Function} - The memoized function
+ */
+function memoize(fn, maxCacheSize = 100, resolver = null) {
+    const cache = new Map();
+    
+    // Using a separate array to track keys allows us to implement 
+    // a lightweight eviction policy without heavy memory overhead.
+    const keys = [];
 
   return function (...args) {
-    const key = JSON.stringify(args); // Create a unique key based on function arguments
+        // Generate a cache key. If a resolver is provided, use it.
+        // Otherwise, assume the first argument is a primitive/key to avoid serialization.
+        const key = resolver ? resolver(...args) : args[0];
 
     if (cache.has(key)) {
-      // If the result is cached, return it
       return cache.get(key);
-    } else {
-      // Otherwise, compute the result and cache it
-      const result = func(...args);
+        }
+
+        const result = fn(...args);
+
+        if (cache.size >= maxCacheSize) {
+            // Evict the oldest entry (FIFO) to keep memory footprint predictable
+            const oldestKey = keys.shift();
+            cache.delete(oldestKey);
+        }
+
+        keys.push(key);
       cache.set(key, result);
       return result;
-    }
   };
 }
 
