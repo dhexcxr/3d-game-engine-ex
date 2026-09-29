@@ -82,7 +82,7 @@ watchProp(game, 'timer');
 		game.isRunning = true;								// so at higher speed everything happens faster
 	} else {												// TODO update to rely on time between ticks so we can speed this up
 //     	gameLoop();			// TODO run one of this so that we paint the first screen on startup, then wait for user click
-	}
+	}							// FOLLOWUP - well, maybe not, without the one run is just starts on a blank screen, which is ok
 
     function gameLoop(){
 //       _debugOutput('clear', 'debug2');

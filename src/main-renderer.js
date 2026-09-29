@@ -111,13 +111,12 @@ let _r = {
    * It returns an array to be rendered later.
    * the aim is to remove the first and last 30 pixels of very row,
    * to obscure the skewing
-   */
+   */		// NOTE TODO i think this is where the skewing can be improved
   fPrepareFrame: function(oInput, oOverlay, eTarget){
     var oOverlay = oOverlay || false;
     var eTarget  = eTarget || viewWindow.outputEl;
     pfOutput.length = 0;
 
-// NOTE TODO i think this is where the skewing can be improved
 
     // this is the maximum of variation created by the lookup timer, aka the final lookmodifier value
     var neverMoreThan = Math.round(viewWindow.height / _skipEveryXrow(game.fLooktimer) - 1);
@@ -167,14 +166,12 @@ let _r = {
         }
 
         globalPrintIndex++;
-      } // end for(rpix
-
-      // print filler pixels
+      } // end for(rpix)
       for(var i=0; i<fLookModifier; i++){
-        pfOutput.push( "." );
+        pfOutput.push( "." );		      // print filler pixels
       }
 
-    } // end for(row
+    } // end for(row)
 
     return pfOutput;
   },
@@ -189,14 +186,14 @@ let _r = {
 	dfOutput.length = 0;
 
     // interates over each row again, and omits the first and last 30 pixels, to disguise the skewing!
-    var printIndex = 0;
-    var removePixels = viewWindow.height / 2;		// w/ original 80 height, this was 40 (despite quote of 30 above)
-//     var removePixels = 48;		/// TODO to be able to calculate this and actually have nice look up/down skewing
-    for(var row = 0; row < viewWindow.height; row++){	// determine the allowed up/down angle, calc how much that would transform a 90deg line
-      dfOutput.push("<br>");
-      for(var pix = 0; pix < viewWindow.width; pix++){	// build that calc into the skipEveryX() function
-															// implement the skew in a continuous way (a greater number of more granular steps)
-        // H-blank based on screen-width				//  add logic to expand the visuals that are being skewed instead of just adding
+    var printIndex = 0;		// w/ original 80 height, removePixels was 40 (despite quote of 30 above)
+    var removePixels = viewWindow.height / 2;			// TODO to be able to calculate this and actually have nice look up/down skewing
+    for(var row = 0; row < viewWindow.height; row++){	// determine the allowed up/down angle, calc how much that would transform a 90deg
+      dfOutput.push("<br>");	// innerHTML version		// line, build that calc into the skipEveryX() function
+//       dfOutput.push("\n");	// textContent version
+      for(var pix = 0; pix < viewWindow.width; pix++){		// implement the skew in a continuous way (a greater number of more granular steps)
+															// add logic to expand the visuals that are being skewed instead of just adding	
+																// extra dots '.' (which is done in fPrepareFrame() function)
 
         if( !(pix < removePixels || pix > viewWindow.width - removePixels)) {
 		  dfOutput.push(frame[printIndex]);
@@ -206,13 +203,15 @@ let _r = {
       }
     }
     target.innerHTML = dfOutput.join('');		// TODO change this to a Canvas
+//     target.textContent = dfOutput.join('');
   },
 
 
   /**
    * Function that handles movement of all sprites
    */
-  moveSprites: function() {
+  moveSprites: function() {		// NOTE TODO this could probably be in some kind of game logic module
+									// maybe physics because it has to do with the movement of in game objects
 
     // for each sprite object
 	for (const sprite of Object.values(map.sprites)) {
@@ -722,12 +721,7 @@ let _r = {
    */
   // helper function
 
-  let result = [];
-
-
-
   function _evenlyPickItemsFromArray(numOfValues, neededCount) {
-
 	let returnValues = Math.min(neededCount, numOfValues);		// NOTE is there ever a condition where neededCount > numOfValues?
 	var interval = numOfValues / returnValues;
 	return Uint16Array.from({ length: returnValues }, (_, index) => ~~(index * interval + interval / 2));
