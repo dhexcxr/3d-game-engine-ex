@@ -57,12 +57,12 @@ let _r = {
 
 		var texpixels = texture.texture;
 
-		if( texture.texture == "DIRECTIONAL" ){
+		if( texpixels instanceof Map ){
 		  // Different Texture based on viewport
 		  if( player.ang > 0 && player.ang < Math.PI ){
-			texpixels = texture.S;
+			texpixels = texpixels.get('S');
 		  } else {
-			texpixels = texture.N;
+			texpixels = texpixels.get('N');
 		  }
 		}
 

@@ -3,67 +3,67 @@ var defaultTexHeight = 16;
 var defaultTexScale = 2;
 
 // large brick wall texture
-var brick = "";
-brick += "#####.####.####.";
-brick += "#7#o7.#o#o.#o#o.";
-brick += "0oooo.#ooo.#ooo.";
-brick += "................";
-brick += "5##.####.#####.#";
-brick += "#7o.7#7o.7#77o.#";
-brick += "ooo.oooo.ooo#o.#";
-brick += "................";
-brick += "#####.####.####.";
-brick += "#7#o7.#o#o.#o#o.";
-brick += "#oooo.#ooo.#ooo.";
-brick += "................";
-brick += "##.####.#####.##";
-brick += "#o.#7##.#7#7o.#7";
-brick += "oo.#ooo.#oooo.#o";
-brick += "................";
+let brick =
+`#####.####.####.\
+#7#o7.#o#o.#o#o.\
+0oooo.#ooo.#ooo.\
+................\
+5##.####.#####.#\
+#7o.7#7o.7#77o.#\
+ooo.oooo.ooo#o.#\
+................\
+#####.####.####.\
+#7#o7.#o#o.#o#o.\
+#oooo.#ooo.#ooo.\
+................\
+##.####.#####.##\
+#o.#7##.#7#7o.#7\
+oo.#ooo.#oooo.#o\
+................`;
 
 
 // wood planks texture
-var woodplanks = "";
-woodplanks += "ooooo.oooooooooo";
-woodplanks += "ooo#o.o#o7777ooo";
-woodplanks += "7oooo.ooooooo777";
-woodplanks += "ooooo.oooooooooo";
-woodplanks += "ooooo.ooo777oooo";
-woodplanks += "77o#o.o#oooo7777";
-woodplanks += "ooooo.oooooooooo";
-woodplanks += "................";
-woodplanks += "ooooooooooo.oooo";
-woodplanks += "ooo77777o+o.o#oo";
-woodplanks += "777oooooooo.ooo7";
-woodplanks += "ooooooooooo.oooo";
-woodplanks += "ooooo777ooo.oooo";
-woodplanks += "77777oooo#o.o#o7";
-woodplanks += "ooooooooooo.oooo";
-woodplanks += "................";
-woodplanks += "................";
-woodplanks += "................";
+let woodplanks =
+`................\
+ooooo.oooooooooo\
+ooo#o.o#o7777ooo\
+7oooo.ooooooo777\
+ooooo.oooooooooo\
+ooooo.ooo777oooo\
+77o#o.o#oooo7777\
+ooooo.oooooooooo\
+................\
+................\
+ooooooooooo.oooo\
+ooo77777o+o.o#oo\
+777oooooooo.ooo7\
+ooooooooooo.oooo\
+ooooo777ooo.oooo\
+77777oooo#o.o#o7\
+ooooooooooo.oooo\
+................`;
 
 
 // cobble stone
 var texWidth = 16;
 var texHeight = 16;
-var cobblestone = "";
-cobblestone += "##.........777.#";
-cobblestone += "777..####7....##";
-cobblestone += "777.##77777..##7";
-cobblestone += "77*.#7777777.*77";
-cobblestone += "7*..7777777*..*7";
-cobblestone += "......77***.....";
-cobblestone += "..##7*.....###..";
-cobblestone += "###777...##777.#";
-cobblestone += "##777*..##777*.7.";
-cobblestone += "7777*..77777*...";
-cobblestone += "77*.....777*....";
-cobblestone += "....##..........";
-cobblestone += "...##77......#77";
-cobblestone += "7.##77777..##777";
-cobblestone += "7.#77777*.#7777*";
-cobblestone += "...777**..7777~~";
+let cobblestone =
+`##.........777.#\
+777..####7....##\
+777.##77777..##7\
+77*.#7777777.*77\
+7*..7777777*..*7\
+......77***.....\
+..##7*.....###..\
+###777...##777.#\
+##777*..##777*.7\
+7777*..77777*...\
+77*.....777*....\
+....##..........\
+...##77......#77\
+7.##77777..##777\
+7.#77777*.#7777*\
+...777**..7777~~`;
 
 
 // Perspective Store Shelve Test Looking South
@@ -146,9 +146,10 @@ var textures = {
     "scale": 2,
   },
   "W": {
-    "texture": "DIRECTIONAL",
-    "N": textureN,
-    "S": textureS,
+    "texture": new Map([
+    	['N', textureN],
+		['S', textureS],
+    ]),
     "scale": 1
   },
 };
