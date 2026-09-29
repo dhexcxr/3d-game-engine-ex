@@ -154,14 +154,8 @@ let _r = {
       //   [1,2,4,5,7,8]
       removeFrom = _evenlyPickItemsFromArray(viewWindow.width, toBeRemoved);
 
-      // loops through each rows of pixels
-      for(var rpix = 0; rpix < viewWindow.width; rpix++){
-
-        // print only if the pixel is in the list of pixels to print
-        if( removeFrom.includes(rpix) ){
-          // don"t print
-        } else {
-          // print
+      for(var rpix = 0; rpix < viewWindow.width; rpix++) {      // loops through each rows of pixels
+        if (!removeFrom.includes(rpix)) {        // print only if the pixel is in the list of pixels to print
           pfOutput.push(String.fromCharCode(oInput[globalPrintIndex]) );
         }
 
