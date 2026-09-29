@@ -1,6 +1,6 @@
 // main i/o
 
-export {_debugOutput, _mh, init, viewWindow, map};
+export {_debugOutput, _mh, init, viewWindow, map, charLookup};
 
 import {game, brightness, main, player} from './main-game-engine.js';
 
@@ -8,6 +8,7 @@ let gameResumeGuardOn = false;
 
 const secondDisplay = document.querySelector('#seconddisplay')	// used for overlay/menus
 
+const charLookup = new Map;
 // Update status when the user switches tabs or minimizes the window
 document.addEventListener('visibilitychange', () => {		// NOTE TODO i can get what I think is a race condition 
 	if(gameResumeGuardOn || player.bPaused) {
@@ -517,7 +518,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
     checkExit: function(){
       // if we hit an exit
-      if(map.tiles[~~(player.y) * map.width + ~~(player.x)] == "X"){
+      if(map.tiles[~~(player.y) * map.width + ~~(player.x)] == "X") {		// TODO this should compare to codePoint
         _loadLevel( map.exitsto );
       }
     },
@@ -646,12 +647,20 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
   };
 
   function _convertAssetsToUnicode(asset) {
+//   	let rawChar;
+  	let rawCodePoint;
   	if(Array.isArray(asset)) {
   		for (let i = 0; i < asset.length; i++) {
-  			asset[i] = asset[i].codePointAt(0);
+  			rawCodePoint = asset[i].codePointAt(0);
+  			charLookup.set(rawCodePoint, asset[i]);
+  			asset[i] = rawCodePoint;
   		}
   	} else if (typeof asset === 'string' || asset instanceof String) {
-  		return [...asset].map(char => char.codePointAt(0));
+  		return [...asset].map(char => {
+  			rawCodePoint = char.codePointAt(0)
+			charLookup.set(rawCodePoint, char);
+  			return rawCodePoint;
+  		});
   	} else if(asset instanceof Map) {
   		asset.forEach((subAsset, subAssetKey, assetMap) => {
   			assetMap.set(subAssetKey, _convertAssetsToUnicode(subAsset));
@@ -724,7 +733,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     var sOutput = new Array(viewWindow.buffer.length);
     for(var screnCol = 0; screnCol < viewWindow.height; screnCol++){
       for(var viewWindowRow = 0; viewWindowRow < viewWindow.width; viewWindowRow++){
-        sOutput.push(String.fromCharCode(brightness[0]));
+        sOutput.push(String.fromCharCode(brightness[0]));		// TODO is this after charLookup creation? swap to it if so
       }
       sOutput.push("<br>");
     }
