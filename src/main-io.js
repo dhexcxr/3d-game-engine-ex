@@ -281,8 +281,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
         if (e.which == 83 || e.which == 40) { // s or down
           player.bMoveBackward = true;
         }
-
-        printPlayerLoc();		// DEBUG only
       };
 
       window.onkeyup = function(e) {
@@ -312,8 +310,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
         if (e.which == 83 || e.which == 40) { // s or down
           player.bMoveBackward = false;
         }
-
-        printPlayerLoc();		// DEBUG only
       };
     },
 
@@ -360,8 +356,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
         // look up and down
         _mh.yMoveUpdate( ( e.movementY || e.mozMovementY || e.webkitMovementY || 0), 0.05 );
-
-        printPlayerLoc();		// DEBUG only
       }
     },
 

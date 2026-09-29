@@ -728,7 +728,7 @@ let _r = {
 
   function _evenlyPickItemsFromArray(numOfValues, neededCount) {
 
-	let returnValues = Math.min(neededCount, numOfValues);		// NOTE is there every a condition where neededCount > allItems.length?
+	let returnValues = Math.min(neededCount, numOfValues);		// NOTE is there ever a condition where neededCount > numOfValues?
 	var interval = numOfValues / returnValues;
 	return Uint16Array.from({ length: returnValues }, (_, index) => ~~(index * interval + interval / 2));
   }

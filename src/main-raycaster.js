@@ -265,7 +265,7 @@ function raycaster() {
               }
             }  else if(sWalltype != "." || sWalltype == "T") {		// Solid Walltype
 
-              var fSampleY = ( (screenRow - nCeiling) / (nFloor - nCeiling) );
+              var fSampleY = ( (screenRow - nCeiling) / wallHeight );
 
               /**
                * animation timer example
