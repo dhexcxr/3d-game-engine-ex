@@ -109,46 +109,6 @@ let resModifier = 2;
 
 	buffer: [],
 
-	setupScreenBuffer: function(size = 1024) {
-		this.buffer =  new Uint16Array(size);
-
-	  const bufferArray = {	// Uint16Array offers better performance than standard array, contiguous, no GC
-		innerUint16Array: new Uint16Array(size),
-
-		toString() {
-		  let result = "";
-		  for (let i = 0; i < this.innerUint16Array.length; i++) {
-			if (this.innerUint16Array[i] === 0) break;
-			result += String.fromCharCode(this.innerUint16Array[i]);
-		  }
-		  return result;
-		},
-
-		clear() {
-		  this.innerUint16Array.fill(0);
-		},
-
-		get length() {
-		  return this.innerUint16Array.length;
-		}
-	  };
-
-	  // co-opt bracket notation to automatically encode chars as numbers for storage in Unit16Array
-	  this.buffer = new Proxy(bufferArray, {
-		get(target, prop, receiver) {
-			// Intercept bracket reads like obj[0]
-			return String.fromCharCode(target.innerUint16Array[prop]);
-		},
-
-		set(target, prop, value, receiver) {
-			// Intercept bracket writes like obj[0] = 'g'
-			target.innerUint16Array[prop] = value.charCodeAt(0);
-			return true;
-		}
-	  });
-	},
-
-
 	nRenderMode: 2,	// used in renderer and raycaster, but the raycaster stuff should probably be moved into renderer
 
 	get skew() { return this.height / (2 - game.nJumptimer * 0.15 - game.fLooktimer * 0.15) },	// mostly used in raycaster, but I think that might should be in rendere instead
@@ -648,8 +608,13 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     // initial gameload
     _loadLevel("mainlevelfile1.map");
 
-	viewWindow.setupScreenBuffer(viewWindow.width * Math.round(viewWindow.height));	// this will replace the default array with the Unit16Array
+	viewWindow.buffer = new Uint16Array(viewWindow.width * Math.round(viewWindow.height));
 
+	// convert characters to unicode
+	_convertAssetsToUnicode(brightness);		// TODO make brightness not const, so I can reassign it just like texture
+	for (const texObj of Object.values(textures)) {
+		texObj.texture = _convertAssetsToUnicode(texObj.texture);
+	}
   };
 
   function _convertAssetsToUnicode(asset) {
@@ -659,6 +624,11 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
   		}
   	} else if (typeof asset === 'string' || asset instanceof String) {
   		return [...asset].map(char => char.codePointAt(0));
+  	} else if(asset instanceof Map) {
+  		asset.forEach((subAsset, subAssetKey, assetMap) => {
+  			assetMap.set(subAssetKey, _convertAssetsToUnicode(subAsset));
+  		})
+  		return asset;
   	}
   };
 
@@ -723,14 +693,14 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
   // for every row make a viewWindow.width amount of pixels
   var _createTestScreen = function(){
-    var sOutput = "";
+    var sOutput = new Array(viewWindow.buffer.length);
     for(var screnCol = 0; screnCol < viewWindow.height; screnCol++){
       for(var viewWindowRow = 0; viewWindowRow < viewWindow.width; viewWindowRow++){
-        sOutput += brightness[0];
+        sOutput.push(String.fromCharCode(brightness[0]));
       }
-      sOutput += "<br>";
+      sOutput.push("<br>");
     }
-    viewWindow.outputEl.innerHTML = sOutput;
+    viewWindow.outputEl.innerHTML = sOutput.join('');
   };
 
 

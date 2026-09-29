@@ -33,6 +33,7 @@ import {_debugOutput, viewWindow, map} from './main-io.js';
 const MIN_DIST = 0.1; // Prevent division by zero if standing exactly on a sprite	// RENDERER only
 
 const pfOutput = new Array(viewWindow.width * Math.round(viewWindow.height));
+const dfOutput = new Array(viewWindow.width * Math.round(viewWindow.height));
 let removeFrom = [];		// TODO change to Unit8Array
 
 
@@ -162,9 +163,7 @@ let _r = {
           // don"t print
         } else {
           // print
-//           pfOutput.push( _r.printCompositPixel(oInput, oOverlay, globalPrintIndex) );
-//           pfOutput.push( oOverlay && oOverlay[globalPrintIndex] != 0 ? oOverlay[globalPrintIndex] : String.fromCharCode(oInput[globalPrintIndex]) );		// Unit16Array functionality
-          pfOutput.push( oOverlay && oOverlay[globalPrintIndex] != 0 ? oOverlay[globalPrintIndex] : oInput[globalPrintIndex]);
+          pfOutput.push(String.fromCharCode(oInput[globalPrintIndex]) );
         }
 
         globalPrintIndex++;
@@ -187,29 +186,26 @@ let _r = {
 // 	var frame = screen;		// DEBUG uncomment to remove skew from look up/down rendering
     var target = target || viewWindow.outputEl;
 
-
-    let sOutput = new Array(viewWindow.buffer.length);
+	dfOutput.length = 0;
 
     // interates over each row again, and omits the first and last 30 pixels, to disguise the skewing!
     var printIndex = 0;
     var removePixels = viewWindow.height / 2;		// w/ original 80 height, this was 40 (despite quote of 30 above)
 //     var removePixels = 48;		/// TODO to be able to calculate this and actually have nice look up/down skewing
     for(var row = 0; row < viewWindow.height; row++){	// determine the allowed up/down angle, calc how much that would transform a 90deg line
+      dfOutput.push("<br>");
       for(var pix = 0; pix < viewWindow.width; pix++){	// build that calc into the skipEveryX() function
 															// implement the skew in a continuous way (a greater number of more granular steps)
         // H-blank based on screen-width				//  add logic to expand the visuals that are being skewed instead of just adding
-        if(printIndex % (viewWindow.width) == 0){			// extra dots '.' (this is done in fPrepareFrame() function)
-          sOutput.push("<br>");
-        }
 
         if( !(pix < removePixels || pix > viewWindow.width - removePixels)) {
-		  sOutput.push(frame[printIndex]);
+		  dfOutput.push(frame[printIndex]);
         }
 
         printIndex++;
       }
     }
-    target.innerHTML = sOutput.join('');
+    target.innerHTML = dfOutput.join('');		// TODO change this to a Canvas
   },
 
 
@@ -497,6 +493,7 @@ let _r = {
 
       var fill = "";
 
+      pixel = String.fromCharCode(pixel);		// Unit16Array functionality
       if( sWallFaceDirection === "N" || sWallFaceDirection === "S" ){
 
         if(fDistanceToWall < viewWindow.depth / 5.5 ){
@@ -650,15 +647,15 @@ let _r = {
 
       if( screenRow < nDoorFrameTop) {
         if(fDistanceToWall < viewWindow.depth / 4) {
-          fill = "\u2550";		// &boxH;
+          fill = 9552;		// &boxH;
         } else {
-          fill = "=";
+          fill = "=".charCodeAt(0);
         }
       } else {
         if(fDistanceToWall < viewWindow.depth / 4) {
-          fill = "\u2551";		// &boxV;
+          fill = 9553;		// &boxV;
         } else {
-          fill = "|";
+          fill = "|".charCodeAt(0);
         }
       }
       return fill;
@@ -673,13 +670,13 @@ let _r = {
       b = 1 - (j -viewWindow.height / (2- game.fLooktimer * 0.15)) / (viewWindow.height / (2 - game.fLooktimer * 0.15));
 
       if(b < 0.25){
-        fill = "x";
+        fill = "x".charCodeAt(0);
       } else if(b < 0.5) {
-        fill = "=";
+        fill = "=".charCodeAt(0);
       } else if(b < 0.75) {
-        fill = "-";
+        fill = "-".charCodeAt(0);
       } else if(b < 0.9) {
-        fill = "`";
+        fill = "`".charCodeAt(0);
       } else {
         fill = brightness[0];
       }
@@ -688,20 +685,20 @@ let _r = {
     },
 
     renderCeiling: function(j) {
-      var fill = "`";
+      var fill = "`".charCodeAt(0);
 
       // draw ceiling, in different shades
       b = 1 - (j -viewWindow.height / 2) / (viewWindow.height / 2);
       if(b < 0.25){
-        fill = "`";
+        fill = "`".charCodeAt(0);
       } else if(b < 0.5) {
-        fill = "-";
+        fill = "-".charCodeAt(0);
       } else if(b < 0.75) {
-        fill = "=";
+        fill = "=".charCodeAt(0);
       } else if(b < 0.9) {
-        fill = "x";
+        fill = "x".charCodeAt(0);
       } else {
-        fill = "#";
+        fill = "#".charCodeAt(0);
       }
 
       return fill;
