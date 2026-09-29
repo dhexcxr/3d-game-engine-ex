@@ -4,53 +4,52 @@ export {_debugOutput, _mh, init, viewWindow, map};
 
 import {game, brightness, main, player} from './main-game-engine.js';
 
-		// TODO put this inside viewWindow object, also probably make a function to return the value
-let focusPauseGuard = false;
+let gameResumeGuardOn = false;
 
 // Update status when the user switches tabs or minimizes the window
 document.addEventListener('visibilitychange', () => {		// NOTE TODO i can get what I think is a race condition 
-	if(focusPauseGuard || player.bPaused) {
+	if(gameResumeGuardOn || player.bPaused) {
 		return;
 	} else {
-		focusPauseGuard = true;
+		gameResumeGuardOn = true;
 		let iwa = viewWindow.isWindowActive();
 		if(iwa && !game.isRunning) {
 			resumeGameClock();
 		} else if(!iwa && game.isRunning) {
 			pauseGameClock();
 		}
-		focusPauseGuard = false;
+		gameResumeGuardOn = false;
 	}
 });
 
 // Update status when the window gains or loses OS focus
 window.addEventListener('focus', () => {		// TODO make one callback then pass it to all 3 of these listeners
-	if(focusPauseGuard || player.bPaused) {
+	if(gameResumeGuardOn || player.bPaused) {
 		return;
 	} else {
-		focusPauseGuard = true;
+		gameResumeGuardOn = true;
 		let iwa = viewWindow.isWindowActive();
 		if(iwa && !game.isRunning) {
 			resumeGameClock();
 		} else if(!iwa && game.isRunning) {
 			pauseGameClock();
 		}
-		focusPauseGuard = false;
+		gameResumeGuardOn = false;
 	}
 });
 
 window.addEventListener('blur', () => {
-	if(focusPauseGuard || player.bPaused) {
+	if(gameResumeGuardOn || player.bPaused) {
 		return;
 	} else {
-		focusPauseGuard = true;
+		gameResumeGuardOn = true;
 		let iwa = viewWindow.isWindowActive();
 		if(iwa && !game.isRunning) {
 			resumeGameClock();
 		} else if(!iwa && game.isRunning) {
 			pauseGameClock();
 		}
-		focusPauseGuard = false;
+		gameResumeGuardOn = false;
 	}
 });
 let pointerLocked = document.pointerLockElement;	// is this reference always live?
@@ -66,9 +65,9 @@ document.addEventListener("pointerlockchange", (event) => {
 // 									// put all that in this with the guard
 // }
 
-function pauseGameClock() {
-	clearInterval(game.timer);
-	game.isRunning = false;
+function pauseGameClock() {		// TODO NOTE i think the ultimate guard agains't multiple interval timers (at least until I swap to
+	clearInterval(game.timer);		// getAnimationFrame) is til clear this var and only start the timer if it is null
+	game.isRunning = false;			// then, i don't think I'd need as many guards strewn about the code
 // 	player.bPaused = true;
 	_debugOutput(`isWindowActive: ${viewWindow.isWindowActive()}; bPaused: ${player.bPaused}`, 'debug2');
 }
