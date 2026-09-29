@@ -637,6 +637,11 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 	for (const texObj of Object.values(textures)) {
 		texObj.texture = _convertAssetsToUnicode(texObj.texture);
 	}
+	// hack to add gate chars into charLookup
+		// need to get it somewhere standardized
+	_convertAssetsToUnicode(["═", "=", "║", "|"])
+	// hack for floor and ceiling, # is ceiling only, there is also a '=' but that is already in gate chars
+	_convertAssetsToUnicode(["`", "-", "x", "#"])
 	// pauses, then starts the game loop
     _testScreenSizeAndStartTheGame();		// NOTE moving this func call here from _loadLevel might break changing levels....maybe
     window.addEventListener("resize", function(){		// to FIX we might need to call main() from here, instead of end of _testScreenSizeAndStartTheGame()
@@ -653,13 +658,13 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
   	let rawCodePoint;
   	if(Array.isArray(asset)) {
   		for (let i = 0; i < asset.length; i++) {
-  			rawCodePoint = asset[i].codePointAt(0);
+  			rawCodePoint = asset[i].charCodeAt(0);
   			charLookup.set(rawCodePoint, asset[i]);
   			asset[i] = rawCodePoint;
   		}
   	} else if (typeof asset === 'string' || asset instanceof String) {
   		return [...asset].map(char => {
-  			rawCodePoint = char.codePointAt(0)
+  			rawCodePoint = char.charCodeAt(0)
 			charLookup.set(rawCodePoint, char);
   			return rawCodePoint;
   		});

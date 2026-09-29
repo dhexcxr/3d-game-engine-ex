@@ -1,7 +1,7 @@
 export {_r, _rh};
 
 import {game, brightness, player} from './main-game-engine.js';
-import {_debugOutput, viewWindow, map} from './main-io.js';
+import {_debugOutput, viewWindow, map, charLookup} from './main-io.js';
 
 /*
 	original top level funcs:
@@ -99,7 +99,7 @@ let _r = {
     if( sOverlay && sOverlay[nIndex] != 0){
 	return sOverlay[nIndex];
     } else {
-	return String.fromCharCode(sInput[nIndex]);
+	return charLookup.get(sInput[nIndex]);
     }
     return '';
   },
@@ -156,7 +156,7 @@ let _r = {
 
       for(var rpix = 0; rpix < viewWindow.width; rpix++) {      // loops through each rows of pixels
         if (!removeFrom.includes(rpix)) {        // print only if the pixel is in the list of pixels to print
-          pfOutput.push(String.fromCharCode(oInput[globalPrintIndex]) );
+          pfOutput.push(charLookup.get(oInput[globalPrintIndex]) );
         }
 
         globalPrintIndex++;
@@ -486,7 +486,7 @@ let _r = {
 
       var fill = "";
 
-      pixel = String.fromCharCode(pixel);		// Unit16Array functionality
+      pixel = charLookup.get(pixel);		// Unit16Array functionality
       if( sWallFaceDirection === "N" || sWallFaceDirection === "S" ){
 
         if(fDistanceToWall < viewWindow.depth / 5.5 ){
@@ -636,17 +636,17 @@ let _r = {
 
     // shading and sectionals for gate
     renderGate: function(screenRow, fDistanceToWall, nDoorFrameTop, nCeiling) {
-      var fill = "X";
+      var fill = "X".charCodeAt(0);
 
       if( screenRow < nDoorFrameTop) {
         if(fDistanceToWall < viewWindow.depth / 4) {
-          fill = 9552;		// &boxH;
+          fill = "═".charCodeAt(0);	// 9552;		// &boxH;
         } else {
           fill = "=".charCodeAt(0);
         }
       } else {
         if(fDistanceToWall < viewWindow.depth / 4) {
-          fill = 9553;		// &boxV;
+          fill = "║".charCodeAt(0);	// 9553;		// &boxV;
         } else {
           fill = "|".charCodeAt(0);
         }
@@ -655,7 +655,7 @@ let _r = {
     },
 
     renderFloor: function(j) {
-      var fill = "`";
+      var fill = "`".charCodeAt(0);
 
 			// TODO do something better with this
       // draw floor, in different shades
