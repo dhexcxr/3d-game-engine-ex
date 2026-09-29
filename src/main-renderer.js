@@ -189,7 +189,7 @@ let _r = {
 															// add logic to expand the visuals that are being skewed instead of just adding	
 																// extra dots '.' (which is done in fPrepareFrame() function)
 
-        if( !(pix < removePixels || pix > viewWindow.width - removePixels)) {
+        if( !(pix < removePixels || pix > (viewWindow.width - removePixels))) {
 		  dfOutput.push(frame[printIndex]);
         }
 
