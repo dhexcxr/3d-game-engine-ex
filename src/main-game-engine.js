@@ -55,6 +55,7 @@ const player = {
 
 const game = {
 	timer: {},		// here and io, holds setInterval that controls game time/speed
+	isRunning: false,
 	currentFrame: 0, 	// here in main loop, raycaster, and renderer
 	animationTimer: 0,		// here and renderer
 	nJumptimer: 0,	// only HERE, but this should probably be moved into io....well is movement io or is it game logic?
@@ -73,7 +74,7 @@ watchProp(game, 'timer');
   let main = function(){
 //     game.timer = setInterval(gameLoop, 33);		// default
     game.timer = setInterval(gameLoop, 16.66667);		// NOTE TODO most things rely on the frame rate
-    													// (not the right way to do it)
+    game.isRunning = true;													// (not the right way to do it)
     													// so at higher speed everything happens faster
     													// TODO update to rely on time between ticks
 

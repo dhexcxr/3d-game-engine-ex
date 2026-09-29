@@ -4,36 +4,79 @@ export {_debugOutput, _mh, init, viewWindow, map};
 
 import {game, brightness, main, player} from './main-game-engine.js';
 
-		// TODO put this inside viewWindow object
-let isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
+		// TODO put this inside viewWindow object, also probably make a function to return the value
+let focusPauseGuard = false;
 
 // Update status when the user switches tabs or minimizes the window
-document.addEventListener('visibilitychange', () => {
-	isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
-	isWindowActive ? pauseGameClock() : resumeGameClock();
+document.addEventListener('visibilitychange', () => {		// NOTE TODO i can get what I think is a race condition 
+	if(focusPauseGuard || player.bPaused) {
+		return;
+	} else {
+		focusPauseGuard = true;
+		let iwa = viewWindow.isWindowActive();
+		if(iwa && !game.isRunning) {
+			resumeGameClock();
+		} else if(!iwa && game.isRunning) {
+			pauseGameClock();
+		}
+		focusPauseGuard = false;
+	}
 });
 
 // Update status when the window gains or loses OS focus
-window.addEventListener('focus', () => {
-	isWindowActive = document.visibilityState === 'visible' && document.hasFocus();
-	isWindowActive && !player.bPaused ? resumeGameClock() : pauseGameClock();
+window.addEventListener('focus', () => {		// TODO make one callback then pass it to all 3 of these listeners
+	if(focusPauseGuard || player.bPaused) {
+		return;
+	} else {
+		focusPauseGuard = true;
+		let iwa = viewWindow.isWindowActive();
+		if(iwa && !game.isRunning) {
+			resumeGameClock();
+		} else if(!iwa && game.isRunning) {
+			pauseGameClock();
+		}
+		focusPauseGuard = false;
+	}
 });
 
 window.addEventListener('blur', () => {
-	isWindowActive = false;
-	isWindowActive && !player.bPaused ? resumeGameClock() : pauseGameClock();
+	if(focusPauseGuard || player.bPaused) {
+		return;
+	} else {
+		focusPauseGuard = true;
+		let iwa = viewWindow.isWindowActive();
+		if(iwa && !game.isRunning) {
+			resumeGameClock();
+		} else if(!iwa && game.isRunning) {
+			pauseGameClock();
+		}
+		focusPauseGuard = false;
+	}
 });
+let pointerLocked = document.pointerLockElement;	// is this reference always live?
+// TODO organize this module more....probably after the cleanup
+document.addEventListener("pointerlockchange", (event) => {
+	// TODO check if pointer is locked
+		// if yes, allow mousemove, remove message
+		// if not, ignore mouse move, put "click to start" or something message on screen
+});
+
+
+// function focusPause() {		// TODO if I ever find out why the above conditionals are opposite, or can make them not opposite
+// 									// put all that in this with the guard
+// }
 
 function pauseGameClock() {
 	clearInterval(game.timer);
+	game.isRunning = false;
 // 	player.bPaused = true;
-	_debugOutput(`isWindowActive: ${isWindowActive}; bPaused: ${player.bPaused}`, 'debug2');
+	_debugOutput(`isWindowActive: ${viewWindow.isWindowActive()}; bPaused: ${player.bPaused}`, 'debug2');
 }
 
 function resumeGameClock() {
 	_testScreenSizeAndStartTheGame();
 // 	player.bPaused = false;
-	_debugOutput(`isWindowActive: ${isWindowActive}; bPaused: ${player.bPaused}`, 'debug2');
+	_debugOutput(`isWindowActive: ${viewWindow.isWindowActive()}; bPaused: ${player.bPaused}`, 'debug2');
 }
 
 
@@ -54,7 +97,7 @@ let resModifier = 2;
   let sLevelstring = "";	// only here IO
 
   let viewWindow = {
-    isWindowActive: isWindowActive,
+    isWindowActive: () => document.visibilityState === 'visible' && document.hasFocus(),
   	width: 320,		// HERE to calc viewWindow.skew, but thats only used in raycaster (but should probably be in renderer)
   	height: 80,			// also used in io, raycaster, and renderer
 //   	height: 92,			// allow for more square "pixels"
@@ -144,6 +187,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
   var _loadLevel = function(level){
 
     clearInterval(game.timer);
+    game.isRunning = false;
 
     sLevelstring = level.replace(".map", ""); // sets global string
 
@@ -193,6 +237,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     _testScreenSizeAndStartTheGame();
     window.addEventListener("resize", function(){
       clearInterval(game.timer);
+      game.isRunning = false;
       _testScreenSizeAndStartTheGame();
     });
   };
@@ -206,9 +251,9 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     // keystroke listening engine
     keylisten: function(){
 
-      window.onkeydown = function(e) {
+      window.onkeydown = function(e) {		// TODO change to addEventListener, keydown & keyup
       	// Ignore the event if the window is not currently active
-  		if (!isWindowActive) return;
+  		if (!viewWindow.isWindowActive()) return;
 
         console.log(e.which);		// DEBUG ONLY
 		if (e.which === 192) {		// `, print ray details to console
@@ -221,8 +266,9 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
             player.bPaused = false;
           } else {
             clearInterval(game.timer);		// NOTE TODO i think something about my module design is making this
+            game.isRunning = false;
             player.bPaused = true;				// clearInterval() not work, it isn't pausing as fully as the non-module version
-          }										// try hack with checking for paused or isWindowActive in main loop for now
+          }										// try hack with checking for paused or viewWindow.isWindowActive() in main loop for now
         }
 
         if (player.bPaused) return;
@@ -347,7 +393,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       document.body.requestPointerLock();
       document.onmousemove = function (e) {
 		// Ignore the event if the window is not currently active or paused
-  		if (!isWindowActive || player.bPaused) return;
+  		if (!viewWindow.isWindowActive() || player.bPaused) return;
 
         // look left/right
         player.ang   += ( (e.movementX * fMouseLookFactor) || (e.mozMovementX * fMouseLookFactor) || (e.webkitMovementX * fMouseLookFactor) || 0);
@@ -413,7 +459,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       // look (left hand of viewWindow)
       eTouchLook.addEventListener("touchmove", function(e){
 		// Ignore the event if the window is not currently active or is paused
-  		if (!isWindowActive || player.bPaused) return;
+  		if (!viewWindow.isWindowActive() || player.bPaused) return;
 
         // fetches differences from input
         var oDifferences = _mh.touchCalculate( _mh.oTouch.look, e);
@@ -443,7 +489,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       // move (right hand of viewWindow)
       eTouchMove.addEventListener("touchmove", function(e){
         // Ignore the event if the window is not currently active or is paused
-  		if (!isWindowActive || player.bPaused) return;
+  		if (!viewWindow.isWindowActive() || player.bPaused) return;
 
         var oDifferences = _mh.touchCalculate( _mh.oTouch.move, e);
 
