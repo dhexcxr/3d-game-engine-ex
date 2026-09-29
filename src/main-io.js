@@ -631,7 +631,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     // initial gameload
     _loadLevel("mainlevelfile1.map");
 
-	viewWindow.buffer = new Uint16Array(viewWindow.width * Math.round(viewWindow.height));
 
 	// convert characters to unicode
 	_convertAssetsToUnicode(brightness);		// TODO make brightness not const, so I can reassign it just like texture
@@ -645,6 +644,8 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       game.isRunning = false;
       _testScreenSizeAndStartTheGame();
     });
+    // NOTE must be called after _testScreenSizeAndStartTheGame, because that sets up final screen height
+	viewWindow.buffer = new Uint16Array(viewWindow.width * Math.round(viewWindow.height));
   };
 
   function _convertAssetsToUnicode(asset) {
