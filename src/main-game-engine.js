@@ -62,6 +62,7 @@ const game = {
 	fLooktimer: 0,	// HERE in screen.skew (which should move), also in io and renderer			// eh first put it together in io, then we can decide to split that up
 	lastTime: 0,
 
+	startRunning: true,		// DEBUG
 };
 
 watchProp(game, 'timer');
@@ -77,8 +78,8 @@ watchProp(game, 'timer');
     let smoothedDelta = 10; // Initialize assuming ~30 FPS (1000ms / 60)
 	const alpha = 0.9;         // Higher = smoother/slower, Lower = twitchier
 
-	if (document.pointerLockElement) {					// NOTE TODO most things rely on the frame rate
-		game.timer = setInterval(gameLoop, 16.66667);		// (not the right way to do it)
+	if (document.pointerLockElement || game.startRunning) {					// NOTE TODO most things rely on the frame rate
+		game.timer = setInterval(gameLoop, 10);		// (not the right way to do it)
 		game.isRunning = true;								// so at higher speed everything happens faster
 	} else {												// TODO update to rely on time between ticks so we can speed this up
 //     	gameLoop();			// TODO run one of this so that we paint the first screen on startup, then wait for user click

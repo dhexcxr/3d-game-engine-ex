@@ -8,11 +8,12 @@ let gameResumeGuardOn = false;
 
 const secondDisplay = document.querySelector('#seconddisplay')	// used for overlay/menus
 let enableOverlay = false;
+let enableBackgroundRun = true
 
 const charLookup = new Map;
 // Update status when the user switches tabs or minimizes the window
 document.addEventListener('visibilitychange', () => {		// NOTE TODO i can get what I think is a race condition 
-	if(gameResumeGuardOn || player.bPaused) {
+	if(gameResumeGuardOn || player.bPaused || enableBackgroundRun) {
 		return;
 	} else {
 		gameResumeGuardOn = true;
@@ -28,7 +29,7 @@ document.addEventListener('visibilitychange', () => {		// NOTE TODO i can get wh
 
 // Update status when the window gains or loses OS focus
 window.addEventListener('focus', () => {		// TODO make one callback then pass it to all 3 of these listeners
-	if(gameResumeGuardOn || player.bPaused) {
+	if(gameResumeGuardOn || player.bPaused || enableBackgroundRun) {
 		return;
 	} else {
 		gameResumeGuardOn = true;
@@ -43,7 +44,7 @@ window.addEventListener('focus', () => {		// TODO make one callback then pass it
 });
 
 window.addEventListener('blur', () => {
-	if(gameResumeGuardOn || player.bPaused) {
+	if(gameResumeGuardOn || player.bPaused || enableBackgroundRun) {
 		return;
 	} else {
 		gameResumeGuardOn = true;
@@ -59,6 +60,7 @@ window.addEventListener('blur', () => {
 
 // TODO organize this module more....probably after the cleanup
 document.addEventListener("pointerlockchange", (event) => {
+	if (game.isRunning && enableBackgroundRun) return;
 	// TODO check if pointer is locked
 	if (document.pointerLockElement) {
 		if (player.bPaused) {
