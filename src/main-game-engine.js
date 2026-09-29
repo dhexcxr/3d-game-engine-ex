@@ -59,6 +59,7 @@ const game = {
 	animationTimer: 0,		// here and renderer
 	nJumptimer: 0,	// only HERE, but this should probably be moved into io....well is movement io or is it game logic?
 	fLooktimer: 0,	// HERE in screen.skew (which should move), also in io and renderer			// eh first put it together in io, then we can decide to split that up
+	lastTime: 0,
 
 };
 
@@ -76,7 +77,7 @@ watchProp(game, 'timer');
     													// so at higher speed everything happens faster
     													// TODO update to rely on time between ticks
 
-    let lastTime = performance.now();
+    game.lastTime = performance.now();
     let smoothedDelta = 10; // Initialize assuming ~30 FPS (1000ms / 60)
 	const alpha = 0.9;         // Higher = smoother/slower, Lower = twitchier
 
@@ -85,8 +86,8 @@ watchProp(game, 'timer');
 // 	  if (!viewWindow.isWindowActive || player.bPaused) return;
 
 	  const currentTime = performance.now()
-	  const rawDelta = currentTime - lastTime;
-	  lastTime = currentTime;
+	  const rawDelta = currentTime - game.lastTime;
+	  game.lastTime = currentTime;
 
 	  // Guard against edge cases (e.g., background tab pauses, heavy hitching)
 	  if (rawDelta > 0) {
