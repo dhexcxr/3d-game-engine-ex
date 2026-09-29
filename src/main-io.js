@@ -7,6 +7,7 @@ import {game, brightness, main, player} from './main-game-engine.js';
 let gameResumeGuardOn = false;
 
 const secondDisplay = document.querySelector('#seconddisplay')	// used for overlay/menus
+let enableOverlay = false;
 
 const charLookup = new Map;
 // Update status when the user switches tabs or minimizes the window
@@ -72,7 +73,7 @@ document.addEventListener("pointerlockchange", (event) => {
 			}
 		}
 	} else {
-		secondDisplay.style.setProperty('opacity', '70%')
+		secondDisplay.style.setProperty('opacity', (enableOverlay ? '70%' : '0%'))
 		secondDisplay.innerHTML = 'click to resume'
 		if (game.isRunning && !player.bPaused) {
 			pauseGameClock();
@@ -254,7 +255,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
             clearInterval(game.timer);		// NOTE TODO i think something about my module design is making this
             game.isRunning = false;
             player.bPaused = true;				// clearInterval() not work, it isn't pausing as fully as the non-module version
-			secondDisplay.style.setProperty('opacity', '70%')
+			secondDisplay.style.setProperty('opacity', (enableOverlay ? '70%' : '0%'))
 			secondDisplay.innerHTML = 'paused';
           }										// try hack with checking for paused or viewWindow.isWindowActive() in main loop for now
         }
