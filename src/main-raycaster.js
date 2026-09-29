@@ -17,6 +17,9 @@ let cameraX = null;
 let rayDirX = null;
 let rayDirY = null;
 
+let visitedTiles = new Uint32Array(16 * 16);
+
+
 function raycaster() {
 // for the length of the screenwidth (one frame)
       for(var screenColumn = 0; screenColumn < viewWindow.width; screenColumn++){
@@ -63,9 +66,11 @@ function raycaster() {
         var map_x = ~~(player.x);	// the player's current map xy coordinates
 	    var map_y = ~~(player.y);	// TODO get all this crap that is constant out of this loop, actually this needs to be reset every ray
 
-		map.visitedTiles[map_y * map.width + map_x] = game.currentFrame;	// TODO maybe just check the player XY instead of setting this for sprites
+	let currentMapTileIndex = map_y * map.width + map_x;
 
-      	let tileType = map.tiles[map_y * map.width + map_x];	// NOTE this could be only inside loop, I want it right now so we can debug what the ray is hitting by saving into rayOb	// ACTUALLY i think I might have meant outside the loop, it doesn't change with the rays cast
+	visitedTiles[currentMapTileIndex] = game.currentFrame;	// TODO maybe just check the player XY instead of setting this for sprites
+      	
+      	let tileType = map.tiles[currentMapTileIndex];	// NOTE this could be only inside loop, I want it right now so we can debug what the ray is hitting by saving into rayOb	// ACTUALLY i think I might have meant outside the loop, it doesn't change with the rays cast
 
       	var delta_x = Math.abs(1 / rayDirX);	// the dist the ray must travel to reach the border of the next tile
       	var delta_y = Math.abs(1 / rayDirY);
@@ -110,8 +115,9 @@ function raycaster() {
 			hit_NS_wall = false;
 		  }
 
-          map.visitedTiles[map_y * map.width + map_x] = game.currentFrame;
-		  tileType = map.tiles[map_y * map.width + map_x];
+		  currentMapTileIndex = map_y * map.width + map_x;
+		  visitedTiles[currentMapTileIndex] = game.currentFrame;
+		  tileType = map.tiles[currentMapTileIndex];
 
           // test if ray hits out of bounds
           if(map_x < 0 || map_x >= map.width || map_y < 0 || map_y >= map.height){
@@ -312,4 +318,5 @@ function raycaster() {
           }
         } // end draw column loop
       }  // end column loop
+      map.visitedTiles = visitedTiles;
 }
