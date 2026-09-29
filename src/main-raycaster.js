@@ -12,9 +12,10 @@ const edgeThreshold = 0.01;		// control thickness of border in flat renderer, al
 let midFrameInfoMsg = '';		// DEBUG only
 let endDoorInfoMsg = '';		// DEBUG only
 
-// let sco = screen;
-const getRayX = memoize((vX, pX, cX) => vX + (pX * cX));
-const getRayY = memoize((vY, pY, cY) => vY + (pY * cY));
+let cameraX = null;
+
+let rayDirX = null;
+let rayDirY = null;
 
 function raycaster() {
 // for the length of the screenwidth (one frame)
@@ -29,12 +30,10 @@ function raycaster() {
         		// then just add interval to original angle on each iteration
         		// see https://tech.nextroll.com/blog/dev/2022/02/02/rustenstein.html
 
-		// cameraX is the vector of the current ray being cast with respect to the camera/screen plane
-		let cameraX = (2 * screenColumn / viewWindow.width) - 1;
-// 		let rayDirX = player.viewX + (viewWindow.planeX * cameraX);
-// 		let rayDirY = player.viewY + (viewWindow.planeY * cameraX);
-		let rayDirX = getRayX(player.viewX, viewWindow.planeX, cameraX);
-		let rayDirY = getRayY(player.viewY, viewWindow.planeY,  cameraX);
+	// cameraX is the vector of the current ray being cast with respect to the camera/screen plane
+		cameraX = (2 * screenColumn / viewWindow.width) - 1;
+		rayDirX = player.viewX + (viewWindow.planeX * cameraX);
+		rayDirY = player.viewY + (viewWindow.planeY * cameraX);
 
 
         var bBreakLoop = false;
