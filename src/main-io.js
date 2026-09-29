@@ -6,6 +6,8 @@ import {game, brightness, main, player} from './main-game-engine.js';
 
 let gameResumeGuardOn = false;
 
+const secondDisplay = document.querySelector('#seconddisplay')	// used for overlay/menus
+
 // Update status when the user switches tabs or minimizes the window
 document.addEventListener('visibilitychange', () => {		// NOTE TODO i can get what I think is a race condition 
 	if(gameResumeGuardOn || player.bPaused) {
@@ -52,10 +54,29 @@ window.addEventListener('blur', () => {
 		gameResumeGuardOn = false;
 	}
 });
-let pointerLocked = document.pointerLockElement;	// is this reference always live?
+
 // TODO organize this module more....probably after the cleanup
 document.addEventListener("pointerlockchange", (event) => {
 	// TODO check if pointer is locked
+	if (document.pointerLockElement) {
+		if (player.bPaused) {
+			secondDisplay.innerHTML = 'paused';
+		} else {
+			secondDisplay.style.setProperty('opacity', '0%')
+			secondDisplay.innerHTML = '';
+			if(!gameResumeGuardOn) {
+				gameResumeGuardOn = true;
+				resumeGameClock();
+				gameResumeGuardOn = false;
+			}
+		}
+	} else {
+		secondDisplay.style.setProperty('opacity', '70%')
+		secondDisplay.innerHTML = 'click to resume'
+		if (game.isRunning && !player.bPaused) {
+			pauseGameClock();
+		}
+	}
 		// if yes, allow mousemove, remove message
 		// if not, ignore mouse move, put "click to start" or something message on screen
 });
@@ -212,7 +233,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
       window.onkeydown = function(e) {		// TODO change to addEventListener, keydown & keyup
       	// Ignore the event if the window is not currently active
-  		if (!viewWindow.isWindowActive()) return;
+  		if (!viewWindow.isWindowActive() || !document.pointerLockElement) return;
 
         console.log(e.which);		// DEBUG ONLY
 		if (e.which === 192) {		// `, print ray details to console
@@ -223,10 +244,14 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
           if( player.bPaused ){		// TODO do not respond to mouselook when paused
             _testScreenSizeAndStartTheGame();
             player.bPaused = false;
+			secondDisplay.style.setProperty('opacity', '0%')
+			secondDisplay.innerHTML = '';
           } else {
             clearInterval(game.timer);		// NOTE TODO i think something about my module design is making this
             game.isRunning = false;
             player.bPaused = true;				// clearInterval() not work, it isn't pausing as fully as the non-module version
+			secondDisplay.style.setProperty('opacity', '70%')
+			secondDisplay.innerHTML = 'paused';
           }										// try hack with checking for paused or viewWindow.isWindowActive() in main loop for now
         }
 
@@ -348,7 +373,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       document.body.requestPointerLock();
       document.onmousemove = function (e) {
 		// Ignore the event if the window is not currently active or paused
-  		if (!viewWindow.isWindowActive() || player.bPaused) return;
+  		if (!viewWindow.isWindowActive() || player.bPaused || !document.pointerLockElement) return;
 
         // look left/right
         player.ang   += ( (e.movementX * fMouseLookFactor) || (e.mozMovementX * fMouseLookFactor) || (e.webkitMovementX * fMouseLookFactor) || 0);
