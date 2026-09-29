@@ -64,7 +64,7 @@ document.addEventListener("pointerlockchange", (event) => {
 		} else {
 			secondDisplay.style.setProperty('opacity', '0%')
 			secondDisplay.innerHTML = '';
-			if(!gameResumeGuardOn) {
+			if(!game.isRunning && !gameResumeGuardOn) {
 				gameResumeGuardOn = true;
 				resumeGameClock();
 				gameResumeGuardOn = false;
@@ -213,13 +213,16 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       document.querySelector("body").style.background = map.background;
     });
 
-    // pauses, then starts the game loop
-    _testScreenSizeAndStartTheGame();
-    window.addEventListener("resize", function(){
-      clearInterval(game.timer);
-      game.isRunning = false;
-      _testScreenSizeAndStartTheGame();
-    });
+	// NOTE TODO i think this is where the oSprite thing should be called, because at this point the level has been loaded
+		// and we should have the oSprites....i think
+
+//     // pauses, then starts the game loop
+//     _testScreenSizeAndStartTheGame();
+//     window.addEventListener("resize", function(){
+//       clearInterval(game.timer);
+//       game.isRunning = false;
+//       _testScreenSizeAndStartTheGame();
+//     });
   };
 
 
@@ -633,6 +636,13 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 	for (const texObj of Object.values(textures)) {
 		texObj.texture = _convertAssetsToUnicode(texObj.texture);
 	}
+	// pauses, then starts the game loop
+    _testScreenSizeAndStartTheGame();		// NOTE moving this func call here from _loadLevel might break changing levels....maybe
+    window.addEventListener("resize", function(){		// to FIX we might need to call main() from here, instead of end of _testScreenSizeAndStartTheGame()
+      clearInterval(game.timer);
+      game.isRunning = false;
+      _testScreenSizeAndStartTheGame();
+    });
   };
 
   function _convertAssetsToUnicode(asset) {
