@@ -62,6 +62,7 @@ const game = {
 
 };
 
+watchProp(game, 'timer');
 
 
   /**
@@ -231,3 +232,31 @@ function memoize(func) {
     }
   };
 }
+
+/**
+ *
+ * watch for changes in a property, can help add breakpoint whenever value changes
+ *
+ * @param {Object} obj - the object containing the property to watch
+ * @param {String} prop - the name of the object property to watch, in string form
+ *
+ */
+function watchProp(obj, prop) {
+  let val = obj[prop];
+  Object.defineProperty(obj, prop, {
+    get: function() {
+    	console.trace(`${prop} get, val: ${val}
+    	trace:`)
+    	return val;
+    },
+    set: function(newVal) {
+      val = newVal;
+//       console.log(`${prop} changed to:`, newVal);
+//       debugger; // DevTools will break right here!
+	  console.trace(`${prop} changed to: ${newVal}
+	  trace:`);
+    },
+    configurable: true
+  });
+}
+
