@@ -113,6 +113,8 @@ let hitSideCheck = 0;		// DEBUG only, only in [io
 let hiRes = false;
 let resModifier = 2;
 
+let showCanvas = false;
+let showText = true;
 
   let eTouchLook;
   let eTouchMove;
@@ -598,6 +600,13 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
   function setupCanvas() {
 
 	const canvas = document.getElementById("canvDisp");
+
+	if (!showCanvas) {
+		canvas.style.display = 'none';
+		viewWindow.clearCanvas = () => { return };
+		viewWindow.canvasText = () => { return };
+		return
+	}
 	const canvasContext = canvas.getContext("2d", { alpha: false });
 
 	// correct canvas size for HiDPI
@@ -704,6 +713,9 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       game.isRunning = false;
       _testScreenSizeAndStartTheGame();
     });
+
+	viewWindow.outputEl.style.display = showText ? 'inline-block' : 'none';
+
     // NOTE must be called after _testScreenSizeAndStartTheGame, because that sets up final screen height
 	viewWindow.buffer = new Uint16Array(viewWindow.width * Math.ceil(viewWindow.height));
 	setupCanvas();
