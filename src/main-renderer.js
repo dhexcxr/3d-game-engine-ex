@@ -217,15 +217,10 @@ let _r = {
 															// add logic to expand the visuals that are being skewed instead of just adding	
 																// extra dots '.' (which is done in fPrepareFrame() function)
 
-        if( !(pix < removePixels || pix > (viewWindow.width - removePixels))) {
-		  dfOutput.push(frame[printIndex]);
-        }
-
-        printIndex++;
-      }
+      dfOutput.push(...frame.slice(row * viewWindow.width + ~~removePixels, (row + 1) * viewWindow.width - ~~removePixels));
       //       dfOutput.push("<br>");	// innerHTML version		// line, build that calc into the skipEveryX() function
       dfOutput.push("\n");	// textContent or canvas version
-	  canvasContext.fillText(dfOutput.slice(row * (viewWindow.width - ~~removePixels * 2), (row + 1) * (viewWindow.width - ~~removePixels * 2)).join(''), 0, lineheight * row + lineheight);
+	  viewWindow.canvasText(frame.slice(row * viewWindow.width + ~~removePixels, (row + 1) * viewWindow.width - ~~removePixels).join(''), 0, lineheight * row + lineheight);		// corrected/trimmed screen
     }
 //     target.innerHTML = dfOutput.join('');		// TODO change this to a Canvas
     target.textContent = dfOutput.join('');
