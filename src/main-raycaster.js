@@ -22,6 +22,7 @@ let visitedTiles = new Uint32Array(16 * 16);
 
 function raycaster() {
 // for the length of the screenwidth (one frame)
+	let visitedTiles = map.visitedTiles;
       for(var screenColumn = 0; screenColumn < viewWindow.width; screenColumn++){
 
         // calculates the ray angle into the world space
@@ -66,10 +67,10 @@ function raycaster() {
         var map_x = ~~(player.x);	// the player's current map xy coordinates
 	    var map_y = ~~(player.y);	// TODO get all this crap that is constant out of this loop, actually this needs to be reset every ray
 
-	let currentMapTileIndex = map_y * map.width + map_x;
+		let currentMapTileIndex = map_y * map.width + map_x;
+													// >>> 0 -> clamps to 32 bit integer
+		visitedTiles[currentMapTileIndex] = game.currentFrame >>> 0;	// TODO maybe just check the player XY instead of setting this for sprites
 
-	visitedTiles[currentMapTileIndex] = game.currentFrame;	// TODO maybe just check the player XY instead of setting this for sprites
-      	
       	let tileType = map.tiles[currentMapTileIndex];	// NOTE this could be only inside loop, I want it right now so we can debug what the ray is hitting by saving into rayOb	// ACTUALLY i think I might have meant outside the loop, it doesn't change with the rays cast
 
       	var delta_x = Math.abs(1 / rayDirX);	// the dist the ray must travel to reach the border of the next tile
@@ -116,7 +117,7 @@ function raycaster() {
 		  }
 
 		  currentMapTileIndex = map_y * map.width + map_x;
-		  visitedTiles[currentMapTileIndex] = game.currentFrame;
+		  visitedTiles[currentMapTileIndex] = game.currentFrame >>> 0;
 		  tileType = map.tiles[currentMapTileIndex];
 
           // test if ray hits out of bounds
