@@ -325,12 +325,12 @@ let _r = {
         let playerToSpriteY = sprite.y - player.y;
 
         // Rotate sprite into player's local space using your view angles
-	    let invDet = 1.0 / (planeX * player.viewY - player.viewX * planeY);
+	    let invDet = 1.0 / (viewWindow.planeX * player.viewY - player.viewX * viewWindow.planeY);
 	    // Transform sprite position into camera space using the inverse matrix
 			// spriteViewX is the lateral (left/right) offset on the screen plane
 			// fSpriteDist is the depth
 		let spriteViewX = invDet * (player.viewY * playerToSpriteX - player.viewX * playerToSpriteY);
-		let fSpriteDist = invDet * (-planeY * playerToSpriteX + planeX * playerToSpriteY);
+		let fSpriteDist = invDet * (-viewWindow.planeY * playerToSpriteX + viewWindow.planeX * playerToSpriteY);
 
         if (fSpriteDist < MIN_DIST) {
 //         	_debugOutput(`STV: ${!spriteTileNotVisited}; STC: ${fSpriteDist < MIN_DIST}`, 'debug2');
@@ -435,7 +435,7 @@ let _r = {
 
 
               // assign based on render mode
-              if( sceen.nRenderMode == 2 || sceen.nRenderMode == 0 ){
+              if( viewWindow.nRenderMode == 2 || viewWindow.nRenderMode == 0 ){
                 sSpriteGlyph = _rh.renderWall( fSpriteDist, "W", sSamplePixel );
               } else {
                 sSpriteGlyph = sSamplePixel;
