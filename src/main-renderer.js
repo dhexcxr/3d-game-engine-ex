@@ -181,7 +181,7 @@ let _r = {
 	dfOutput.length = 0;
 	viewWindow.clearCanvas();
 	let fontHeight = viewWindow.canvasFontHeight;
-	let lineheight = fontHeight * 1;
+	let lineheight = fontHeight * 1.75;
 
     // interates over each row again, and omits the first and last 30 pixels, to disguise the skewing!
     var printIndex = 0;		// w/ original 80 height, removePixels was 40 (despite quote of 30 above)

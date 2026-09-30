@@ -657,7 +657,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 	canvasContext.imageSmoothingEnabled = true;
 	canvasContext.imageSmoothingQuality = "high";
 	canvasContext.font = `${canvasFontSize}px "Consolas", Courier, monospace`;
-	canvasContext.letterSpacing = `${1/canvasFontSize * 1.75}px`;
+	canvasContext.letterSpacing = `${1/canvasFontSize}px`;
 	// canvasContext.globalCompositeOperation = "xor";
 
 
