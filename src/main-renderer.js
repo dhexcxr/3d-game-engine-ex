@@ -658,8 +658,7 @@ let _r = {
 
 			// TODO do something better with this
       // draw floor, in different shades
-      let b = 1 - (j -viewWindow.height / 2) / (viewWindow.height / 2);
-      b = 1 - (j -viewWindow.height / (2- game.fLooktimer * 0.15)) / (viewWindow.height / (2 - game.fLooktimer * 0.15));
+      let b = 1 - (j -viewWindow.height / (2- game.fLooktimer * 0.15)) / (viewWindow.height / (2 - game.fLooktimer * 0.15));
 
       if(b < 0.25){
         fill = "x".charCodeAt(0);

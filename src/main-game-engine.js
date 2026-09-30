@@ -225,7 +225,7 @@ var gameEngineJS = function(){
 
 /**
  * A fast, capped memoization function for game loops.
- * 
+ *
  * @param {Function} fn - The function to memoize
  * @param {number} maxCacheSize - Max number of unique arguments to cache (LRU-like eviction)
  * @param {Function} resolver - Optional function to generate a strict cache key from arguments
@@ -233,8 +233,8 @@ var gameEngineJS = function(){
  */
 function memoize(fn, maxCacheSize = 100, resolver = null) {
     const cache = new Map();
-    
-    // Using a separate array to track keys allows us to implement 
+
+    // Using a separate array to track keys allows us to implement
     // a lightweight eviction policy without heavy memory overhead.
     const keys = [];
 

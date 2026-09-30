@@ -61,7 +61,7 @@ window.addEventListener('blur', () => {
 // TODO organize this module more....probably after the cleanup
 document.addEventListener("pointerlockchange", (event) => {
 	if (game.isRunning && enableBackgroundRun) return;
-	// TODO check if pointer is locked
+
 	if (document.pointerLockElement) {
 		if (player.bPaused) {
 			secondDisplay.innerHTML = 'paused';
@@ -114,7 +114,6 @@ let hiRes = true;
 let resModifier = 2;
 
 
-//   var eScreen;	// HERE and io._createTestScreen & io._testScreenSizeAndStartTheGame
   let eTouchLook;
   let eTouchMove;
 
@@ -138,7 +137,7 @@ let resModifier = 2;
 	get skew() { return this.height / (2 - game.nJumptimer * 0.15 - game.fLooktimer * 0.15) },	// mostly used in raycaster, but I think that might should be in rendere instead
 
 	// camera plane
-	get planeX() { return -player.viewY * 0.66 },		// initially 0.8391, based on tan(FOV/2), TODO make constant
+	get planeX() { return -player.viewY * 0.66 },		// initially 0.8391, based on tan(FOV/2), TODO make a constant
 	get planeY() { return player.viewX * 0.66 },		// smaller will be more wider
   };
 
@@ -220,13 +219,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 	// NOTE TODO i think this is where the oSprite thing should be called, because at this point the level has been loaded
 		// and we should have the oSprites....i think
 
-//     // pauses, then starts the game loop
-//     _testScreenSizeAndStartTheGame();
-//     window.addEventListener("resize", function(){
-//       clearInterval(game.timer);
-//       game.isRunning = false;
-//       _testScreenSizeAndStartTheGame();
-//     });
   };
 
 
@@ -344,8 +336,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       };
     },
 
-    //
-    //
     /**
      * Y-Movement
      * @param  {float}  fMoveInput   the movement from touch or mouse-input
@@ -612,7 +602,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
 	// correct canvas size for HiDPI
 	// Get the DPR and size of the canvas
-// 	const dpr = window.devicePixelRatio;
 	// Force a higher internal scale factor
 	const dpr = Math.max(window.devicePixelRatio || 1, 2) * 2;
 
@@ -807,7 +796,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     var sOutput = new Array(viewWindow.buffer.length);
     for(var screnCol = 0; screnCol < viewWindow.height; screnCol++){
       for(var viewWindowRow = 0; viewWindowRow < viewWindow.width; viewWindowRow++){
-        sOutput.push(charLookup.get(brightness[0]));		// TODO is this after charLookup creation? swap to it if so
+        sOutput.push(charLookup.get(brightness[0]));
       }
       sOutput.push("<br>");
     }

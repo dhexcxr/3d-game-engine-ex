@@ -122,12 +122,12 @@ function raycaster() {
 
           // test if ray hits out of bounds
           if(map_x < 0 || map_x >= map.width || map_y < 0 || map_y >= map.height){
-//             bHitWall = true; // didn't actually, just no wall there, with this enabled we paint a wall, but we can still go through it
+//             bHitWall = true; // no wall there, but with this enabled we paint a wall, but can still go through it
             fDistanceToWall = viewWindow.depth;
             bBreakLoop = true;
           }
 
-          // test for objects		// NOTE TODO holes in the floor are not rendering at all
+          // test for objects
           else if(tileType == "o" || tileType == ","){
           	if(!bHitObject) fDistanceToObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
             bHitObject = true;
@@ -177,25 +177,7 @@ function raycaster() {
 		// used to place texture exactly where ray hit wall
 		fSampleX -= ~~(fSampleX);
 
-			// NOTE i think tracking objects and...whatever a backObject is this way
-				// only allows a ray to "hit" one, the last one
-				// we might need to make some way to track what object is hit
-				// and the distance to that specific object
-// 		if( bHitObject ) fDistanceToObject = nRayLength;
-// 		if( bHitBackObject ) fDistanceToInverseObject = nRayLength;
-// 		if( bHitWall ) fDistanceToWall = nRayLength;
-			// TODO i feel like these could be bumped up into the above tile checks
-				// but the first time I did it the renderer completely broke
-				/// FOLLWUP, so the original incremented each of these fDistance... vars
-					// inside the ray cast loop, while the <things> were NOT hit
-					// thus stopping updating them when they were hit
-				// I feel like I could keep them out, but I might need an hit_NS_wall
-					// var for each object maybe
-				// at the very least I need to record the ray length whenever a thing is hit
-					// and not update it afterwards
-
-			// NOTE isBoundary is only used for the solid wall rendering
-				// it also effects the holes
+		// draw lines between wall blocks in no texture mode
 
 		if (fSampleX <= edgeThreshold || fSampleX >= 1.0 - edgeThreshold) {
 			if(hit_NS_wall) {
