@@ -4,8 +4,6 @@ export {_debugOutput, _mh, init, viewWindow, map, charLookup};
 
 import {game, brightness, main, player} from './main-game-engine.js';
 
-const canvas = document.getElementById("canvDisp");
-const cannvasContext = canvas.getContext("2d");
 let gameResumeGuardOn = false;
 
 const secondDisplay = document.querySelector('#seconddisplay')	// used for overlay/menus
@@ -607,6 +605,70 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
   };
 
+  function setupCanvas() {
+
+	const canvas = document.getElementById("canvDisp");
+	const canvasContext = canvas.getContext("2d", { alpha: false });
+
+	// correct canvas size for HiDPI
+	// Get the DPR and size of the canvas
+// 	const dpr = window.devicePixelRatio;
+	// Force a higher internal scale factor
+	const dpr = Math.max(window.devicePixelRatio || 1, 2) * 2;
+
+	const rect = canvas.getBoundingClientRect();
+
+	let canvasFontSize = hiRes ? 3 : 6;
+
+	canvasContext.font = `${canvasFontSize}px "Consolas", Courier, monospace`;
+
+	// Measure a string containing full height typography extensions
+	const textMetrics = canvasContext.measureText('M');
+
+	// Calculate total height using font bounding metrics
+	const fontHeight = Math.ceil(textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent);
+	const fontWidth = Math.ceil(textMetrics.width);
+
+	// Set the "actual" size of the canvas
+	canvas.width = rect.width * dpr;
+	canvas.height = rect.height * dpr;		// the 1.168 compensates for the
+// 	canvas.width = Math.round(rect.width * dpr / fontWidth) * fontWidth;////<-
+// 	canvas.height = Math.round(rect.height * dpr / 1.168 / fontHeight) * fontHeight;////<-		// the 1.168 compensates for the original line-height in the display element
+			// NEXT TODO remove the skipPixels stuff and transform the canvas to do lookup/down
+
+	// Scale the context to ensure correct drawing operations
+	canvasContext.scale(dpr, dpr);
+
+	// Set the "drawn" size of the canvas
+	canvas.style.width = `${rect.width}px`;
+	canvas.style.height = `${rect.height}px`;////<-
+// 	canvas.style.width = `${Math.round(rect.width / 1.168 / canvasFontSize) * canvasFontSize}px`;
+// 	canvas.style.height = `${Math.round(rect.height / 1.168 / canvasFontSize) * canvasFontSize}px`;
+// 	canvas.style.width = `${Math.round(rect.width / fontWidth) * fontWidth}px`;////<-
+// 	canvas.style.height = `${Math.round(rect.height / 1.168 / fontHeight) * fontHeight}px`;
+// 	canvas.style.width = `${canvas.width / 2}px`;
+// 	canvas.style.height = `${canvas.height / 2}px`;
+
+	// set some nice/required options
+	canvasContext.fillStyle = 'white';
+	canvasContext.strokeStyle = 'white';
+	canvasContext.textRendering = "geometricPrecision";
+// 	canvasContext.textAlign = "center";
+	canvasContext.imageSmoothingEnabled = true;
+	canvasContext.imageSmoothingQuality = "high";
+	canvasContext.font = `${canvasFontSize}px "Consolas", Courier, monospace`;
+	canvasContext.letterSpacing = `${1/canvasFontSize * 1.75}px`;
+	// canvasContext.globalCompositeOperation = "xor";
+
+
+	viewWindow.canvas = canvas;
+	viewWindow.canvasContext = canvasContext;
+  	viewWindow.clearCanvas = () => canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+  	viewWindow.canvasText = (text, x, y, maxWidth) => canvasContext.fillText(text, x, y, maxWidth);
+  	viewWindow.canvasFontSize = canvasFontSize;
+  	viewWindow.canvasFontHeight = fontHeight;
+  	viewWindow.canvasFontWidth = fontWidth;
+  }
   // init() called from HTML
     var init = function( input ) {
     // prep document
@@ -655,6 +717,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     });
     // NOTE must be called after _testScreenSizeAndStartTheGame, because that sets up final screen height
 	viewWindow.buffer = new Uint16Array(viewWindow.width * Math.ceil(viewWindow.height));
+	setupCanvas();
   };
 
   function _convertAssetsToUnicode(asset) {
