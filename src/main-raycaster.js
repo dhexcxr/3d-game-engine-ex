@@ -2,7 +2,7 @@
 
 export {raycaster};
 
-import {brightness, player, memoize} from './main-game-engine.js';
+import {game, brightness, player, memoize} from './main-game-engine.js';
 import {_debugOutput, viewWindow, map} from './main-io.js';
 import {_r, _rh} from './main-renderer.js';
 
@@ -17,12 +17,15 @@ let cameraX = null;
 let rayDirX = null;
 let rayDirY = null;
 
-let visitedTiles = new Uint32Array(16 * 16);
+// TODO await till map is available then calc this
+// let visitedTiles = new Uint32Array(map.width * map.height);
+// TODO await till map is available then assign this
+// let visitedTiles = map.visitedTiles;
 
 
 function raycaster() {
 // for the length of the screenwidth (one frame)
-	let visitedTiles = map.visitedTiles;
+// 	let visitedTiles = map.visitedTiles;
       for(var screenColumn = 0; screenColumn < viewWindow.width; screenColumn++){
 
         // calculates the ray angle into the world space
@@ -68,8 +71,8 @@ function raycaster() {
 	    var map_y = ~~(player.y);	// TODO get all this crap that is constant out of this loop, actually this needs to be reset every ray
 
 		let currentMapTileIndex = map_y * map.width + map_x;
-													// >>> 0 -> clamps to 32 bit integer
-		visitedTiles[currentMapTileIndex] = game.currentFrame >>> 0;	// TODO maybe just check the player XY instead of setting this for sprites
+		map.visitedTiles[currentMapTileIndex] = game.currentFrame;	// TODO maybe just check the player XY instead of setting this for sprites
+// 	visitedTiles[currentMapTileIndex] = game.currentFrame >>> 0;	// TODO maybe just check the player XY instead of setting this for sprites
 
       	let tileType = map.tiles[currentMapTileIndex];	// NOTE this could be only inside loop, I want it right now so we can debug what the ray is hitting by saving into rayOb	// ACTUALLY i think I might have meant outside the loop, it doesn't change with the rays cast
 
@@ -117,7 +120,7 @@ function raycaster() {
 		  }
 
 		  currentMapTileIndex = map_y * map.width + map_x;
-		  visitedTiles[currentMapTileIndex] = game.currentFrame >>> 0;
+          map.visitedTiles[currentMapTileIndex] = game.currentFrame;
 		  tileType = map.tiles[currentMapTileIndex];
 
           // test if ray hits out of bounds
@@ -197,7 +200,6 @@ function raycaster() {
         var nCeiling = viewWindow.skew - wallHeight / 2;
 		var nFloor   = viewWindow.skew + wallHeight / 2;
 
-// 	    rayObs.push(new RayOb(screenColumn, -1, fDistanceToWall, wallHeight, nCeiling, nFloor, game.fLooktimer, tileType));
 
         // similar for towers and gates
         let nTower = viewWindow.skew - wallHeight / 2 - wallHeight;
@@ -217,8 +219,6 @@ function raycaster() {
         // the spot where the wall was hit
         viewWindow.depthBuffer[screenColumn] = fDistanceToWall;
 
-// DEBUG ONLY print out details on the Tower block, and see why we're painting shader in the sky
-//_debugOutput(`SprDist: ${fSpriteDist}; SprH: ${fSpriteHeight}; SprCeil: ${fSpriteCeiling}; SprFlr: ${fSpriteFloor}`, 'debug2');
 
         // draw the columns one screenheight-pixel at a time
         for(var screenRow = 0; screenRow < viewWindow.height; screenRow++){
@@ -252,7 +252,7 @@ function raycaster() {
               } else {
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = brightness[0];
               }
-            }  else if(sWalltype != "." || sWalltype == "T") {		// Solid Walltype
+            } else if(sWalltype != "." || sWalltype == "T") {		// Solid Walltype
 
               var fSampleY = ( (screenRow - nCeiling) / wallHeight );
 
@@ -301,5 +301,5 @@ function raycaster() {
           }
         } // end draw column loop
       }  // end column loop
-      map.visitedTiles = visitedTiles;
+//       map.visitedTiles = visitedTiles;
 }

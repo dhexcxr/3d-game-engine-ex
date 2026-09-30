@@ -83,7 +83,7 @@ let _r = {
 		  let retVal = texpixels[samplePosition];
 		  if(retVal === 'undefined')
 			console.log(retVal);
-		  return texpixels[samplePosition];
+		  return retVal;
 		}
 	  },
 
@@ -435,11 +435,9 @@ let _r = {
 
 
               // assign based on render mode
-              if( viewWindow.nRenderMode == 2 || viewWindow.nRenderMode == 0 ){
-                sSpriteGlyph = _rh.renderWall( fSpriteDist, "W", sSamplePixel );
-              } else {
-                sSpriteGlyph = sSamplePixel;
-              }
+              let sSpriteGlyph = (viewWindow.nRenderMode == 2 || viewWindow.nRenderMode == 0)
+              						? _rh.renderWall( fSpriteDist, "W", sSamplePixel )
+              						: sSamplePixel;
 
 
               var nSpriteColumn = ~~((fMiddleOfSprite + sx - (fSpriteWidth / 2)));

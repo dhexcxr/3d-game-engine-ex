@@ -110,7 +110,7 @@ const nLookLimit = 8;
 let LockLook = false;		// IO only, DEBUG only
 let hitSideCheck = 0;		// DEBUG only, only in [io
 
-let hiRes = true;
+let hiRes = false;
 let resModifier = 2;
 
 
