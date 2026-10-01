@@ -483,7 +483,8 @@ let _r = {
     renderWall: function(fDistanceToWall, sWallFaceDirection, pixel, lightBright = 0) {
 
       var fill = "";
-      let startBright;
+      let pixelBright;
+      let startBright = -1;
 
       pixel = charLookup.get(pixel);		// Unit16Array functionality
       if( sWallFaceDirection === "N" || sWallFaceDirection === "S" ){
@@ -491,53 +492,53 @@ let _r = {
         if(fDistanceToWall < viewWindow.depth / 5.5 ){
 
           if( pixel === "#" ){
-            startBright = 4;
+            pixelBright = 4;
           } else if( pixel === "7" ) {
-            startBright = 3;
+            pixelBright = 3;
           } else if( pixel === "*" || pixel === "o") {
-            startBright = 2;
+            pixelBright = 2;
           } else {
-            startBright = 1;
+            pixelBright = 1;
           }
 
         } else if(fDistanceToWall < viewWindow.depth / 3.66 ) {
 
           if( pixel === "#" ){
-            startBright = 3;
+            pixelBright = 3;
           } else if( pixel === "7" ) {
-            startBright = 2;
+            pixelBright = 2;
           } else if( pixel === "*" || pixel === "o") {
-            startBright = 1;
+            pixelBright = 1;
           } else {
-            startBright = 0;
+            pixelBright = 0;
           }
 
         } else if(fDistanceToWall < viewWindow.depth / 2.33 ) {
 
           if( pixel === "#" ){
-            startBright = 2;
+            pixelBright = 2;
           } else if( pixel === "7" ) {
-            startBright = 1;
+            pixelBright = 1;
           } else if( pixel === "*" || pixel === "o") {
-            startBright = 1;
+            pixelBright = 1;
           } else {
-            startBright = 0;
+            pixelBright = 0;
           }
 
         } else if(fDistanceToWall < viewWindow.depth / 1 ) {
 
           if( pixel === "#" ){
-            startBright = 1;
+            pixelBright = 1;
           } else if( pixel === "7" ) {
-            startBright = 1;
+            pixelBright = 1;
           } else if( pixel === "*" || pixel === "o") {
-            startBright = 1;
+            pixelBright = 1;
           } else {
-            startBright = 0;
+            pixelBright = 0;
           }
 
         } else {
-          startBright = 0;
+          pixelBright = 0;
         }
       }
 
@@ -547,56 +548,56 @@ let _r = {
         if(fDistanceToWall < viewWindow.depth / 5.5 ){
 
           if( pixel === "#" ){
-            startBright = 3;
+            pixelBright = 3;
           } else if( pixel === "7" ) {
-            startBright = 2;
+            pixelBright = 2;
           } else if( pixel === "*" || pixel === "o") {
-            startBright = 1;
+            pixelBright = 1;
           } else {
-            startBright = 0;
+            pixelBright = 0;
           }
 
         } else if(fDistanceToWall < viewWindow.depth / 3.66 ) {
 
           if( pixel === "#" ){
-            startBright = 2;
+            pixelBright = 2;
           } else if( pixel === "7" ) {
-            startBright = 2;
+            pixelBright = 2;
           } else if( pixel === "*" || pixel === "o") {
-            startBright = 1;
+            pixelBright = 1;
           } else {
-            startBright = 0;
+            pixelBright = 0;
           }
 
         } else if(fDistanceToWall < viewWindow.depth / 2.33 ) {
 
           if( pixel === "#" ){
-            startBright = 2;
+            pixelBright = 2;
           } else if( pixel === "7" ) {
-            startBright = 1;
+            pixelBright = 1;
           } else if( pixel === "*" || pixel === "o") {
-            startBright = 1;
+            pixelBright = 1;
           } else {
-            startBright = 0;
+            pixelBright = 0;
           }
 
         } else if(fDistanceToWall < viewWindow.depth / 1 ) {
 
           if( pixel === "#" ){
-            startBright = 1;
+            pixelBright = 1;
           } else if( pixel === "7" ) {
-            startBright = 1;
+            pixelBright = 1;
           } else if( pixel === "*" || pixel === "o") {
-            startBright = 0;
+            pixelBright = 0;
           } else {
-            startBright = 0;
+            pixelBright = 0;
           }
 
         } else {
-          startBright = 0;
+          pixelBright = 0;
         }
       }
-      fill = brightness[Math.min(startBright + lightBright, 4)];
+      fill = brightness[Math.min(Math.max(startBright + pixelBright + lightBright, 0), 4)];
 
       return fill;
     },
