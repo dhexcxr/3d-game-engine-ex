@@ -7,7 +7,7 @@ import {_debugOutput, viewWindow, map} from './main-io.js';
 import {_r, _rh} from './main-renderer.js';
 
 const absSign = (x) => (x === 0 ? 1 : Math.sign(x));	// RENDERER only
-const edgeThreshold = 0.01;		// control thickness of border in flat renderer, also holes	// RAYCASTER only
+const edgeThreshold = 0.05;		// control thickness of border in flat renderer, also holes	// RAYCASTER only
 
 let midFrameInfoMsg = '';		// DEBUG only
 let endDoorInfoMsg = '';		// DEBUG only
@@ -61,6 +61,8 @@ function raycaster() {
         var sWalltype = "#";
         var sObjectType = "0";
         let isBoundary = false;
+        let isObjBoundary = false;
+        let isInvObjBoundary = false;
 
         var fSampleX = 0.0;
         var sWallFaceDirection = "N";
@@ -132,7 +134,16 @@ function raycaster() {
 
           // test for objects
           else if(tileType == "o" || tileType == ","){
-          	if(!bHitObject) fDistanceToObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
+          	if(!bHitObject) {
+          		fDistanceToObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
+				let fObjSampleX = hit_NS_wall ? player.y + fDistanceToObject * rayDirY : player.x + fDistanceToObject * rayDirX;
+				
+				// used to place texture exactly where ray hit wall
+				fObjSampleX -= ~~(fObjSampleX);
+		
+				// draw lines between wall blocks in no texture mode
+				isObjBoundary = (fObjSampleX <= edgeThreshold || fObjSampleX >= 1.0 - edgeThreshold);
+          	}
             bHitObject = true;
             sObjectType = tileType;
           }
@@ -160,10 +171,19 @@ function raycaster() {
           }
 
 	          // save back of object distance as soon as we're out of it
-          if(bHitObject == true && tileType !== "o") {	// if we get multiple objects we'll eventually need to make an array of them or something and loop through them to check when we leave a specific one
+          if(bHitObject == true && tileType !== "o" && tileType !== ",") {	// if we get multiple objects we'll eventually need to make an array of them or something and loop through them to check when we leave a specific one
           		// well, if we don't have them overlapping in a single screen column....
           		// TODO test how this might work with two separate holes, we'll need to paint hole, then floor, then hole
-          	if(!bHitBackObject) fDistanceToInverseObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
+          	if(!bHitBackObject) {
+          		fDistanceToInverseObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
+				let fInvObjSampleX = hit_NS_wall ? player.y + fDistanceToInverseObject * rayDirY : player.x + fDistanceToInverseObject * rayDirX;
+				
+				// used to place texture exactly where ray hit wall
+				fInvObjSampleX -= ~~(fInvObjSampleX);
+		
+				// draw lines between wall blocks in no texture mode
+				isInvObjBoundary = (fInvObjSampleX <= edgeThreshold || fInvObjSampleX >= 1.0 - edgeThreshold);
+          	}
             bHitBackObject = true;
           }
 
@@ -212,9 +232,11 @@ function raycaster() {
 				        										// ALSO, standardize Door vs Gate in var and func names
 
         // similar operation for objects		// TODO calc these like we did for walls and doors probably
-        var nObjectCeiling = viewWindow.skew - viewWindow.height / fDistanceToObject / 2;
-        var nObjectFloor = viewWindow.skew + viewWindow.height / fDistanceToObject / 2;
+        let nObjectHeight = viewWindow.height / fDistanceToObject;
+        var nObjectCeiling = viewWindow.skew - nObjectHeight / 2;
+        var nObjectFloor = viewWindow.skew + nObjectHeight / 2;
         var nFObjectBackwall = viewWindow.skew + (viewWindow.height / (fDistanceToInverseObject + 0) /2 ); // 0 makes the object flat, higher the number, the higher the object :)
+        var nFObjectBackCeil = viewWindow.skew - (viewWindow.height / (fDistanceToInverseObject + 0) /2 );
 
         // the spot where the wall was hit
         viewWindow.depthBuffer[screenColumn] = fDistanceToWall;
@@ -227,21 +249,13 @@ function raycaster() {
           if( screenRow < nCeiling){
 
             // case of tower block (the bit that reaches into the ceiling)
-            if(sWalltype == "T"){
-              if( screenRow > nTower ) {
-
+            if(sWalltype == "T" && screenRow > nTower && (sObjectType !== "," || fDistanceToObject >= fDistanceToWall || (sObjectType === "," && nObjectCeiling <= nCeiling && screenRow > nObjectCeiling))){
                 var fSampleY = ( (screenRow - nTower) / (nCeiling - nTower) );
-
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
-              } else {
+            } else if(sObjectType == "," && screenRow > nObjectCeiling - nObjectHeight && screenRow <= nObjectCeiling && (sWalltype !== "T" || fDistanceToWall >= fDistanceToObject)) {
+                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = isObjBoundary ? brightness[0] : "1".charCodeAt(0);
+            } else {			// draw ceiling/sky
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = brightness[0];
-              }
-            } else {		// draw ceiling/sky
-              if(sWalltype == ",") {
-                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = "1";
-              } else {
-                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = brightness[0];
-              }
             }		          // solid block
           } else if( screenRow > nCeiling && screenRow <= nFloor && !(screenRow >= nDoorFrameBot && sWalltype == 'X') ) {
 
@@ -292,14 +306,12 @@ function raycaster() {
 
         // Object-Draw (removed overlayscreen)
         for(var y = 0; y < viewWindow.height; y++){
-          if( y > nObjectCeiling && y <= nObjectFloor ){
-            if(sObjectType == "o"){
-              if( y >=  nFObjectBackwall ){
-                viewWindow.buffer[y * viewWindow.width + screenColumn] = _rh.renderSolidWall(fDistanceToObject, isBoundary);
-              }
-            }
-          }
-        } // end draw column loop
+          if(sObjectType == "o" && y >= nFObjectBackwall && y <= nObjectFloor) {
+			viewWindow.buffer[y * viewWindow.width + screenColumn] = _rh.renderSolidWall(fDistanceToObject, isInvObjBoundary);
+          } else if (sObjectType == "," && y >= nObjectCeiling && y <= nFObjectBackCeil) {
+            viewWindow.buffer[y * viewWindow.width + screenColumn] = "^".charCodeAt(0);	// @ looks nice here too
+          }	// NOTE could put a horizontal black line by only comparing ceiling thing to < nFObjectBackCeil, and where 
+        } // end draw column loop		// == nFObjectBackCeil, draw black 'pixel'
       }  // end column loop
 //       map.visitedTiles = visitedTiles;
 }

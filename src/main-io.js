@@ -577,7 +577,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       	// that will fix the issue with only being allowed to move normal to the door
       let checkX = (totalX > 0) ? (newX + PLAYER_RADIUS) : (newX - PLAYER_RADIUS);
 
-      if (map.tiles[~~player.y * map.width + ~~checkX] === '.') {
+      if (['.', ','].includes(map.tiles[~~player.y * map.width + ~~checkX]) /* === '.' */) {
       	player.x = newX;
 	  } else if (map.tiles[~~player.y * map.width + ~~checkX] === 'X'		// check for door tiles so we can go half way into the tile
 	  		&& ((Math.sign(totalX) <= 0 && checkX - ~~checkX > 0.5) || (Math.sign(totalX) >= 0 && checkX - ~~checkX < 0.5))) {
@@ -586,7 +586,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
       let checkY = (totalY > 0) ? (newY + PLAYER_RADIUS) : (newY - PLAYER_RADIUS);
 
-      if (map.tiles[~~checkY * map.width + ~~player.x] === '.') {
+      if (['.', ','].includes(map.tiles[~~checkY * map.width + ~~player.x]) /* === '.' */) {
       	player.y = newY;
 	  } else if (map.tiles[~~checkY * map.width + ~~player.x] === 'X'
 	  		&& ((Math.sign(totalY) >= 0 && checkY - ~~checkY < 0.5) || (Math.sign(totalY) <= 0 && checkY - ~~checkY > 0.5))) {
@@ -706,6 +706,8 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 	_convertAssetsToUnicode(["═", "=", "║", "|"])
 	// hack for floor and ceiling, # is ceiling only, there is also a '=' but that is already in gate chars
 	_convertAssetsToUnicode(["`", "-", "x", "#"])
+	// some weird wall type that isn's used in first level
+	_convertAssetsToUnicode("1^");
 	// pauses, then starts the game loop
     _testScreenSizeAndStartTheGame();		// NOTE moving this func call here from _loadLevel might break changing levels....maybe
     window.addEventListener("resize", function(){		// to FIX we might need to call main() from here, instead of end of _testScreenSizeAndStartTheGame()
