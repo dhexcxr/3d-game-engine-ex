@@ -52,9 +52,9 @@ let _r = {
 	   */
 	  getSamplePixel: function(texture, x, y){
 
-		var scaleFactor = texture.scale  || defaultTexScale;
-		var texWidth    = texture.width  || defaultTexWidth;
-		var texHeight   = texture.height || defaultTexHeight;
+		var scaleFactor = texture?.scale  || defaultTexScale;
+		var texWidth    = texture?.width  || defaultTexWidth;
+		var texHeight   = texture?.height || defaultTexHeight;
 
 		var texpixels = texture.texture;
 
@@ -78,7 +78,7 @@ let _r = {
 		var samplePosition = (texWidth * (sampleY)) + sampleX;
 
 		if( x < 0 || x > texWidth || y < 0 || y > texHeight ){
-		  return "+";
+		  return "+".charCodeAt(0);	// HACK, swap for real code
 		} else {
 		  let retVal = texpixels[samplePosition];
 		  if(retVal === 'undefined')
@@ -480,9 +480,10 @@ let _r = {
   // each value can be rendered with 5 shades (4 plus black)
   var _rh = {		// TODO this should probably be a class, then it can hold all its "global" variables as well
 
-    renderWall: function(fDistanceToWall, sWallFaceDirection, pixel) {
+    renderWall: function(fDistanceToWall, sWallFaceDirection, pixel, lightBright = 0) {
 
       var fill = "";
+      let startBright;
 
       pixel = charLookup.get(pixel);		// Unit16Array functionality
       if( sWallFaceDirection === "N" || sWallFaceDirection === "S" ){
@@ -490,53 +491,53 @@ let _r = {
         if(fDistanceToWall < viewWindow.depth / 5.5 ){
 
           if( pixel === "#" ){
-            fill = brightness[4];
+            startBright = 4;
           } else if( pixel === "7" ) {
-            fill = brightness[3];
+            startBright = 3;
           } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[2];
+            startBright = 2;
           } else {
-            fill = brightness[1];
+            startBright = 1;
           }
 
         } else if(fDistanceToWall < viewWindow.depth / 3.66 ) {
 
           if( pixel === "#" ){
-            fill = brightness[3];
+            startBright = 3;
           } else if( pixel === "7" ) {
-            fill = brightness[2];
+            startBright = 2;
           } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[1];
+            startBright = 1;
           } else {
-            fill = brightness[0];
+            startBright = 0;
           }
 
         } else if(fDistanceToWall < viewWindow.depth / 2.33 ) {
 
           if( pixel === "#" ){
-            fill = brightness[2];
+            startBright = 2;
           } else if( pixel === "7" ) {
-            fill = brightness[1];
+            startBright = 1;
           } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[1];
+            startBright = 1;
           } else {
-            fill = brightness[0];
+            startBright = 0;
           }
 
         } else if(fDistanceToWall < viewWindow.depth / 1 ) {
 
           if( pixel === "#" ){
-            fill = brightness[1];
+            startBright = 1;
           } else if( pixel === "7" ) {
-            fill = brightness[1];
+            startBright = 1;
           } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[1];
+            startBright = 1;
           } else {
-            fill = brightness[0];
+            startBright = 0;
           }
 
         } else {
-          fill = brightness[0];
+          startBright = 0;
         }
       }
 
@@ -546,55 +547,56 @@ let _r = {
         if(fDistanceToWall < viewWindow.depth / 5.5 ){
 
           if( pixel === "#" ){
-            fill = brightness[3];
+            startBright = 3;
           } else if( pixel === "7" ) {
-            fill = brightness[2];
+            startBright = 2;
           } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[1];
+            startBright = 1;
           } else {
-            fill = brightness[0];
+            startBright = 0;
           }
 
         } else if(fDistanceToWall < viewWindow.depth / 3.66 ) {
 
           if( pixel === "#" ){
-            fill = brightness[2];
+            startBright = 2;
           } else if( pixel === "7" ) {
-            fill = brightness[2];
+            startBright = 2;
           } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[1];
+            startBright = 1;
           } else {
-            fill = brightness[0];
+            startBright = 0;
           }
 
         } else if(fDistanceToWall < viewWindow.depth / 2.33 ) {
 
           if( pixel === "#" ){
-            fill = brightness[2];
+            startBright = 2;
           } else if( pixel === "7" ) {
-            fill = brightness[1];
+            startBright = 1;
           } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[1];
+            startBright = 1;
           } else {
-            fill = brightness[0];
+            startBright = 0;
           }
 
         } else if(fDistanceToWall < viewWindow.depth / 1 ) {
 
           if( pixel === "#" ){
-            fill = brightness[1];
+            startBright = 1;
           } else if( pixel === "7" ) {
-            fill = brightness[1];
+            startBright = 1;
           } else if( pixel === "*" || pixel === "o") {
-            fill = brightness[0];
+            startBright = 0;
           } else {
-            fill = brightness[0];
+            startBright = 0;
           }
 
         } else {
-          fill = brightness[0];
+          startBright = 0;
         }
       }
+      fill = brightness[Math.min(startBright + lightBright, 4)];
 
       return fill;
     },
@@ -652,14 +654,14 @@ let _r = {
       return fill;
     },
 
-    renderFloor: function(j) {
+    renderFloor: function(screenRow, belowLight) {
       var fill = "`".charCodeAt(0);
 
 			// TODO do something better with this
       // draw floor, in different shades
-      let b = 1 - (j -viewWindow.height / (2- game.fLooktimer * 0.15)) / (viewWindow.height / (2 - game.fLooktimer * 0.15));
+      let b = 1 - (screenRow - viewWindow.height / (2 - game.fLooktimer * 0.15)) / (viewWindow.height / (2 - game.fLooktimer * 0.15));
 
-      if(b < 0.25){
+      if(b < 0.25 || belowLight){
         fill = "x".charCodeAt(0);
       } else if(b < 0.5) {
         fill = "=".charCodeAt(0);
@@ -674,11 +676,11 @@ let _r = {
       return fill;
     },
 
-    renderCeiling: function(j) {
+    renderCeiling: function(screenRow) {
       var fill = "`".charCodeAt(0);
 
       // draw ceiling, in different shades
-      b = 1 - (j -viewWindow.height / 2) / (viewWindow.height / 2);
+      b = 1 - (screenRow -viewWindow.height / 2) / (viewWindow.height / 2);
       if(b < 0.25){
         fill = "`".charCodeAt(0);
       } else if(b < 0.5) {
