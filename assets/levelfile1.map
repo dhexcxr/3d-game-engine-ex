@@ -1,28 +1,28 @@
-var map = "";
-map += "#############..#";
-map += "#...........U..#";
-map += "#...C.......U..#";
-map += "#...W.......U..#";
-map += "#...W..........X";
-map += "#...W..........#";
-map += "#...C........#X#";
-map += "#......##......#";
-map += "#......##....TT#";
-map += "#..............#";
-map += "#..............#";
-map += "#oooo.....$$$$$#";
-map += "#..............#";
-map += "X..............#";
-map += "#....TXT....T.T#";
-map += "########....#X##";
+var rawMap = "";
+rawMap += "#############.X#";
+rawMap += "#...........U..#";
+rawMap += "#...C.......X..#";
+rawMap += "#...W.......U..#";
+rawMap += "#...W..........X";
+rawMap += "#...W..........#";
+rawMap += "#...C..........#";
+rawMap += "#......##......#";
+rawMap += "#......##....TT#";
+rawMap += "#..............#";
+rawMap += "#..............#";
+rawMap += "#oooo.....$$$$$#";
+rawMap += "#..............#";
+rawMap += "X..............#";
+rawMap += "#....TXT....T.T#";
+rawMap += "########....#X##";
 
 levelfile1 = {
-  nMapHeight: 16,
-  nMapWidth: 16,
-  map: map,
-  fPlayerX: 14.5,
-  fPlayerY: 1.5,
-  fPlayerA: 2.0,
+  height: 16,
+  width: 16,
+  tiles: rawMap,
+  playerStartX: 14.5,
+  playerStartY: 1.5,
+  playerStartA: 2.0,
   // fPlayerA: 4.7,
   exitsto: "levelfile2.map",
   color: "white",
