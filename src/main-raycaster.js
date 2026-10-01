@@ -10,9 +10,10 @@ const absSign = (x) => (x === 0 ? 1 : Math.sign(x));	// RENDERER only
 const edgeThreshold = 0.05;		// control thickness of border in flat renderer, also holes	// RAYCASTER only
 
 // Constants for 1.5 tile maximum light radius
-const MAX_RADIUS_SQ = 2.25; // 1.5 * 1.5
+const MAX_RADIUS_SQ = 6.25; // 1.5 * 1.5
 let checkTiles = [];	// tiles to check for ceiling light
-let minLightDistSq = Infinity;
+let closestLightWallDist = Infinity;
+let closestLightFloorDist = Infinity;
 let midFrameInfoMsg = '';		// DEBUG only
 let endDoorInfoMsg = '';		// DEBUG only
 
@@ -154,7 +155,7 @@ function raycaster() {
 				var nObjectCeiling = viewWindow.skew - nObjectHeight / (tileType == "," ? 1.25 : 2);
 				var nObjectFloor = viewWindow.skew + nObjectHeight / 2;
 					
-				vHitObjects.push({objMapTileIndex: currentMapTileIndex, objType: tileType, distToObj: fDistanceToObject, atObjBoundary: isObjBoundary, objHeight: nObjectHeight, objCeil: nObjectCeiling, objFloor: nObjectFloor});
+				vHitObjects.push({objX: map_x, objY: map_y, objMapTileIndex: currentMapTileIndex, objType: tileType, distToObj: fDistanceToObject, atObjBoundary: isObjBoundary, objHeight: nObjectHeight, objCeil: nObjectCeiling, objFloor: nObjectFloor});
             }
             bInObject = true;
             sObjectType = tileType;
@@ -183,9 +184,7 @@ function raycaster() {
           }
 
 	          // save back of object distance as soon as we're out of it
-          if(bInObject == true && tileType !== "o" && tileType !== ",") {	// if we get multiple objects we'll eventually need to make an array of them or something and loop through them to check when we leave a specific one
-          		// well, if we don't have them overlapping in a single screen column....
-          		// TODO test how this might work with two separate holes, we'll need to paint hole, then floor, then hole
+          if(bInObject == true && tileType !== "o" && tileType !== ",") {
           		fDistanceToInverseObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
 				let fInvObjSampleX = hit_NS_wall ? player.y + fDistanceToInverseObject * rayDirY : player.x + fDistanceToInverseObject * rayDirX;
 				
@@ -201,11 +200,10 @@ function raycaster() {
 
 				Object.assign(vHitObjects.at(-1), {distToBackOfObj: fDistanceToInverseObject, atObjBackBoundary: isInvObjBoundary, backOfObjFloor: nFObjectBackwall, backOfObjCeil: nFObjectBackCeil});
           }
-
         } // end ray casting loop
 
-	        let exactHitX = 0;
-        	let exactHitY = 0;
+		let exactHitX = 0;
+		let exactHitY = 0;
 
 		if(hit_NS_wall) {		// NS wall	// sin(RayAng) gives normalized Ray Vector
 			fSampleX = player.y + fDistanceToWall * rayDirY;
@@ -225,7 +223,6 @@ function raycaster() {
 		fSampleX -= ~~(fSampleX);
 
 		// draw lines between wall blocks in no texture mode
-
 		if (fSampleX <= edgeThreshold || fSampleX >= 1.0 - edgeThreshold) {
 			if(hit_NS_wall) {
 				let tileCheckLocDif = sWallFaceDirection === 'W' ? -1 : 1;
@@ -237,12 +234,16 @@ function raycaster() {
 		}
 
 		// check if nearby tiles are lights, so we can brighten walls, etc
-		minLightDistSq = Infinity;
+		closestLightWallDist = Infinity;
 		switch (sWallFaceDirection) {
-			case 'N': checkTiles = [[map_x, map_y - 1], [map_x - 1, map_y - 1], [map_x + 1, map_y - 1]]; break;
-			case 'S': checkTiles = [[map_x, map_y + 1], [map_x - 1, map_y + 1], [map_x + 1, map_y + 1]]; break;
-			case 'E': checkTiles = [[map_x + 1, map_y], [map_x + 1, map_y - 1], [map_x + 1, map_y + 1]]; break;
-			case 'W': checkTiles = [[map_x - 1, map_y], [map_x - 1, map_y - 1], [map_x - 1, map_y + 1]]; break;
+			case 'N': checkTiles = [[map_x, map_y - 1], [map_x - 1, map_y - 1], [map_x + 1, map_y - 1], [map_x - 2, map_y - 1], [map_x + 2, map_y - 1],
+									[map_x, map_y - 2], [map_x - 1, map_y - 2], [map_x + 1, map_y - 2],	[map_x - 2, map_y - 2], [map_x + 2, map_y - 2]]; break;
+			case 'S': checkTiles = [[map_x, map_y + 1], [map_x - 1, map_y + 1], [map_x + 1, map_y + 1], [map_x - 2, map_y + 1], [map_x + 2, map_y + 1],
+									[map_x, map_y + 2], [map_x - 1, map_y + 2], [map_x + 1, map_y + 2], [map_x - 2, map_y + 2], [map_x + 2, map_y + 2]]; break;
+			case 'E': checkTiles = [[map_x + 1, map_y], [map_x + 1, map_y - 1], [map_x + 1, map_y + 1], [map_x + 1, map_y - 2], [map_x + 1, map_y + 2],
+									[map_x + 2, map_y], [map_x + 2, map_y - 1], [map_x + 2, map_y + 1], [map_x + 2, map_y - 2], [map_x + 2, map_y + 2]]; break;
+			case 'W': checkTiles = [[map_x - 1, map_y], [map_x - 1, map_y - 1], [map_x - 1, map_y + 1], [map_x - 1, map_y - 2], [map_x - 1, map_y + 2],
+									[map_x - 1, map_y], [map_x - 2, map_y - 1], [map_x - 2, map_y + 1], [map_x - 2, map_y - 2], [map_x - 2, map_y + 2]]; break;
 		}
 		
 		for (const [tx, ty] of checkTiles) {
@@ -250,10 +251,10 @@ function raycaster() {
 			// Distance to center of light tile
 				const dx = exactHitX - (tx + 0.5);
 				const dy = exactHitY - (ty + 0.5);
-				const distSq = dx * dx + dy * dy; // No sqrt!
+				const distSq = dx * dx + dy * dy;
 			
-				if (distSq < minLightDistSq) {
-					minLightDistSq = distSq;
+				if (distSq < closestLightWallDist) {
+					closestLightWallDist = distSq;
 				}
 		  	}
 		}
@@ -263,28 +264,23 @@ function raycaster() {
 		let baseLight = 0;
 		
 		// Apply proximity boost using squared distance falloff
-		if (minLightDistSq < MAX_RADIUS_SQ) {
+		if (closestLightWallDist < MAX_RADIUS_SQ) {
 			// Quadratic falloff: strongest at 0, drops smoothly to 0 at MAX_RADIUS_SQ
-			const boost = (1.0 - (minLightDistSq / MAX_RADIUS_SQ)) * 0.6; 
+			const boost = (1.0 - (closestLightWallDist / MAX_RADIUS_SQ)) /* * 0.6 */; 
 			baseLight += boost;
 		}
 		
-		// Clamp between 0.0 and 0.999 to prevent out-of-bounds index 5
+		// Clamp between 0 and 5
 		const clampedLight = Math.min(Math.max(baseLight, 0.0), 0.999);
-		
-		// Convert 0.0-0.999 range to integer, this is added to wall brightness
 		const lightBright = Math.floor(clampedLight * 4);
 // 		const asciiPixel = PALETTE[charIndex];
-        // at the end of ray casting, we should have the lengths of the rays
-        // set to their last value, representing their distances
-        // based on the distance to wall, determine how much floor and ceiling to show per column,
-        // Adding in the recalc for looking (game.fLookTimer) and jumping (game.nJumptimer)
+
+		// calc top and bottom of wall
         var wallHeight = Math.round(viewWindow.height / fDistanceToWall);
         var nCeiling = viewWindow.skew - wallHeight / 2;
 		var nFloor   = viewWindow.skew + wallHeight / 2;
 
-
-        // similar for towers and gates
+        // calc top of tower, higher than ceiling
         let nTower = viewWindow.skew - wallHeight / 2 - wallHeight;
 
 			// technique from original wolf3d code (I think), and also this guy: https://github.com/permadi-com/ray-cast/blob/master/demo/1/sample1.js
@@ -293,8 +289,6 @@ function raycaster() {
         let nDoorFrameTop = viewWindow.skew - nDoorHeight / 2;			//  (maybe in the center, like striped), and blockH in the center
         let nDoorFrameBot = viewWindow.skew + nDoorHeight / 2;			// Second, try to actually give it an upper door jamb
 				        										// ALSO, standardize Door vs Gate in var and func names
-
-
         // the spot where the wall was hit
         viewWindow.depthBuffer[screenColumn] = fDistanceToWall;
 
@@ -318,7 +312,7 @@ function raycaster() {
             			|| fDistanceToObject >= fDistanceToWall
             			|| (sObjectType === "," && nObjectCeiling <= nCeiling && screenRow > nObjectCeiling))) {
             	let fSampleY = ((screenRow - nTower) / (nCeiling - nTower));
-                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
+                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY), lightBright);
 	    	} else if(ceilThings.length > 0) {
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
                 	ceilThings[0].atObjBoundary		// at vertical boundary
@@ -370,21 +364,62 @@ function raycaster() {
               viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = sWalltype;
             }
           } else {		// floor
-            viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderFloor(screenRow);
+          	// calc dist to floor at specific screen row
+// 			const currentDist = viewWindow.height / (2.0 * screenRow - viewWindow.height);
+// 			const currentDist = (viewWindow.skew) / (2.0 * screenRow - viewWindow.skew);
+// 			const currentDist = viewWindow.height / (2 * screenRow  - viewWindow.height - game.nJumptimer * 0.15 - game.fLooktimer * 0.15);
+				// this version does very good without skew, light pool looks like its underneath light
+// 			const currentDist = 2 * (viewWindow.height - viewWindow.skew) / (screenRow - viewWindow.skew);
+				// this version works well with skew, but is too far "below", it is rendered too low on screen
+			// const currentDist = 2 * viewWindow.height / (screenRow - viewWindow.skew);
+				// ok, i think this is it
+			const currentDist = viewWindow.height / (screenRow - viewWindow.skew);
+			
+// 			// calc world coordinates of this floor, starting at left side of screen
+			const floorX = player.x + rayDirX * currentDist;
+			const floorY = player.y + rayDirY * currentDist;
+
+			// start floor light calc
+			let floorLight = 0;
+			
+			// check if there is a ceiling light near this floor tile
+			let ceilLights = vHitObjects.filter(obj => obj.objType == ",");
+			closestLightFloorDist = Infinity;
+			ceilLights.forEach((ceilLight) => {
+			  // calc distance from floor at this screen pixel to center of light source
+			  const dx = floorX - (ceilLight.objX + 0.5);
+			  const dy = floorY - (ceilLight.objY + 0.5);
+			  const distSq = dx * dx + dy * dy;
+			  if (distSq < closestLightFloorDist) {
+					closestLightFloorDist = distSq;
+			  }
+			});
+
+		    if (closestLightFloorDist < MAX_RADIUS_SQ) {
+				// calc quadratic falloff
+				const ratio = closestLightFloorDist / MAX_RADIUS_SQ;
+				const falloff = (1.0 - ratio) * (1.0 - ratio);	// squared
+			
+				const lightIntensityBoost = 0.8; // Adjust max brightness of the lamp
+				floorLight += falloff * lightIntensityBoost;
+		    }
+
+			const clampedLightFloor = Math.min(Math.max(floorLight, 0.0), 0.999);
+			const lightBrightFloor = Math.floor(clampedLightFloor * 5);
+			
+            viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderFloor(screenRow, lightBrightFloor);
           }
         } // end draw column loop
 
         // Object-Draw (removed overlayscreen)
-        for(var y = 0; y < viewWindow.height; y++) {	// TODO loop through vHitObjects
+        for(var y = 0; y < viewWindow.height; y++) {	// loop through vHitObjects
 		vHitObjects.filter(obj => 
-			(obj.objType == "o" || obj.objType == ",")
+				obj.objType == "o"
 				&& y >= obj.backOfObjFloor
 				&& y <= obj.objFloor
 		).forEach(floor => {
 			viewWindow.buffer[y * viewWindow.width + screenColumn] =
-				floor.objType == "o"
-				? _rh.renderSolidWall(floor.distToObj, floor.atObjBackBoundary)
-				: brightness[3];
+					_rh.renderSolidWall(floor.distToObj, floor.atObjBackBoundary)
           	});
           
           vHitObjects.filter(obj => {
