@@ -55,14 +55,14 @@ function raycaster() {
 
         var bHitWall = false;
 
-        var bHitObject = false;
-        var bHitBackObject = false;
+        var bInObject = false;
 
         var sWalltype = "#";
         var sObjectType = "0";
         let isBoundary = false;
         let isObjBoundary = false;
         let isInvObjBoundary = false;
+        let vHitObjects = new Array()
 
         var fSampleX = 0.0;
         var sWallFaceDirection = "N";
@@ -133,18 +133,26 @@ function raycaster() {
           }
 
           // test for objects
-          else if(tileType == "o" || tileType == ","){
-          	if(!bHitObject) {
-          		fDistanceToObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
+          else if(tileType == "o" || tileType == ",") {	// NOTE we'll need to update this to account for holes next to ceiling...thingies
+          	if(!bInObject) {
+	          	fDistanceToObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
 				let fObjSampleX = hit_NS_wall ? player.y + fDistanceToObject * rayDirY : player.x + fDistanceToObject * rayDirX;
-				
+
 				// used to place texture exactly where ray hit wall
 				fObjSampleX -= ~~(fObjSampleX);
 		
 				// draw lines between wall blocks in no texture mode
 				isObjBoundary = (fObjSampleX <= edgeThreshold || fObjSampleX >= 1.0 - edgeThreshold);
-          	}
-            bHitObject = true;
+		
+				// similar operation for objects		// TODO calc these like we did for walls and doors probably
+				// TODO move this where its used and loop through vHitObjects
+				let nObjectHeight = viewWindow.height / fDistanceToObject;
+				var nObjectCeiling = viewWindow.skew - nObjectHeight / (tileType == "," ? 1.5 : 2);
+				var nObjectFloor = viewWindow.skew + nObjectHeight / 2;
+					
+				vHitObjects.push({objMapTileIndex: currentMapTileIndex, objType: tileType, distToObj: fDistanceToObject, atObjBoundary: isObjBoundary, objHeight: nObjectHeight, objCeil: nObjectCeiling, objFloor: nObjectFloor});
+            }
+            bInObject = true;
             sObjectType = tileType;
           }
 
@@ -171,10 +179,9 @@ function raycaster() {
           }
 
 	          // save back of object distance as soon as we're out of it
-          if(bHitObject == true && tileType !== "o" && tileType !== ",") {	// if we get multiple objects we'll eventually need to make an array of them or something and loop through them to check when we leave a specific one
+          if(bInObject == true && tileType !== "o" && tileType !== ",") {	// if we get multiple objects we'll eventually need to make an array of them or something and loop through them to check when we leave a specific one
           		// well, if we don't have them overlapping in a single screen column....
           		// TODO test how this might work with two separate holes, we'll need to paint hole, then floor, then hole
-          	if(!bHitBackObject) {
           		fDistanceToInverseObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
 				let fInvObjSampleX = hit_NS_wall ? player.y + fDistanceToInverseObject * rayDirY : player.x + fDistanceToInverseObject * rayDirX;
 				
@@ -183,8 +190,12 @@ function raycaster() {
 		
 				// draw lines between wall blocks in no texture mode
 				isInvObjBoundary = (fInvObjSampleX <= edgeThreshold || fInvObjSampleX >= 1.0 - edgeThreshold);
-          	}
-            bHitBackObject = true;
+				bInObject = false;
+			  		        // TODO move this where its used and loop through vHitObjects
+				var nFObjectBackwall = viewWindow.skew + (viewWindow.height / (fDistanceToInverseObject + 0) /2 ); // 0 makes the object flat, higher the number, the higher the object :)
+				var nFObjectBackCeil = viewWindow.skew - (viewWindow.height / (fDistanceToInverseObject + 0) / (vHitObjects.at(-1) ? 1.5 : 2) );
+
+				Object.assign(vHitObjects.at(-1), {distToBackOfObj: fDistanceToInverseObject, atObjBackBoundary: isInvObjBoundary, backOfObjFloor: nFObjectBackwall, backOfObjCeil: nFObjectBackCeil});
           }
 
         } // end ray casting loop
@@ -231,12 +242,6 @@ function raycaster() {
         let nDoorFrameBot = viewWindow.skew + nDoorHeight / 2;			// Second, try to actually give it an upper door jamb
 				        										// ALSO, standardize Door vs Gate in var and func names
 
-        // similar operation for objects		// TODO calc these like we did for walls and doors probably
-        let nObjectHeight = viewWindow.height / fDistanceToObject;
-        var nObjectCeiling = viewWindow.skew - nObjectHeight / 2;
-        var nObjectFloor = viewWindow.skew + nObjectHeight / 2;
-        var nFObjectBackwall = viewWindow.skew + (viewWindow.height / (fDistanceToInverseObject + 0) /2 ); // 0 makes the object flat, higher the number, the higher the object :)
-        var nFObjectBackCeil = viewWindow.skew - (viewWindow.height / (fDistanceToInverseObject + 0) /2 );
 
         // the spot where the wall was hit
         viewWindow.depthBuffer[screenColumn] = fDistanceToWall;
@@ -247,14 +252,24 @@ function raycaster() {
 
           // sky
           if( screenRow < nCeiling){
+          	let ceilThings = vHitObjects.filter(obj => obj.objType === ','
+          			&& screenRow > obj.objCeil - obj.objHeight
+            		&& screenRow <= obj.objCeil - (5 / obj.distToObj)	// border around light/ceiling
+            		&& (sWalltype !== "T" || fDistanceToWall >= obj.distToObj));
 
             // case of tower block (the bit that reaches into the ceiling)
-            if(sWalltype == "T" && screenRow > nTower && (sObjectType !== "," || fDistanceToObject >= fDistanceToWall || (sObjectType === "," && nObjectCeiling <= nCeiling && screenRow > nObjectCeiling))){
-                var fSampleY = ( (screenRow - nTower) / (nCeiling - nTower) );
+            // TODO loop through ceiling vHitObjects
+            if(sWalltype == "T"
+            		&& screenRow > nTower
+            		&& (sObjectType !== ","
+            			|| fDistanceToObject >= fDistanceToWall
+            			|| (sObjectType === "," && nObjectCeiling <= nCeiling && screenRow > nObjectCeiling))) {
+            	let fSampleY = ((screenRow - nTower) / (nCeiling - nTower));
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[sWalltype], fSampleX, fSampleY));
-            } else if(sObjectType == "," && screenRow > nObjectCeiling - nObjectHeight && screenRow <= nObjectCeiling && (sWalltype !== "T" || fDistanceToWall >= fDistanceToObject)) {
-                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = isObjBoundary ? brightness[0] : "1".charCodeAt(0);
-            } else {			// draw ceiling/sky
+			// draw ceiling/sky		// TOOO loop through ceiling vHitObjects
+	    	} else if(ceilThings.length > 0) {
+                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = ceilThings[0].atObjBoundary ? brightness[0] : "1".charCodeAt(0);
+            } else {
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = brightness[0];
             }		          // solid block
           } else if( screenRow > nCeiling && screenRow <= nFloor && !(screenRow >= nDoorFrameBot && sWalltype == 'X') ) {
@@ -297,20 +312,20 @@ function raycaster() {
           }
         } // end draw column loop
 
-//     	if(screenColumn === viewWindow.width / 2 && (sWalltype == '#' || sWalltype == 'X')) {}
-
-// 		if(midFrameInfoMsg !== '' || endDoorInfoMsg !== '') {
-// 			_debugOutput(`${midFrameInfoMsg}<br>${endDoorInfoMsg}`, 'debug2');
-// 		}
-
-
         // Object-Draw (removed overlayscreen)
-        for(var y = 0; y < viewWindow.height; y++){
-          if(sObjectType == "o" && y >= nFObjectBackwall && y <= nObjectFloor) {
-			viewWindow.buffer[y * viewWindow.width + screenColumn] = _rh.renderSolidWall(fDistanceToObject, isInvObjBoundary);
-          } else if (sObjectType == "," && y >= nObjectCeiling && y <= nFObjectBackCeil) {
-            viewWindow.buffer[y * viewWindow.width + screenColumn] = "^".charCodeAt(0);	// @ looks nice here too
-          }	// NOTE could put a horizontal black line by only comparing ceiling thing to < nFObjectBackCeil, and where 
+        for(var y = 0; y < viewWindow.height; y++) {	// TODO loop through vHitObjects
+          vHitObjects.filter(obj => {
+          	return obj.objType == "o" && y >= obj.backOfObjFloor && y <= obj.objFloor
+          }).forEach(hole => {
+            viewWindow.buffer[y * viewWindow.width + screenColumn] = _rh.renderSolidWall(hole.distToObj, hole.atObjBackBoundary)
+          });
+          
+          vHitObjects.filter(obj => {
+          	return obj.objType == "," && y >= obj.objCeil && y <= obj.backOfObjCeil
+          }).forEach(ceil => {
+            viewWindow.buffer[y * viewWindow.width + screenColumn] = _rh.renderSolidWall(ceil.distToObj)		// this is kinda like a ceiling light
+//             viewWindow.buffer[y * viewWindow.width + screenColumn] = "^".charCodeAt(0);	// @ looks nice here too
+          });
         } // end draw column loop		// == nFObjectBackCeil, draw black 'pixel'
       }  // end column loop
 //       map.visitedTiles = visitedTiles;
