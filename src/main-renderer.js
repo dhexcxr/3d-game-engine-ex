@@ -654,25 +654,39 @@ let _r = {
       return fill;
     },
 
-    renderFloor: function(screenRow, belowLight) {
+    renderFloor: function(screenRow, lightBright = 0) {
       var fill = "`".charCodeAt(0);
 
-			// TODO do something better with this
+	  // TODO do something better with this
       // draw floor, in different shades
-      let b = 1 - (screenRow - viewWindow.height / (2 - game.fLooktimer * 0.15)) / (viewWindow.height / (2 - game.fLooktimer * 0.15));
+      let b = 1 - (screenRow -viewWindow.height / 2) / (viewWindow.height / 2);
+	  let bb = 1 - ((2  * screenRow - viewWindow.height) / viewWindow.height);
+      let bbb = 1 - (screenRow - viewWindow.height / (2 - game.fLooktimer * 0.15)) / (viewWindow.height / (2 - game.fLooktimer * 0.15));
+	  let bbbb = ((0.15 * game.fLooktimer - 2) * screenRow) / viewWindow.height + 2;
 
-      if(b < 0.25 || belowLight){
-        fill = "x".charCodeAt(0);
-      } else if(b < 0.5) {
-        fill = "=".charCodeAt(0);
-      } else if(b < 0.75) {
-        fill = "-".charCodeAt(0);
-      } else if(b < 0.9) {
-        fill = "`".charCodeAt(0);
-      } else {
-        fill = brightness[0];
+	  if (lightBright != 0) {
+
+	    let pixelBright = 0;
+        let startBright = 0;
+
+	  	fill = brightness[Math.min(Math.max(startBright + pixelBright + lightBright, 0), 4)];
+
+	  } else {
+// 	  	let b = 1 - ((2  * screenRow - viewWindow.height) / viewWindow.height);
+		let b = ((0.15 * game.fLooktimer - 2) * screenRow) / viewWindow.height + 2;
+
+	  	if(b < 0.25 ) {
+          fill = "x".charCodeAt(0);
+        } else if(b < 0.5) {
+          fill = "=".charCodeAt(0);
+        } else if(b < 0.75) {
+          fill = "-".charCodeAt(0);
+        } else if(b < 0.9) {
+          fill = "`".charCodeAt(0);
+        } else {
+          fill = brightness[0];
+	    }
       }
-
       return fill;
     },
 
