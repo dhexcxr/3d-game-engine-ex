@@ -93,13 +93,11 @@ document.addEventListener("pointerlockchange", (event) => {
 function pauseGameClock() {		// TODO NOTE i think the ultimate guard agains't multiple interval timers (at least until I swap to
 	clearInterval(game.timer);		// getAnimationFrame) is til clear this var and only start the timer if it is null
 	game.isRunning = false;			// then, i don't think I'd need as many guards strewn about the code
-// 	player.bPaused = true;
 	_debugOutput(`isWindowActive: ${viewWindow.isWindowActive()}; bPaused: ${player.bPaused}`, 'debug2');
 }
 
 function resumeGameClock() {
 	_testScreenSizeAndStartTheGame();
-// 	player.bPaused = false;
 	_debugOutput(`isWindowActive: ${viewWindow.isWindowActive()}; bPaused: ${player.bPaused}`, 'debug2');
 }
 
@@ -110,11 +108,12 @@ const nLookLimit = 8;
 let LockLook = false;		// IO only, DEBUG only
 let hitSideCheck = 0;		// DEBUG only, only in [io
 
-let hiRes = false;
-let resModifier = 2;
-
-let showCanvas = false;
-let showText = true;
+let hiRes = false;		// TODO put this and the showCanvas/Text into the viewWindow obj
+let resModifier = 2;		// then we can check for the showText/Canvas value in the Renderer
+							// and skip the textContent = array.join('')
+								// which will save a lot of time
+let showCanvas = true;
+let showText = false;
 
   let eTouchLook;
   let eTouchMove;

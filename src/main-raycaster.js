@@ -126,7 +126,7 @@ function raycaster() {
 		  tileType = map.tiles[currentMapTileIndex];
 
           // test if ray hits out of bounds
-          if(map_x < 0 || map_x >= map.width || map_y < 0 || map_y >= map.height){
+          if(map_x < 0 || map_x >= map.width || map_y < 0 || map_y >= map.height) {
 //             bHitWall = true; // no wall there, but with this enabled we paint a wall, but can still go through it
             fDistanceToWall = viewWindow.depth;
             bBreakLoop = true;

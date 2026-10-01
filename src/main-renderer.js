@@ -154,6 +154,7 @@ let _r = {
       //   [1,2,4,5,7,8]
       removeFrom = _evenlyPickItemsFromArray(viewWindow.width, toBeRemoved);
 
+// TODO change this to an array.from() line, using the mapFn parameter, see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from
       for(var rpix = 0; rpix < viewWindow.width; rpix++) {      // loops through each rows of pixels
         if (!removeFrom.includes(rpix)) {        // print only if the pixel is in the list of pixels to print
           pfOutput.push(charLookup.get(oInput[globalPrintIndex]) );

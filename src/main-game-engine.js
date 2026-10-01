@@ -181,6 +181,7 @@ watchProp(game, 'timer');
 
 var gameEngineJS = function(){
 
+  // setup variables
   let rayObs = new Array();		// DEBUG ONLY object to hold details of rays
   							// column, ray angle, height of wall	// RAYCASTER only
   class RayOb {
