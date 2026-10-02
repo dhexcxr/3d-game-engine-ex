@@ -1,6 +1,6 @@
 // main i/o
 
-export {_debugOutput, _mh, brightness, init, viewWindow, map, charLookup, codePointLookup, CHAR_CACHE, CHAR_TO_CODE};
+export {_debugOutput, _mh, brightness, init, viewWindow, map, charLookup, codePointLookup, CHAR_CACHE, CHAR_TO_CODE, WALL_TILE};
 
 import {game, main, player} from './main-game-engine.js';
 
@@ -13,7 +13,8 @@ let enableBackgroundRun = true
 const charLookup = new Map();
 const codePointLookup = new Map();
 const CHAR_CACHE = new Array();
-const CHAR_TO_CODE = {};
+const CHAR_TO_CODE = {};	// TODO for 26-08-15, swap to this in renderer, and get map tile light pre-comp going
+let WALL_TILE = new Uint16Array();
 
 let brightness = ["\u00A0", "░", "▒", "▓", "█"];
 
@@ -727,6 +728,10 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 			CHAR_TO_CODE[rawChar] = code;
 		}
 		Object.freeze(CHAR_TO_CODE);
+
+		WALL_TILE = new Uint16Array(Math.max(...charLookup.keys()));
+		WALL_TILE.fill(0);
+		"TX#$CWU".split('').forEach(char => WALL_TILE[char.charCodeAt(0)] = true);
     });
 
 	// pauses, then starts the game loop

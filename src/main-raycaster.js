@@ -3,7 +3,7 @@
 export {raycaster};
 
 import {game, player, memoize} from './main-game-engine.js';
-import {_debugOutput, brightness, viewWindow, map, CHAR_CACHE} from './main-io.js';
+import {_debugOutput, brightness, viewWindow, map, charLookup, CHAR_CACHE, WALL_TILE, CHAR_TO_CODE} from './main-io.js';
 import {_r, _rh} from './main-renderer.js';
 
 const absSign = (x) => (x === 0 ? 1 : Math.sign(x));	// RENDERER only
@@ -552,9 +552,7 @@ function checkDynamicLOS(startX, startY, endX, endY) {
 
 		// Sample the map
 		const tile = map.tiles[checkY * map.width + checkX];	// TODO NOTE make an array of block/wall tiles, so this is just a lookup
-		if (tile > 0 && "TX#$CWU".split('').map(char => char.charCodeAt(0)).includes(tile)) {
-			return false; // Intersection found, wall blocks light
-		}
+		return !(tile > 0 && WALL_TILE[tile])
 	}
 	return true;
 }
