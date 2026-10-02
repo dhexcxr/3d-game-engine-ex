@@ -137,7 +137,7 @@ function raycaster() {
           if(map_x < 0 || map_x >= map.width || map_y < 0 || map_y >= map.height) {
 //             bHitWall = true; // no wall there, but with this enabled we paint a wall, but can still go through it
 			bHitOoB = true;
-	    	fDistanceToWall = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
+            fDistanceToWall = viewWindow.depth;
             fDistanceToOoB = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
             bBreakLoop = true;
           }
@@ -405,8 +405,8 @@ function raycaster() {
 			let floorY = Math.min(Math.max(distRatio * exactHitY + (1.0 - distRatio) * player.y, 0), map.height - 1);
 
 			// true map tile x and y
-			const floorMapX = Math.floor(floorX);
-			const floorMapY = Math.floor(floorY);
+			const floorMapX = ~~floorX;
+			const floorMapY = ~~floorY;
 			let floorLight = 0;
 			
 			// check if there is a ceiling light near this floor tile
@@ -419,7 +419,10 @@ function raycaster() {
 					const lightY = Math.min(Math.max(floorMapY + sy, 0), 15);
 
 					const ceilLookupIndex = lightY * map.width + lightX;
-					if (map.tiles[ceilLookupIndex] === ",".charCodeAt(0)) {
+					if (map.tiles[ceilLookupIndex] === ",".charCodeAt(0)
+							|| (map.tiles[ceilLookupIndex] === "o".charCodeAt(0)	// creepy glow from floor holes
+								&& (sx >= -1 || sx <= 1)
+								&& (sy >= -1 || sy <= 1))) {	// TODO classify all tile types in charLookup or something, so we can do constant things like === WALL_TILE
 						const dx = floorX - (lightX + 0.5);
 						const dy = floorY - (lightY + 0.5);
 						const distSq = dx * dx + dy * dy;
@@ -427,14 +430,16 @@ function raycaster() {
 						if (distSq < MAX_RADIUS_SQ /* && distSq < closestLightFloorDist */) {
 // 							closestLightFloorDist = distSq;
 							const ratio = distSq / MAX_RADIUS_SQ;
-							floorLight += (1.0 - ratio) * (1.0 - ratio) * 0.8;
+							floorLight += (1.0 - ratio) * (1.0 - ratio) * (map.tiles[ceilLookupIndex] === "o".charCodeAt(0)
+																				? 0.6
+																				: 0.8);	// NOTE consider turning down ceilLight intensity
 						}
 					}
 				}
 			}
 
 			const clampedLightFloor = Math.min(Math.max(floorLight, 0.0), 0.999);
-			const lightBrightFloor = Math.floor(clampedLightFloor * 5);
+			const lightBrightFloor = ~~(clampedLightFloor * 5);
 			
             viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderFloor(screenRow, lightBrightFloor);
           }
@@ -448,7 +453,9 @@ function raycaster() {
 				&& y <= obj.objFloor
 		).forEach(floor => {
 			viewWindow.buffer[y * viewWindow.width + screenColumn] =
-					_rh.renderSolidWall(floor.distToObj, floor.atObjBackBoundary)
+					y <= floor.backOfObjFloor + (4 / floor.distToBackOfObj)	// at horizontal boundary
+					? brightness[2]
+					: _rh.renderSolidWall(floor.distToObj, floor.atObjBackBoundary)
           	});
           
           vHitObjects.filter(obj => {
