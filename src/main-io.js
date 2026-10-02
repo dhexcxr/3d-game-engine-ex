@@ -1,8 +1,8 @@
 // main i/o
 
-export {_debugOutput, _mh, brightness, init, viewWindow, map, charLookup, codePointLookup, CHAR_CACHE, CHAR_TO_CODE, WALL_TILE};
+export {_debugOutput, _mh, brightness, init, viewWindow, map, charLookup, codePointLookup, CHAR_CACHE, WALL_TILE};
 
-import {game, main, player} from './main-game-engine.js';
+import {game, player, gameLoop} from './main-game-engine.js';
 
 let gameResumeGuardOn = false;
 
@@ -98,13 +98,16 @@ document.addEventListener("pointerlockchange", (event) => {
 // }
 
 function pauseGameClock() {		// TODO NOTE i think the ultimate guard agains't multiple interval timers (at least until I swap to
-	clearInterval(game.timer);		// getAnimationFrame) is til clear this var and only start the timer if it is null
+// 	clearInterval(game.timer);		// getAnimationFrame) is til clear this var and only start the timer if it is null
 	game.isRunning = false;			// then, i don't think I'd need as many guards strewn about the code
 	_debugOutput(`isWindowActive: ${viewWindow.isWindowActive()}; bPaused: ${player.bPaused}`, 'debug2');
 }
 
 function resumeGameClock() {
 	_testScreenSizeAndStartTheGame();
+	game.lastTime = performance.now();
+	game.isRunning = true;
+	gameLoop();
 	_debugOutput(`isWindowActive: ${viewWindow.isWindowActive()}; bPaused: ${player.bPaused}`, 'debug2');
 }
 
@@ -177,7 +180,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
    */
   var _loadLevel = function(level){
 
-    clearInterval(game.timer);
     game.isRunning = false;
 
     sLevelstring = level.replace(".map", ""); // sets global string
@@ -263,11 +265,14 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
         if (e.which == 80) { // p
           if( player.bPaused ){		// TODO do not respond to mouselook when paused
             _testScreenSizeAndStartTheGame();
+            game.lastTime = performance.now();
+			game.isRunning = true;
+			gameLoop();
             player.bPaused = false;
 			secondDisplay.style.setProperty('opacity', '0%')
 			secondDisplay.innerHTML = '';
           } else {
-            clearInterval(game.timer);		// NOTE TODO i think something about my module design is making this
+//            clearInterval(game.timer);		// NOTE TODO i think something about my module design is making this
             game.isRunning = false;
             player.bPaused = true;				// clearInterval() not work, it isn't pausing as fully as the non-module version
 			secondDisplay.style.setProperty('opacity', (enableOverlay ? '70%' : '0%'))
@@ -538,7 +543,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     },
 
     // called once per frame, handles movement computation
-    move: function(viewX, viewY){
+    move: function(viewX, viewY, deltaTime){
 
       if(player.bTurnLeft){
         player.ang -= 0.05;
@@ -548,13 +553,13 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
         player.ang += 0.05;
       }
 
-      let fMoveFactor = player.bRunning ? 0.2 : 0.1;
+      let playerSpeed = player.bRunning ? 0.012 : 0.006;	// ~3 unit/sec @ 60 physics fps
 
 
       let deltaXDir = 0;
       let deltaYDir = 0;
-      let deltaX = ( viewX + 5.0 * 0.0051 ) * fMoveFactor;
-      let deltaY = ( viewY + 5.0 * 0.0051 ) * fMoveFactor;
+      let deltaX = viewX * playerSpeed * deltaTime;
+      let deltaY = viewY * playerSpeed * deltaTime;
       let totalX = 0;
       let totalY = 0;
 
@@ -587,6 +592,8 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
         totalX += deltaX * deltaXDir;
         totalY += deltaY * deltaYDir;
       }
+
+      _debugOutput(`deltaX: ${deltaX}; deltaY: ${deltaY};`, 'debug2');
 
       let newX = player.x + totalX;
       let newY = player.y + totalY;
@@ -639,6 +646,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
 	let canvasFontSize = hiRes ? 3 : 6;
 
+		// TODO NOTE could set different font color...i think, to do more things!
 	canvasContext.font = `${canvasFontSize}px "Consolas", Courier, monospace`;
 
 	// Measure a string containing full height typography extensions
@@ -683,8 +691,9 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 	viewWindow.canvas = canvas;
 	viewWindow.canvasContext = canvasContext;
   	viewWindow.clearCanvas = () => canvasContext.clearRect(0, 0, canvas.width, canvas.height);
-//	viewWindow.canvasText = (text, x, y, maxWidth) => canvasContext.strokeText(text, x, y, maxWidth);
-  	viewWindow.canvasText = (text, x, y, maxWidth) => canvasContext.fillText(text, x, y, maxWidth);
+	viewWindow.canvasText = (text, x, y, fill = true, maxWidth) => {
+		fill ? canvasContext.fillText(text, x, y, maxWidth) : canvasContext.strokeText(text, x, y, maxWidth)
+	};
   	viewWindow.canvasFontSize = canvasFontSize;
   	viewWindow.canvasFontHeight = fontHeight;
   	viewWindow.canvasFontWidth = fontWidth;
@@ -738,20 +747,22 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 		// generate char to unicode lookup
 		for (const [rawChar, code] of codePointLookup.entries()) {
 			CHAR_TO_CODE[rawChar] = code;
-		}
+		}	// FOLLOWUP i don't think this is ever faster than charCodeAt(0)
 		Object.freeze(CHAR_TO_CODE);
 
 		WALL_TILE = new Uint16Array(Math.max(...charLookup.keys()));
 		WALL_TILE.fill(0);
 		"TX#$CWU".split('').forEach(char => WALL_TILE[char.charCodeAt(0)] = true);
-    });
+    }).then(() => {
 
-	// pauses, then starts the game loop
-    _testScreenSizeAndStartTheGame();		// NOTE moving this func call here from _loadLevel might break changing levels....maybe
-    window.addEventListener("resize", function(){		// to FIX we might need to call main() from here, instead of end of _testScreenSizeAndStartTheGame()
-      clearInterval(game.timer);
-      game.isRunning = false;
-      _testScreenSizeAndStartTheGame();
+		// pauses, then starts the game loop
+    	_testScreenSizeAndStartTheGame();		// NOTE moving this func call here from _loadLevel might break changing levels....maybe
+    	window.addEventListener("resize", function(){		// to FIX we might need to call main() from here, instead of end of _testScreenSizeAndStartTheGame()
+      	game.isRunning = false;
+      	_testScreenSizeAndStartTheGame();
+		game.lastTime = performance.now();
+		game.isRunning = true;
+		gameLoop();
     });
 
 	viewWindow.outputEl.style.display = showText ? 'inline-block' : 'none';
@@ -759,6 +770,10 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     // NOTE must be called after _testScreenSizeAndStartTheGame, because that sets up final screen height
 	viewWindow.buffer = new Uint16Array(viewWindow.width * Math.ceil(viewWindow.height));
 	setupCanvas();
+		game.isRunning = true;
+		gameLoop();
+
+    });
   };
 
   function _convertAssetsToUnicode(asset) {
@@ -945,7 +960,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 // 	  viewWindow.height = Math.ceil((viewWindow.width * fAdjustedAspectRatio - 1) / 2) * 2 + 1;
 // 	viewWindow.height = Math.floor(viewWindow.width * fAdjustedAspectRatio / 2) * 2;
 // 	viewWindow.height = 85;
-      main();
+      // main();		// moved to init()
     }
   };
 
