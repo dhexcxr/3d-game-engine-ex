@@ -286,7 +286,7 @@ function raycaster() {
 
 		switch (sWallFaceDirection) {
 			case 'N': xStart = -2, xEnd = 2;
-						yStart = -1, yEnd = -1;	break;
+						yStart = -1, yEnd = -2;	break;
 
 			case 'S': xStart = -2, xEnd = 2;
 						yStart = 1, yEnd = 2; break;
@@ -301,8 +301,8 @@ function raycaster() {
 							// Look at current tile and its immediate neighbors for a light
 		for (let sx = xStart; sx <= xEnd; sx++) {
 			for (let sy = yStart; sy <= yEnd; sy++) {
-				const lightX = Math.min(Math.max(map_x + sx, 0), 15);
-				const lightY = Math.min(Math.max(map_y + sy, 0), 15);
+				const lightX = Math.min(Math.max(map_x + sx, 0), map.width - 1);
+				const lightY = Math.min(Math.max(map_y + sy, 0), map.height - 1);
 
 				const ceilLookupIndex = lightY * map.width + lightX;
 
@@ -469,6 +469,26 @@ function raycaster() {
 					const lightY = Math.min(Math.max(floorMapY + sy, 0), 15);
 
 					const ceilLookupIndex = lightY * map.width + lightX;
+// TODO NOTE next thing, process map on load, for every tile, build array with x,y of all nearby lights
+	// then we won't have to do this searching, looping through sx, sy, and looking at the map.tiles array
+	// it will just be: get list of lights in range for this tile
+		// calculate dx, dy for this pixel to this light
+		// continue
+	// oh yea, this should account for walls too
+		// so we don't have to do the dynamic thing for every floor and wall pixel....maybe
+	// FURTHER IDEAS
+		// create a second buffer for screen light map
+		// use that to set color of text
+			// though in DOM that will be like, a div per horizontal color or something
+			// and with Canvas that'll be lots of setting canvas settings I think
+				// or maybe it was text settings, something like that
+			// and I doubt either one of those is "cheap" in processing time
+		// OOOoo!, I could use strokeText() to draw outlines
+			// so it'll be darker!
+			// that's an extra 4 shade of darkness already
+		// ok, first test, it seems to make some things brighter
+			// will need some fiddling with to figure out how to use it right
+					// if (map.tiles[lightY * map.width + lightX] === ",") {
 					if (map.tiles[ceilLookupIndex] === ",".charCodeAt(0)
 							|| (map.tiles[ceilLookupIndex] === "o".charCodeAt(0)	// creepy glow from floor holes
 								&& (sx >= -1 || sx <= 1)
