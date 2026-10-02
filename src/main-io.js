@@ -1,6 +1,6 @@
 // main i/o
 
-export {_debugOutput, _mh, brightness, init, viewWindow, map, charLookup};
+export {_debugOutput, _mh, brightness, init, viewWindow, map, charLookup, codePointLookup, CHAR_CACHE, CHAR_TO_CODE};
 
 import {game, main, player} from './main-game-engine.js';
 
@@ -10,7 +10,11 @@ const secondDisplay = document.querySelector('#seconddisplay')	// used for overl
 let enableOverlay = false;
 let enableBackgroundRun = true
 
-const charLookup = new Map;
+const charLookup = new Map();
+const codePointLookup = new Map();
+const CHAR_CACHE = new Array();
+const CHAR_TO_CODE = {};
+
 let brightness = ["\u00A0", "░", "▒", "▓", "█"];
 
 // Update status when the user switches tabs or minimizes the window
@@ -196,7 +200,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
     var levelLoaded = loadScriptAsync(level, sLevelstring);
 
-    levelLoaded.then(function(){		// NOTE TODO this module should just interact with the real world
+    return levelLoaded.then(function() {		// NOTE TODO this module should just interact with the real world
     										// this func for example, just load the map/level data
     										// then a system module will take that data and set the player X/Y/Ang
     										// generate the proper sprites coordinates, etc
@@ -579,7 +583,8 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       	// that will fix the issue with only being allowed to move normal to the door
       let checkX = (totalX > 0) ? (newX + PLAYER_RADIUS) : (newX - PLAYER_RADIUS);
 
-      if (['.'.charCodeAt(0), ','.charCodeAt(0)].includes(map.tiles[~~player.y * map.width + ~~checkX]) /* === '.' */) {
+      if (map.tiles[~~player.y * map.width + ~~checkX] === '.'.charCodeAt(0)
+      		|| map.tiles[~~player.y * map.width + ~~checkX] === ','.charCodeAt(0)) {
       	player.x = newX;
 	  } else if (map.tiles[~~player.y * map.width + ~~checkX] === 'X'		// check for door tiles so we can go half way into the tile
 	  		&& ((Math.sign(totalX) <= 0 && checkX - ~~checkX > 0.5) || (Math.sign(totalX) >= 0 && checkX - ~~checkX < 0.5))) {
@@ -588,7 +593,8 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
       let checkY = (totalY > 0) ? (newY + PLAYER_RADIUS) : (newY - PLAYER_RADIUS);
 
-      if (['.'.charCodeAt(0), ','.charCodeAt(0)].includes(map.tiles[~~checkY * map.width + ~~player.x]) /* === '.' */) {
+      if (map.tiles[~~checkY * map.width + ~~player.x]  === '.'.charCodeAt(0)
+      		|| map.tiles[~~checkY * map.width + ~~player.x] === ','.charCodeAt(0)) {
       	player.y = newY;
 	  } else if (map.tiles[~~checkY * map.width + ~~player.x] === 'X'.charCodeAt(0)
 	  		&& ((Math.sign(totalY) >= 0 && checkY - ~~checkY < 0.5) || (Math.sign(totalY) <= 0 && checkY - ~~checkY > 0.5))) {
@@ -696,21 +702,33 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     document.getElementById("shader").addEventListener("click", () => viewWindow.nRenderMode = 2);
 
     // initial gameload
-    _loadLevel("mainlevelfile1.map");
+    _loadLevel("mainlevelfile1.map").then(() => {
 
+		// convert characters to unicode
+		brightness = _convertAssetsToUnicode(brightness);		// TODO make brightness not const, so I can reassign it just like texture
+		for (const texObj of Object.values(textures)) {
+			texObj.texture = _convertAssetsToUnicode(texObj.texture);
+		}
+		// hack to add gate chars into charLookup
+			// need to get it somewhere standardized
+		_convertAssetsToUnicode(["═", "=", "║", "|"])
+		// hack for floor and ceiling, # is ceiling only, there is also a '=' but that is already in gate chars
+		_convertAssetsToUnicode(["`", "-", "x", "#"])
+		// some weird wall type that isn't used in first level
+		_convertAssetsToUnicode("1^");
+		// create array char cache, maybe faster than map?
+		CHAR_CACHE.length = Math.max(...charLookup.keys());
+		CHAR_CACHE.fill(" ");
+		charLookup.forEach((rawChar, rawCharCode) => CHAR_CACHE[rawCharCode] = rawChar);
 
-	// convert characters to unicode
-	brightness = _convertAssetsToUnicode(brightness);		// TODO make brightness not const, so I can reassign it just like texture
-	for (const texObj of Object.values(textures)) {
-		texObj.texture = _convertAssetsToUnicode(texObj.texture);
-	}
-	// hack to add gate chars into charLookup
-		// need to get it somewhere standardized
-	_convertAssetsToUnicode(["═", "=", "║", "|"])
-	// hack for floor and ceiling, # is ceiling only, there is also a '=' but that is already in gate chars
-	_convertAssetsToUnicode(["`", "-", "x", "#"])
-	// some weird wall type that isn't used in first level
-	_convertAssetsToUnicode("1^");
+		// frozen object, maybe even faster?
+		// generate char to unicode lookup
+		for (const [rawChar, code] of codePointLookup.entries()) {
+			CHAR_TO_CODE[rawChar] = code;
+		}
+		Object.freeze(CHAR_TO_CODE);
+    });
+
 	// pauses, then starts the game loop
     _testScreenSizeAndStartTheGame();		// NOTE moving this func call here from _loadLevel might break changing levels....maybe
     window.addEventListener("resize", function(){		// to FIX we might need to call main() from here, instead of end of _testScreenSizeAndStartTheGame()
@@ -766,7 +784,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     var x = +(_randomIntFromInterval(0, map.width)) + 0;
     var y = +(_randomIntFromInterval(0, map.height)) - 0;
 
-    while( map.tiles[ ~~(y) * map.width + ~~(x)] != "." .charCodeAt(0)){
+    while (map.tiles[ ~~(y) * map.width + ~~(x)] !== '.'.charCodeAt(0)) {
       x = +(_randomIntFromInterval(0, map.width)) + 1;
       y = +(_randomIntFromInterval(0, map.height)) - 1;
     }
@@ -809,7 +827,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     var sOutput = new Array(viewWindow.buffer.length);
     for(var screnCol = 0; screnCol < viewWindow.height; screnCol++){
       for(var viewWindowRow = 0; viewWindowRow < viewWindow.width; viewWindowRow++){
-        sOutput.push(charLookup.get(brightness[0]));
+        sOutput.push(CHAR_CACHE[brightness[0]]);
       }
       sOutput.push("<br>");
     }

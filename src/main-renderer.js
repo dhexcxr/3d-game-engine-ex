@@ -1,7 +1,7 @@
 export {_r, _rh};
 
 import {game, player} from './main-game-engine.js';
-import {_debugOutput, brightness, viewWindow, map, charLookup} from './main-io.js';
+import {_debugOutput, brightness, viewWindow, map, charLookup, codePointLookup, CHAR_CACHE} from './main-io.js';
 
 /*
 	original top level funcs:
@@ -99,7 +99,7 @@ let _r = {
     if( sOverlay && sOverlay[nIndex] != 0){
 	return sOverlay[nIndex];
     } else {
-	return charLookup.get(sInput[nIndex]);
+		return CHAR_CACHE[sInput[nIndex]];
     }
     return '';
   },
@@ -156,8 +156,11 @@ let _r = {
 
 // TODO change this to an array.from() line, using the mapFn parameter, see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from
       for(var rpix = 0; rpix < viewWindow.width; rpix++) {      // loops through each rows of pixels
+      // TODO change removeFrom to a dense array with the "removed" elements as undefined
+			  // then we can just perform a regular array lookup (instead of includes)
+			  // whcih should be faster
         if (!removeFrom.includes(rpix)) {        // print only if the pixel is in the list of pixels to print
-          pfOutput.push(charLookup.get(oInput[globalPrintIndex]) );
+          pfOutput.push(CHAR_CACHE[oInput[globalPrintIndex]] );
         }
 
         globalPrintIndex++;

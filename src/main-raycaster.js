@@ -3,7 +3,7 @@
 export {raycaster};
 
 import {game, player, memoize} from './main-game-engine.js';
-import {_debugOutput, brightness, viewWindow, map} from './main-io.js';
+import {_debugOutput, brightness, viewWindow, map, CHAR_CACHE} from './main-io.js';
 import {_r, _rh} from './main-renderer.js';
 
 const absSign = (x) => (x === 0 ? 1 : Math.sign(x));	// RENDERER only
@@ -379,7 +379,7 @@ function raycaster() {
 				}, 0);
 				const clampedLight = Math.min(Math.max(wallLight, 0.0), 0.999);
 				const lightBright = ~~(clampedLight * 4);
-                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[String.fromCharCode(sWalltype)], fSampleX, fSampleY), lightBright);
+                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY), lightBright);
 	    	} else if(ceilThings.length > 0) {
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
                 	ceilThings[0].atObjBoundary		// at vertical boundary
@@ -417,7 +417,7 @@ function raycaster() {
               // Render Texture Directly
               if( viewWindow.nRenderMode == 1 ){
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
-                	_r.getSamplePixel(textures[String.fromCharCode(sWalltype)], fSampleX, fSampleY);
+                	_r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY);
               } else if( viewWindow.nRenderMode == 2 ) {		// Render Texture with Shading
 				const wallLight = lightCalcs.reduce((totalLight, lightCalc) => {
 					return totalLight + lightCalc(fSampleY);
@@ -427,7 +427,7 @@ function raycaster() {
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
                 	_rh.renderWall(fDistanceToWall,
                 		sWallFaceDirection,
-                		_r.getSamplePixel(textures[String.fromCharCode(sWalltype)], fSampleX, fSampleY), lightBright);
+                		_r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY), lightBright);
               } else if( viewWindow.nRenderMode == 0 ) {	// old, solid-style shading
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
                 	_rh.renderSolidWall(fDistanceToWall, isBoundary);
@@ -499,6 +499,7 @@ function raycaster() {
 
 						if (distSq < MAX_RADIUS_SQ
 								&& checkDynamicLOS(floorX, floorY, lightX + 0.5, lightY + 0.5)) {
+// 							closestLightFloorDist = distSq;
 							const ratio = distSq / MAX_RADIUS_SQ;
 							floorLight += (1.0 - ratio) * (1.0 - ratio) * (map.tiles[ceilLookupIndex] === "o".charCodeAt(0)
 																				? 0.6
@@ -550,7 +551,7 @@ function checkDynamicLOS(startX, startY, endX, endY) {
 		const checkY = Math.floor(startY + (endY - startY) * t);
 
 		// Sample the map
-		const tile = map.tiles[checkY * map.width + checkX];
+		const tile = map.tiles[checkY * map.width + checkX];	// TODO NOTE make an array of block/wall tiles, so this is just a lookup
 		if (tile > 0 && "TX#$CWU".split('').map(char => char.charCodeAt(0)).includes(tile)) {
 			return false; // Intersection found, wall blocks light
 		}
