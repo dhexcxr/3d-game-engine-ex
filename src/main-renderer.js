@@ -481,7 +481,7 @@ let _r = {
   var _rh = {		// TODO this should probably be a class, then it can hold all its "global" variables as well
 
     renderWall: function(fDistanceToWall, sWallFaceDirection, pixel, lightBright = 0) {
-
+						// TODO try making lightBright -1, and clamping the bottom too
       var fill = "";
       let pixelBright;
       let startBright = -1;
@@ -660,11 +660,6 @@ let _r = {
 
 	  // TODO do something better with this
       // draw floor, in different shades
-      let b = 1 - (screenRow -viewWindow.height / 2) / (viewWindow.height / 2);
-	  let bb = 1 - ((2  * screenRow - viewWindow.height) / viewWindow.height);
-      let bbb = 1 - (screenRow - viewWindow.height / (2 - game.fLooktimer * 0.15)) / (viewWindow.height / (2 - game.fLooktimer * 0.15));
-	  let bbbb = ((0.15 * game.fLooktimer - 2) * screenRow) / viewWindow.height + 2;
-
 	  if (lightBright != 0) {
 
 	    let pixelBright = 0;
@@ -673,7 +668,6 @@ let _r = {
 	  	fill = brightness[Math.min(Math.max(startBright + pixelBright + lightBright, 0), 4)];
 
 	  } else {
-// 	  	let b = 1 - ((2  * screenRow - viewWindow.height) / viewWindow.height);
 		let b = ((0.15 * game.fLooktimer - 2) * screenRow) / viewWindow.height + 2;
 
 	  	if(b < 0.25 ) {

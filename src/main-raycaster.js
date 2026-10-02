@@ -428,7 +428,6 @@ function raycaster() {
 						const distSq = dx * dx + dy * dy;
 						
 						if (distSq < MAX_RADIUS_SQ /* && distSq < closestLightFloorDist */) {
-// 							closestLightFloorDist = distSq;
 							const ratio = distSq / MAX_RADIUS_SQ;
 							floorLight += (1.0 - ratio) * (1.0 - ratio) * (map.tiles[ceilLookupIndex] === "o".charCodeAt(0)
 																				? 0.6
