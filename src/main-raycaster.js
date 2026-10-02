@@ -238,12 +238,44 @@ function raycaster() {
 			}
 		}
 
+		// calc top and bottom of wall, the top being the ceiling
+	        var wallHeight = Math.round(viewWindow.height / fDistanceToWall);
+	        var nCeiling = viewWindow.skew - wallHeight / 2;
+		var nFloor   = viewWindow.skew + wallHeight / 2;
+
+		// calc top of tower, which is higher than ceiling
+		let nTowerCeil = viewWindow.skew - wallHeight / 2 - wallHeight;
+	        let nTowerHeight = nFloor - nTowerCeil;
+
+			// technique from original wolf3d code (I think), and also this guy: https://github.com/permadi-com/ray-cast/blob/master/demo/1/sample1.js
+			// TODO put all these types of calcs in each "hit object" code so it doesn't run all the time
+		let nDoorHeight = Math.round(viewWindow.height / fDistToDoor)	// TODO change the gate render, make the blockV on the left and right edges
+		let nDoorFrameTop = viewWindow.skew - nDoorHeight / 2;			//  (maybe in the center, like striped), and blockH in the center
+		let nDoorFrameBot = viewWindow.skew + nDoorHeight / 2;			// Second, try to actually give it an upper door jamb
+				        										// ALSO, standardize Door vs Gate in var and func names
+
+
+
+        // the spot where the wall was hit
+        viewWindow.depthBuffer[screenColumn] = fDistanceToWall;
+
+
+
+
+/*--------LIGHTS--------*/
+
 		// check if nearby tiles are lights, so we can brighten walls, etc
 		closestLightWallDist = Infinity;
 
 		let wallLight = 0;		// NOTE TODO these should go into an object, probably
-		let lightFromCeil = false;
-		let lightFromHole = false;
+		let lightFromCeilInColumn = false;		// TODO next, probably put togethet these objects to get lights working how i want them
+		let lightFromHoleInColumn = false;
+		let ceilLightInTile = false;
+		let floorLightInTile = false;
+
+		const invLightRadius = 1 / MAX_RADIUS_SQ;
+
+		let lightCalcs = new Array(9);
 
 		let xStart = 0;
 		let xEnd = 0;
@@ -272,46 +304,41 @@ function raycaster() {
 
 				const ceilLookupIndex = lightY * map.width + lightX;
 
-				lightFromCeil = map.tiles[ceilLookupIndex] === ",".charCodeAt(0);
-				lightFromHole = map.tiles[ceilLookupIndex] === "o".charCodeAt(0);
+				ceilLightInTile = map.tiles[ceilLookupIndex] === ",".charCodeAt(0);
+				floorLightInTile = map.tiles[ceilLookupIndex] === "o".charCodeAt(0);
 
-				if (lightFromCeil
-						|| (lightFromHole	// creepy glow from floor holes
+				lightFromCeilInColumn = lightFromCeilInColumn || ceilLightInTile;
+				lightFromHoleInColumn = lightFromHoleInColumn || floorLightInTile;
+
+
+				// if (map.tiles[lightY * map.width + lightX] === ",") {
+				if (ceilLightInTile
+						|| (floorLightInTile	// creepy glow from floor holes
 							&& (sx >= -1 || sx <= 1)
 							&& (sy >= -1 || sy <= 1))) {	// TODO classify all tile types in charLookup or something, so we can do constant things like === WALL_TILE
 					const dx = exactHitX - (lightX + 0.5);
-					const dy = exactHitY - (lightY + 0.5);
+					const dy = exactHitY - (lightY + 0.5);	// TODO we might need to calc the yDist from light to wall in here, to better blend ceil vs floor
 				const distSq = dx * dx + dy * dy;
-			
-					if (distSq < MAX_RADIUS_SQ) {
-						const ratio = distSq / MAX_RADIUS_SQ;
-						wallLight += (1.0 - ratio) * (1.0 - ratio) * (map.tiles[ceilLookupIndex] === "o".charCodeAt(0)
-																			? 0.6
-																			: 0.8);
+
+					const lightPreCalc = 1 - (distSq * invLightRadius);
+
+					lightCalcs.push((fSampleY) => {
+						const vertDistSq = (lightFromCeilInColumn ? fSampleY * fSampleY : 0
+													+ lightFromHoleInColumn ? (1 - fSampleY) * (1 - fSampleY) : 0)
+												/ (lightFromCeilInColumn && lightFromHoleInColumn ? 2 : 1);
+
+						if (distSq + vertDistSq < MAX_RADIUS_SQ) {
+							const lightCalc = lightPreCalc - (vertDistSq * invLightRadius);
+
+							return lightCalc * lightCalc * (map.tiles[ceilLookupIndex] === "o".charCodeAt(0)
+																? 0.6
+																: 0.6);
 					}
-				}
+				});
 		  	}
 		}
-		
-		// Clamp between 0 and 5
-		const clampedLight = Math.min(Math.max(wallLight, 0.0), 0.999);
-
-		// calc top and bottom of wall
-        var wallHeight = Math.round(viewWindow.height / fDistanceToWall);
-        var nCeiling = viewWindow.skew - wallHeight / 2;
-		var nFloor   = viewWindow.skew + wallHeight / 2;
-
-        // calc top of tower, higher than ceiling
-        let nTower = viewWindow.skew - wallHeight / 2 - wallHeight;
-
-			// technique from original wolf3d code (I think), and also this guy: https://github.com/permadi-com/ray-cast/blob/master/demo/1/sample1.js
-			// TODO put all these types of calcs in each "hit object" code so it doesn't run all the time
-		let nDoorHeight = Math.round(viewWindow.height / fDistToDoor)	// TODO change the gate render, make the blockV on the left and right edges
-        let nDoorFrameTop = viewWindow.skew - nDoorHeight / 2;			//  (maybe in the center, like striped), and blockH in the center
-        let nDoorFrameBot = viewWindow.skew + nDoorHeight / 2;			// Second, try to actually give it an upper door jamb
-				        										// ALSO, standardize Door vs Gate in var and func names
-        // the spot where the wall was hit
-        viewWindow.depthBuffer[screenColumn] = fDistanceToWall;
+	}
+/*-----end-LIGHTS------*/
 
 
         // draw the columns one screenheight-pixel at a time
@@ -328,12 +355,16 @@ function raycaster() {
 
             // case of tower block (the bit that reaches into the ceiling)
             if(sWalltype == "T".charCodeAt(0)
-            		&& screenRow > nTower
+            		&& screenRow > nTowerCeil
             		&& (sObjectType !== ",".charCodeAt(0)
             			|| fDistanceToObject >= fDistanceToWall
             			|| (sObjectType === ",".charCodeAt(0) && nObjectCeiling <= nCeiling && screenRow > nObjectCeiling))) {
-            	let fSampleY = ((screenRow - nTower) / (nCeiling - nTower));
-            	const lightBright = ~~(clampedLight * (lightFromCeil ? 1 - fSampleY / 4 : fSampleY) * 4);
+            	let fSampleY = ((screenRow - nTowerCeil) / (nCeiling - nTowerCeil));
+				const wallLight = lightCalcs.reduce((totalLight, lightCalc) => {
+					return totalLight + lightCalc(fSampleY);
+				}, 0);
+				const clampedLight = Math.min(Math.max(wallLight, 0.0), 0.999);
+				const lightBright = ~~(clampedLight * 4);
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[String.fromCharCode(sWalltype)], fSampleX, fSampleY), lightBright);
 	    	} else if(ceilThings.length > 0) {
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
@@ -374,7 +405,11 @@ function raycaster() {
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
                 	_r.getSamplePixel(textures[String.fromCharCode(sWalltype)], fSampleX, fSampleY);
               } else if( viewWindow.nRenderMode == 2 ) {		// Render Texture with Shading
-                const lightBright = ~~(clampedLight * (lightFromCeil ? 1 - fSampleY / 4 : fSampleY) * 4);
+				const wallLight = lightCalcs.reduce((totalLight, lightCalc) => {
+					return totalLight + lightCalc(fSampleY);
+				}, 0);
+				const clampedLight = Math.min(Math.max(wallLight, 0.0), 0.999);
+				const lightBright = ~~(clampedLight * 4);
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
                 	_rh.renderWall(fDistanceToWall,
                 		sWallFaceDirection,
