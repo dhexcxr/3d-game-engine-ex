@@ -1,8 +1,8 @@
 // main i/o
 
-export {_debugOutput, _mh, init, viewWindow, map, charLookup};
+export {_debugOutput, _mh, brightness, init, viewWindow, map, charLookup};
 
-import {game, brightness, main, player} from './main-game-engine.js';
+import {game, main, player} from './main-game-engine.js';
 
 let gameResumeGuardOn = false;
 
@@ -11,6 +11,8 @@ let enableOverlay = false;
 let enableBackgroundRun = true
 
 const charLookup = new Map;
+let brightness = ["\u00A0", "░", "▒", "▓", "█"];
+
 // Update status when the user switches tabs or minimizes the window
 document.addEventListener('visibilitychange', () => {		// NOTE TODO i can get what I think is a race condition 
 	if(gameResumeGuardOn || player.bPaused || enableBackgroundRun) {
@@ -200,6 +202,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     										// generate the proper sprites coordinates, etc
       // updates the level map and dimensions
       map = window[sLevelstring];
+      map.tiles = _convertAssetsToUnicode(map.tiles);		// TODO change this to map.tileCodes or something
 	  // keep track of map tiles visited by the rays, help cull sprites without trig
       map.visitedTiles = new Uint32Array(map.width * map.height);	// renderer and raycaster
 
@@ -482,7 +485,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
           player.y += ( Math.cos(player.ang) + 5.0 * 0.0051 ) * oDifferences.x * 0.05;
 
           // converts coordinates into integer space and check if it is a wall (!.), if so, reverse
-          if(map.tiles[~~(player.y) * map.width + ~~(g)] != "."){
+          if(map.tiles[~~(player.y) * map.width + ~~(g)] != ".".charCodeAt(0)){
             _mh.checkExit();
             player.x += ( Math.sin(player.ang) + 5.0 * 0.0051 ) * oDifferences.x * 0.05;
             player.y -= ( Math.cos(player.ang) + 5.0 * 0.0051 ) * oDifferences.x * 0.05;
@@ -493,7 +496,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
           player.y += ( Math.sin(player.ang) + 5.0 * 0.0051 ) * -oDifferences.y * 0.05;
 
           // converts coordinates into integer space and check if it is a wall (!.), if so, reverse
-          if(map.tiles[~~(player.y) * map.width + ~~(player.x)] != "."){
+          if(map.tiles[~~(player.y) * map.width + ~~(player.x)] != ".".charCodeAt(0)){
             _mh.checkExit();
             player.x -= ( Math.cos(player.ang) + 5.0 * 0.0051 ) * -oDifferences.y * 0.05;
             player.y -= ( Math.sin(player.ang) + 5.0 * 0.0051 ) * -oDifferences.y * 0.05;
@@ -512,7 +515,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
     checkExit: function(){
       // if we hit an exit
-      if(map.tiles[~~(player.y) * map.width + ~~(player.x)] == "X") {		// TODO this should compare to codePoint
+      if(map.tiles[~~(player.y) * map.width + ~~(player.x)] == "X".charCodeAt(0)) {		// TODO this should compare to codePoint
         _loadLevel( map.exitsto );
       }
     },
@@ -576,7 +579,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       	// that will fix the issue with only being allowed to move normal to the door
       let checkX = (totalX > 0) ? (newX + PLAYER_RADIUS) : (newX - PLAYER_RADIUS);
 
-      if (['.', ','].includes(map.tiles[~~player.y * map.width + ~~checkX]) /* === '.' */) {
+      if (['.'.charCodeAt(0), ','.charCodeAt(0)].includes(map.tiles[~~player.y * map.width + ~~checkX]) /* === '.' */) {
       	player.x = newX;
 	  } else if (map.tiles[~~player.y * map.width + ~~checkX] === 'X'		// check for door tiles so we can go half way into the tile
 	  		&& ((Math.sign(totalX) <= 0 && checkX - ~~checkX > 0.5) || (Math.sign(totalX) >= 0 && checkX - ~~checkX < 0.5))) {
@@ -585,9 +588,9 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
       let checkY = (totalY > 0) ? (newY + PLAYER_RADIUS) : (newY - PLAYER_RADIUS);
 
-      if (['.', ','].includes(map.tiles[~~checkY * map.width + ~~player.x]) /* === '.' */) {
+      if (['.'.charCodeAt(0), ','.charCodeAt(0)].includes(map.tiles[~~checkY * map.width + ~~player.x]) /* === '.' */) {
       	player.y = newY;
-	  } else if (map.tiles[~~checkY * map.width + ~~player.x] === 'X'
+	  } else if (map.tiles[~~checkY * map.width + ~~player.x] === 'X'.charCodeAt(0)
 	  		&& ((Math.sign(totalY) >= 0 && checkY - ~~checkY < 0.5) || (Math.sign(totalY) <= 0 && checkY - ~~checkY > 0.5))) {
 	  	player.y = newY;
 	  }
@@ -696,7 +699,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
 
 	// convert characters to unicode
-	_convertAssetsToUnicode(brightness);		// TODO make brightness not const, so I can reassign it just like texture
+	brightness = _convertAssetsToUnicode(brightness);		// TODO make brightness not const, so I can reassign it just like texture
 	for (const texObj of Object.values(textures)) {
 		texObj.texture = _convertAssetsToUnicode(texObj.texture);
 	}
@@ -705,7 +708,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 	_convertAssetsToUnicode(["═", "=", "║", "|"])
 	// hack for floor and ceiling, # is ceiling only, there is also a '=' but that is already in gate chars
 	_convertAssetsToUnicode(["`", "-", "x", "#"])
-	// some weird wall type that isn's used in first level
+	// some weird wall type that isn't used in first level
 	_convertAssetsToUnicode("1^");
 	// pauses, then starts the game loop
     _testScreenSizeAndStartTheGame();		// NOTE moving this func call here from _loadLevel might break changing levels....maybe
@@ -723,20 +726,16 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
   };
 
   function _convertAssetsToUnicode(asset) {
-//   	let rawChar;
   	let rawCodePoint;
   	if(Array.isArray(asset)) {
-  		for (let i = 0; i < asset.length; i++) {
-  			rawCodePoint = asset[i].charCodeAt(0);
-  			charLookup.set(rawCodePoint, asset[i]);
-  			asset[i] = rawCodePoint;
-  		}
-  	} else if (typeof asset === 'string' || asset instanceof String) {
-  		return [...asset].map(char => {
+		return Uint16Array.from(asset.map(char => {
   			rawCodePoint = char.charCodeAt(0)
 			charLookup.set(rawCodePoint, char);
   			return rawCodePoint;
-  		});
+  		}));
+  	} else if(typeof asset === 'string' || asset instanceof String) {
+  		asset = _convertAssetsToUnicode(asset.split(''));
+  		return asset;
   	} else if(asset instanceof Map) {
   		asset.forEach((subAsset, subAssetKey, assetMap) => {
   			assetMap.set(subAssetKey, _convertAssetsToUnicode(subAsset));
@@ -766,7 +765,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     var x = +(_randomIntFromInterval(0, map.width)) + 0;
     var y = +(_randomIntFromInterval(0, map.height)) - 0;
 
-    while( map.tiles[ ~~(y) * map.width + ~~(x)] != "." ){
+    while( map.tiles[ ~~(y) * map.width + ~~(x)] != "." .charCodeAt(0)){
       x = +(_randomIntFromInterval(0, map.width)) + 1;
       y = +(_randomIntFromInterval(0, map.height)) - 1;
     }

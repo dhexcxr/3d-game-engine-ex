@@ -1,7 +1,7 @@
 export {_r, _rh};
 
-import {game, brightness, player} from './main-game-engine.js';
-import {_debugOutput, viewWindow, map, charLookup} from './main-io.js';
+import {game, player} from './main-game-engine.js';
+import {_debugOutput, brightness, viewWindow, map, charLookup} from './main-io.js';
 
 /*
 	original top level funcs:
@@ -226,7 +226,7 @@ let _r = {
         var fCollideY2 = +(sprite.y) + 0.425; // 0.25
         var fCollideX2 = +(sprite.x) - 0.65; //0.5
 
-        if( map.tiles[ ~~(fCollideY) * map.width + ~~(fCollideX)] != "." || map.tiles[ ~~(fCollideY2) * map.width + ~~(fCollideX2)] != "." ){
+        if( map.tiles[ ~~(fCollideY) * map.width + ~~(fCollideX)] != ".".charCodeAt(0) || map.tiles[ ~~(fCollideY2) * map.width + ~~(fCollideX2)] != ".".charCodeAt(0) ){
 
           sprite.stuckcounter++;
 
