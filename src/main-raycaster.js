@@ -60,6 +60,9 @@ function raycaster() {
 
         var bHitWall = false;
 
+        let bHitOoB = false;
+        let fDistanceToOoB = 0;
+
         var bInObject = false;
 
         var sWalltype = "#";
@@ -133,7 +136,9 @@ function raycaster() {
           // test if ray hits out of bounds
           if(map_x < 0 || map_x >= map.width || map_y < 0 || map_y >= map.height) {
 //             bHitWall = true; // no wall there, but with this enabled we paint a wall, but can still go through it
-            fDistanceToWall = viewWindow.depth;
+			bHitOoB = true;
+	    	fDistanceToWall = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
+            fDistanceToOoB = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
             bBreakLoop = true;
           }
 
@@ -206,13 +211,13 @@ function raycaster() {
 		let exactHitY = 0;
 
 		if(hit_NS_wall) {		// NS wall	// sin(RayAng) gives normalized Ray Vector
-			fSampleX = player.y + fDistanceToWall * rayDirY;
+			fSampleX = player.y + (bHitOoB ? fDistanceToOoB : fDistanceToWall) * rayDirY;
 			sWallFaceDirection = step_x === 1 ? "W" : "E";
 
 			exactHitX = map_x + (sWallFaceDirection === 'W' ? 0 : 1);
 			exactHitY = fSampleX;
 		} else {
-			fSampleX = player.x + fDistanceToWall * rayDirX;
+			fSampleX = player.x + (bHitOoB ? fDistanceToOoB : fDistanceToWall) * rayDirX;
 			sWallFaceDirection = step_y === 1 ? "N" : "S";
 
 			exactHitX = fSampleX;
