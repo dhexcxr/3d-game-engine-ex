@@ -489,7 +489,7 @@ let _r = {
       let pixelBright;
       let startBright = -1;
 
-      pixel = charLookup.get(pixel);		// Unit16Array functionality
+      pixel = CHAR_CACHE[pixel];		// Unit16Array functionality
       if( sWallFaceDirection === "N" || sWallFaceDirection === "S" ){
 
         if(fDistanceToWall < viewWindow.depth / 5.5 ){

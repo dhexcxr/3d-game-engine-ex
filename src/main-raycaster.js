@@ -3,7 +3,7 @@
 export {raycaster};
 
 import {game, player, memoize} from './main-game-engine.js';
-import {_debugOutput, brightness, viewWindow, map, charLookup, CHAR_CACHE, WALL_TILE, CHAR_TO_CODE} from './main-io.js';
+import {_debugOutput, brightness, viewWindow, map, charLookup, CHAR_CACHE, WALL_TILE} from './main-io.js';
 import {_r, _rh} from './main-renderer.js';
 
 const absSign = (x) => (x === 0 ? 1 : Math.sign(x));	// RENDERER only
@@ -329,29 +329,28 @@ function raycaster() {
 					lightCalcs.push(((currentCeilLightTile, currentFloorLightTile) => {
 						return (fSampleY) => {
 							let totalLight = 0;
-						
+
 							if (currentCeilLightTile) {
 								const vertDistSq = fSampleY * fSampleY;
-
-						if (distSq + vertDistSq < MAX_RADIUS_SQ) {
-							const lightCalc = lightPreCalc - (vertDistSq * invLightRadius);
+								if (distSq + vertDistSq < MAX_RADIUS_SQ) {
+									const lightCalc = lightPreCalc - (vertDistSq * invLightRadius);
 									totalLight += lightCalc * lightCalc * 0.8;
 								}
 							}
 
 							if (currentFloorLightTile) {
 								const vertDistSq = (1 - fSampleY) * (1 - fSampleY);
-								
 								if (distFlSq + vertDistSq < MAX_FLR_RADIUS_SQ) {
 									const lightCalc = lightFlPreCalc - (vertDistSq * invLightFlRadius);
 									totalLight += lightCalc * lightCalc * 0.8;
-					}
-		  	}
+								}
+		  					}
 							return totalLight;
-					}})(ceilLightInTile, floorLightInTile));
+						}
+					})(ceilLightInTile, floorLightInTile));
+				}
+			}
 		}
-	}
-}
 /*-----end-LIGHTS------*/
 
 
@@ -465,8 +464,8 @@ function raycaster() {
 		    			// Look at current tile and its immediate neighbors for a light
 			for (let sx = -2; sx <= 2; sx++) {
 				for (let sy = -2; sy <= 2; sy++) {
-					const lightX = Math.min(Math.max(floorMapX + sx, 0), 15);
-					const lightY = Math.min(Math.max(floorMapY + sy, 0), 15);
+					const lightX = Math.min(Math.max(floorMapX + sx, 0), map.width - 1);
+					const lightY = Math.min(Math.max(floorMapY + sy, 0), map.height - 1);
 
 					const ceilLookupIndex = lightY * map.width + lightX;
 // TODO NOTE next thing, process map on load, for every tile, build array with x,y of all nearby lights
