@@ -378,36 +378,41 @@ function raycaster() {
 				// this version works well with skew, but is too far "below", it is rendered too low on screen
 			// const currentDist = 2 * viewWindow.height / (screenRow - viewWindow.skew);
 				// ok, i think this is it
-			const currentDist = viewWindow.height / (screenRow - viewWindow.skew);
-			
-			const floorX = player.x + rayDirX * currentDist;
-			const floorY = player.y + rayDirY * currentDist;
-			// calc world coordinates of the floor at this screen pixel
+			const currentDist = viewWindow.height / (2 * (screenRow - viewWindow.skew));
 
-			// start floor light calc
+			const distRatio = currentDist / (bHitOoB ? fDistanceToOoB : fDistanceToWall);
+			
+			// calc world coordinates of the floor at this screen pixel
+			let floorX = Math.min(Math.max(distRatio * exactHitX + (1.0 - distRatio) * player.x, 0), map.width - 1);
+			let floorY = Math.min(Math.max(distRatio * exactHitY + (1.0 - distRatio) * player.y, 0), map.height - 1);
+
+			// true map tile x and y
+			const floorMapX = Math.floor(floorX);
+			const floorMapY = Math.floor(floorY);
 			let floorLight = 0;
 			
 			// check if there is a ceiling light near this floor tile
-			let ceilLights = vHitObjects.filter(obj => obj.objType == ",");
 			closestLightFloorDist = Infinity;
-			ceilLights.forEach((ceilLight) => {
-			  // calc distance from floor at this screen pixel to center of light source
-			  const dx = floorX - (ceilLight.objX + 0.5);
-			  const dy = floorY - (ceilLight.objY + 0.5);
-			  const distSq = dx * dx + dy * dy;
-			  if (distSq < closestLightFloorDist) {
-					closestLightFloorDist = distSq;
-			  }
-			});
 
-		    if (closestLightFloorDist < MAX_RADIUS_SQ) {
-				// calc quadratic falloff
-				const ratio = closestLightFloorDist / MAX_RADIUS_SQ;
-				const falloff = (1.0 - ratio) * (1.0 - ratio);	// squared
-			
-				const lightIntensityBoost = 0.8; // Adjust max brightness of the lamp
-				floorLight += falloff * lightIntensityBoost;
-		    }
+		    			// Look at current tile and its immediate neighbors for a light
+			for (let sx = -2; sx <= 2; sx++) {
+				for (let sy = -2; sy <= 2; sy++) {
+					const ceilLightX = Math.min(Math.max(floorMapX + sx, 0), 15);
+					const ceilLightY = Math.min(Math.max(floorMapY + sy, 0), 15);
+					
+					if (map.tiles[ceilLightY * map.width + ceilLightX] === ",") {
+						const dx = floorX - (ceilLightX + 0.5);
+						const dy = floorY - (ceilLightY + 0.5);
+						const distSq = dx * dx + dy * dy;
+						
+						if (distSq < MAX_RADIUS_SQ /* && distSq < closestLightFloorDist */) {
+// 							closestLightFloorDist = distSq;
+							const ratio = distSq / MAX_RADIUS_SQ;
+							floorLight += (1.0 - ratio) * (1.0 - ratio) * 0.8;
+						}
+					}
+				}
+			}
 
 			const clampedLightFloor = Math.min(Math.max(floorLight, 0.0), 0.999);
 			const lightBrightFloor = Math.floor(clampedLightFloor * 5);
