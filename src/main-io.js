@@ -223,6 +223,18 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
       document.querySelector("body").style.color = map.color;
       document.querySelector("body").style.background = map.background;
+
+      // pre-baked light dist/intensity jitter
+      const JITTER_SIZE = map.width * map.height * 100;
+      map.JITTER_MASK = JITTER_SIZE - 1;
+
+      map.jitterTableX = new Float32Array(JITTER_SIZE);
+      map.jitterTableY = new Float32Array(JITTER_SIZE);
+
+      for (let i = 0; i < JITTER_SIZE; i++) {		// -0.2 to 0.2 range
+            map.jitterTableX[i] = (Math.random() * 0.4) - 0.2;
+            map.jitterTableY[i] = (Math.random() * 0.4) - 0.2;
+      }
     });
 
 	// NOTE TODO i think this is where the oSprite thing should be called, because at this point the level has been loaded

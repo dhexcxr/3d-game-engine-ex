@@ -488,22 +488,56 @@ function raycaster() {
 			// that's an extra 4 shade of darkness already
 		// ok, first test, it seems to make some things brighter
 			// will need some fiddling with to figure out how to use it right
-					// if (map.tiles[lightY * map.width + lightX] === ",") {
-					if (map.tiles[ceilLookupIndex] === ",".charCodeAt(0)
-							|| (map.tiles[ceilLookupIndex] === "o".charCodeAt(0)	// creepy glow from floor holes
+
+					const ceilLight = map.tiles[ceilLookupIndex] === ",".charCodeAt(0);
+					const floorHole = map.tiles[ceilLookupIndex] === "o".charCodeAt(0);
+
+					if (ceilLight
+							|| (floorHole	// creepy glow from floor holes
 								&& (sx >= -1 || sx <= 1)
 								&& (sy >= -1 || sy <= 1))) {	// TODO classify all tile types in charLookup or something, so we can do constant things like === WALL_TILE
-						const dx = floorX - (lightX + 0.5);
-						const dy = floorY - (lightY + 0.5);
-						const distSq = dx * dx + dy * dy;
+// fancy lights
+						const lightCentX = lightX + 0.5;
+						const lightCentY = lightY + 0.5;
 
-						if (distSq < MAX_RADIUS_SQ
-								&& checkDynamicLOS(floorX, floorY, lightX + 0.5, lightY + 0.5)) {
-// 							closestLightFloorDist = distSq;
-							const ratio = distSq / MAX_RADIUS_SQ;
-							floorLight += (1.0 - ratio) * (1.0 - ratio) * (map.tiles[ceilLookupIndex] === "o".charCodeAt(0)
-																				? 0.6
-																				: 0.8);	// NOTE consider turning down ceilLight intensity
+						const offset = 0.5;		// NOTE original was 0.25
+
+						// hash map coordinates to calc jitter lookup (see spacial hashing)
+						const lookupIndex = (~~(floorX * 100) + ~~(floorY * 100) * 57) & map.JITTER_MASK;
+						const noiseX = map.jitterTableX[lookupIndex];
+						const noiseY = map.jitterTableY[lookupIndex];
+
+						const lightPoints = floorHole
+							? [{ x: lightCentX + noiseX,          y: lightCentY + noiseY },          // Center
+								{ x: lightCentX - offset + noiseX, y: lightCentY - offset + noiseY }, // Top-Left
+								{ x: lightCentX + offset + noiseX, y: lightCentY - offset + noiseY }, // Top-Right
+								{ x: lightCentX - offset + noiseX, y: lightCentY + offset + noiseY }, // Bottom-Left
+								{ x: lightCentX + offset + noiseX, y: lightCentY + offset + noiseY }]  // Bottom-Right
+							: [{ x: lightCentX + noiseX,          y: lightCentY + noiseY }];
+
+						let visiblePoints = 0;
+						let accumulatedFalloff = 0;
+
+						// calc dist from each of 5 points in light source
+						for (let p = 0; p < lightPoints.length; p++) {
+							const pt = lightPoints[p];
+
+							const dx = floorX - pt.x;
+							const dy = floorY - pt.y;
+							const distSq = dx * dx + dy * dy;
+
+							if (distSq < MAX_RADIUS_SQ	// sum falloff for all visible points
+									&& checkDynamicLOS(floorX, floorY, pt.x, pt.y)) {
+								visiblePoints++;
+								const ratio = distSq / MAX_RADIUS_SQ;
+								accumulatedFalloff += (1.0 - ratio) * (1.0 - ratio);
+							}
+						}
+
+						if (visiblePoints > 0) {	// calc actual amount of light
+							  const visibilityFactor = visiblePoints / lightPoints.length;
+							  const averageFalloff = accumulatedFalloff / visiblePoints;			// NOTE consider turning down ceilLight intensity
+							  floorLight += averageFalloff * visibilityFactor * (floorHole ? 0.8 : 0.8);
 						}
 					}
 				}
