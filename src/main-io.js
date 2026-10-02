@@ -110,12 +110,12 @@ const nLookLimit = 8;
 let LockLook = false;		// IO only, DEBUG only
 let hitSideCheck = 0;		// DEBUG only, only in [io
 
-let hiRes = false;		// TODO put this and the showCanvas/Text into the viewWindow obj
+let hiRes = true;		// TODO put this and the showCanvas/Text into the viewWindow obj
 let resModifier = 2;		// then we can check for the showText/Canvas value in the Renderer
 							// and skip the textContent = array.join('')
 								// which will save a lot of time
 let showCanvas = true;
-let showText = false;
+let showText = true;
 
   let eTouchLook;
   let eTouchMove;
@@ -664,6 +664,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 	viewWindow.canvas = canvas;
 	viewWindow.canvasContext = canvasContext;
   	viewWindow.clearCanvas = () => canvasContext.clearRect(0, 0, canvas.width, canvas.height);
+//	viewWindow.canvasText = (text, x, y, maxWidth) => canvasContext.strokeText(text, x, y, maxWidth);
   	viewWindow.canvasText = (text, x, y, maxWidth) => canvasContext.fillText(text, x, y, maxWidth);
   	viewWindow.canvasFontSize = canvasFontSize;
   	viewWindow.canvasFontHeight = fontHeight;

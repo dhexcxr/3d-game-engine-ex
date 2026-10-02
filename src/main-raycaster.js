@@ -150,16 +150,16 @@ function raycaster() {
 
 				// used to place texture exactly where ray hit wall
 				fObjSampleX -= ~~(fObjSampleX);
-		
+
 				// draw lines between wall blocks in no texture mode
 				isObjBoundary = (fObjSampleX <= edgeThreshold || fObjSampleX >= 1.0 - edgeThreshold);
-		
+
 				// similar operation for objects		// TODO calc these like we did for walls and doors probably
 				// TODO move this where its used and loop through vHitObjects
 				let nObjectHeight = viewWindow.height / fDistanceToObject;
 				var nObjectCeiling = viewWindow.skew - nObjectHeight / (tileType == ",".charCodeAt(0) ? 1.25 : 2);
 				var nObjectFloor = viewWindow.skew + nObjectHeight / 2;
-					
+
 				vHitObjects.push({objX: map_x, objY: map_y, objMapTileIndex: currentMapTileIndex, objType: tileType, distToObj: fDistanceToObject, atObjBoundary: isObjBoundary, objHeight: nObjectHeight, objCeil: nObjectCeiling, objFloor: nObjectFloor});
             }
             bInObject = true;
@@ -192,10 +192,10 @@ function raycaster() {
           if(bInObject == true && tileType !== "o".charCodeAt(0) && tileType !== ",".charCodeAt(0)) {
           		fDistanceToInverseObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
 				let fInvObjSampleX = hit_NS_wall ? player.y + fDistanceToInverseObject * rayDirY : player.x + fDistanceToInverseObject * rayDirX;
-				
+
 				// used to place texture exactly where ray hit wall
 				fInvObjSampleX -= ~~(fInvObjSampleX);
-		
+
 				// draw lines between wall blocks in no texture mode
 				isInvObjBoundary = (fInvObjSampleX <= edgeThreshold || fInvObjSampleX >= 1.0 - edgeThreshold);
 				bInObject = false;
@@ -433,8 +433,9 @@ function raycaster() {
 				// ok, i think this is it
 			const currentDist = viewWindow.height / (2 * (screenRow - viewWindow.skew));
 
+			// ratio of dist of floor at current screen pixel to total ray length
 			const distRatio = currentDist / (bHitOoB ? fDistanceToOoB : fDistanceToWall);
-			
+
 			// calc world coordinates of the floor at this screen pixel
 			let floorX = Math.min(Math.max(distRatio * exactHitX + (1.0 - distRatio) * player.x, 0), map.width - 1);
 			let floorY = Math.min(Math.max(distRatio * exactHitY + (1.0 - distRatio) * player.y, 0), map.height - 1);
@@ -443,7 +444,7 @@ function raycaster() {
 			const floorMapX = ~~floorX;
 			const floorMapY = ~~floorY;
 			let floorLight = 0;
-			
+
 			// check if there is a ceiling light near this floor tile
 			closestLightFloorDist = Infinity;
 
@@ -461,7 +462,6 @@ function raycaster() {
 						const dx = floorX - (lightX + 0.5);
 						const dy = floorY - (lightY + 0.5);
 						const distSq = dx * dx + dy * dy;
-						
 						if (distSq < MAX_RADIUS_SQ /* && distSq < closestLightFloorDist */) {
 							const ratio = distSq / MAX_RADIUS_SQ;
 							floorLight += (1.0 - ratio) * (1.0 - ratio) * (map.tiles[ceilLookupIndex] === "o".charCodeAt(0)
@@ -474,14 +474,14 @@ function raycaster() {
 
 			const clampedLightFloor = Math.min(Math.max(floorLight, 0.0), 0.999);
 			const lightBrightFloor = ~~(clampedLightFloor * 5);
-			
+
             viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderFloor(screenRow, lightBrightFloor);
           }
         } // end draw column loop
 
         // Object-Draw (removed overlayscreen)
         for(var y = 0; y < viewWindow.height; y++) {	// loop through vHitObjects
-		vHitObjects.filter(obj => 
+		vHitObjects.filter(obj =>
 				obj.objType == "o".charCodeAt(0)
 				&& y >= obj.backOfObjFloor
 				&& y <= obj.objFloor
@@ -491,7 +491,7 @@ function raycaster() {
 					? brightness[2]
 					: _rh.renderSolidWall(floor.distToObj, floor.atObjBackBoundary)
           	});
-          
+
           vHitObjects.filter(obj => {
           	return obj.objType == ",".charCodeAt(0) && y >= obj.objCeil && y <= obj.backOfObjCeil
           }).forEach(ceil => {
