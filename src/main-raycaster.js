@@ -11,6 +11,7 @@ const edgeThreshold = 0.05;		// control thickness of border in flat renderer, al
 
 // Constants for 1.5 tile maximum light radius
 const MAX_RADIUS_SQ = 6.25; // 1.5 * 1.5
+const MAX_FLR_RADIUS_SQ = 2.25; // 1.5 * 1.5
 let checkTiles = [];	// tiles to check for ceiling light
 let closestLightWallDist = Infinity;
 let closestLightFloorDist = Infinity;
@@ -274,6 +275,7 @@ function raycaster() {
 		let floorLightInTile = false;
 
 		const invLightRadius = 1 / MAX_RADIUS_SQ;
+		const invLightFlRadius = 1 / MAX_FLR_RADIUS_SQ;
 
 		let lightCalcs = new Array(9);
 
@@ -314,30 +316,42 @@ function raycaster() {
 				// if (map.tiles[lightY * map.width + lightX] === ",") {
 				if (ceilLightInTile
 						|| (floorLightInTile	// creepy glow from floor holes
-							&& (sx >= -1 || sx <= 1)
-							&& (sy >= -1 || sy <= 1))) {	// TODO classify all tile types in charLookup or something, so we can do constant things like === WALL_TILE
+							&& sx >= Math.sign(xStart) && sx <= Math.sign(xEnd)
+							&& sy >= Math.sign(yStart) && sy <= Math.sign(yEnd))) {	// TODO classify all tile types in charLookup or something, so we can do constant things like === WALL_TILE
 					const dx = exactHitX - (lightX + 0.5);
 					const dy = exactHitY - (lightY + 0.5);	// TODO we might need to calc the yDist from light to wall in here, to better blend ceil vs floor
-				const distSq = dx * dx + dy * dy;
+					const distSq = ceilLightInTile ? dx * dx + dy * dy : 0;
+					const distFlSq = floorLightInTile ? dx * dx + dy * dy : 0;
 
 					const lightPreCalc = 1 - (distSq * invLightRadius);
+					const lightFlPreCalc = 1 - (distFlSq * invLightFlRadius);
 
-					lightCalcs.push((fSampleY) => {
-						const vertDistSq = (lightFromCeilInColumn ? fSampleY * fSampleY : 0
-													+ lightFromHoleInColumn ? (1 - fSampleY) * (1 - fSampleY) : 0)
-												/ (lightFromCeilInColumn && lightFromHoleInColumn ? 2 : 1);
+					lightCalcs.push(((currentCeilLightTile, currentFloorLightTile) => {
+						return (fSampleY) => {
+							let totalLight = 0;
+						
+							if (currentCeilLightTile) {
+								const vertDistSq = fSampleY * fSampleY;
 
 						if (distSq + vertDistSq < MAX_RADIUS_SQ) {
 							const lightCalc = lightPreCalc - (vertDistSq * invLightRadius);
+									totalLight += lightCalc * lightCalc * 0.8;
+								}
+							}
 
-							return lightCalc * lightCalc * (map.tiles[ceilLookupIndex] === "o".charCodeAt(0)
-																? 0.6
-																: 0.6);
+							if (currentFloorLightTile) {
+								const vertDistSq = (1 - fSampleY) * (1 - fSampleY);
+								
+								if (distFlSq + vertDistSq < MAX_FLR_RADIUS_SQ) {
+									const lightCalc = lightFlPreCalc - (vertDistSq * invLightFlRadius);
+									totalLight += lightCalc * lightCalc * 0.8;
 					}
-				});
 		  	}
+							return totalLight;
+					}})(ceilLightInTile, floorLightInTile));
 		}
 	}
+}
 /*-----end-LIGHTS------*/
 
 
@@ -462,7 +476,9 @@ function raycaster() {
 						const dx = floorX - (lightX + 0.5);
 						const dy = floorY - (lightY + 0.5);
 						const distSq = dx * dx + dy * dy;
-						if (distSq < MAX_RADIUS_SQ /* && distSq < closestLightFloorDist */) {
+
+						if (distSq < MAX_RADIUS_SQ
+								&& checkDynamicLOS(floorX, floorY, lightX + 0.5, lightY + 0.5)) {
 							const ratio = distSq / MAX_RADIUS_SQ;
 							floorLight += (1.0 - ratio) * (1.0 - ratio) * (map.tiles[ceilLookupIndex] === "o".charCodeAt(0)
 																				? 0.6
@@ -501,4 +517,23 @@ function raycaster() {
         } // end draw column loop		// == nFObjectBackCeil, draw black 'pixel'
       }  // end column loop
 //       map.visitedTiles = visitedTiles;
+}
+
+function checkDynamicLOS(startX, startY, endX, endY) {
+	// Use a fixed number of sample steps proportional to a 1.5 tile maximum distance
+	const steps = 4;
+
+	for (let i = 1; i < steps; i++) {
+		const t = i / steps;
+		// Interpolate a point along the line between pixel and light center
+		const checkX = Math.floor(startX + (endX - startX) * t);
+		const checkY = Math.floor(startY + (endY - startY) * t);
+
+		// Sample the map
+		const tile = map.tiles[checkY * map.width + checkX];
+		if (tile > 0 && "TX#$CWU".split('').map(char => char.charCodeAt(0)).includes(tile)) {
+			return false; // Intersection found, wall blocks light
+		}
+	}
+	return true;
 }
