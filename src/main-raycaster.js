@@ -181,7 +181,7 @@ function raycaster() {
           }
 
           // Test for walls	// NOTE why is it not....like, testing /for/ walls...
-          else if( tileType != "." ){
+          else if( tileType != "." ) {		// NOTE this also matches towers
             bHitWall = true;
             fDistanceToWall = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
             bBreakLoop = true;
@@ -248,7 +248,7 @@ function raycaster() {
 			case 'E': checkTiles = [[map_x + 1, map_y], [map_x + 1, map_y - 1], [map_x + 1, map_y + 1], [map_x + 1, map_y - 2], [map_x + 1, map_y + 2],
 									[map_x + 2, map_y], [map_x + 2, map_y - 1], [map_x + 2, map_y + 1], [map_x + 2, map_y - 2], [map_x + 2, map_y + 2]]; break;
 			case 'W': checkTiles = [[map_x - 1, map_y], [map_x - 1, map_y - 1], [map_x - 1, map_y + 1], [map_x - 1, map_y - 2], [map_x - 1, map_y + 2],
-									[map_x - 1, map_y], [map_x - 2, map_y - 1], [map_x - 2, map_y + 1], [map_x - 2, map_y - 2], [map_x - 2, map_y + 2]]; break;
+									[map_x - 2, map_y], [map_x - 2, map_y - 1], [map_x - 2, map_y + 1], [map_x - 2, map_y - 2], [map_x - 2, map_y + 2]]; break;
 		}
 		
 		for (const [tx, ty] of checkTiles) {
@@ -380,9 +380,9 @@ function raycaster() {
 				// ok, i think this is it
 			const currentDist = viewWindow.height / (screenRow - viewWindow.skew);
 			
-// 			// calc world coordinates of this floor, starting at left side of screen
 			const floorX = player.x + rayDirX * currentDist;
 			const floorY = player.y + rayDirY * currentDist;
+			// calc world coordinates of the floor at this screen pixel
 
 			// start floor light calc
 			let floorLight = 0;
