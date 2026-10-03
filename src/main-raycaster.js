@@ -330,8 +330,12 @@ function raycaster() {
 						return (fSampleY) => {
 							let totalLight = 0;
 
+							const lookupIndex = (~~(fSampleX * 100) + ~~(fSampleY * 100) * 57) & map.JITTER_MASK;
+							const noiseX = map.jitterTableX[lookupIndex];
+							const noiseY = map.jitterTableY[lookupIndex];
+
 							if (currentCeilLightTile) {
-								const vertDistSq = fSampleY * fSampleY;
+								const vertDistSq = (fSampleY + noiseX) * (fSampleY + noiseY);
 								if (distSq + vertDistSq < MAX_RADIUS_SQ) {
 									const lightCalc = lightPreCalc - (vertDistSq * invLightRadius);
 									totalLight += lightCalc * lightCalc * 0.8;
@@ -339,7 +343,7 @@ function raycaster() {
 							}
 
 							if (currentFloorLightTile) {
-								const vertDistSq = (1 - fSampleY) * (1 - fSampleY);
+								const vertDistSq = (1 - fSampleY + noiseX) * (1 - fSampleY + noiseY);
 								if (distFlSq + vertDistSq < MAX_FLR_RADIUS_SQ) {
 									const lightCalc = lightFlPreCalc - (vertDistSq * invLightFlRadius);
 									totalLight += lightCalc * lightCalc * 0.8;
