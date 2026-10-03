@@ -229,53 +229,97 @@ let _r = {
 			
 			const startCol = ~~removePixels;
 			const endCol = viewWindow.width - ~~removePixels;
-			for (let row = 0; row < viewWindow.height; row++) {
-				for (let col = startCol; col < endCol; col++) {
-					// Get character string from the skewed layout frame
-					const charCode = frame[row * viewWindow.width + col];
-					// O(1) Lookup of the sequential atlas column
-					const colIndex = charToAtlasIndex[charCode];
-					// Source Coordinates (White color is row 15)
-					const sx = colIndex * pixelW * viewWindow.dpr;
-					const sy = 15 * pixelH * viewWindow.dpr;
-// 					const sx = colIndex % atlasCols * pixelW;
-// 					const sy = (colIndex / atlasCols | 0) * pixelW * 15;
-					
-					// Destination Coordinates (aligned to the left edge of viewport)
-					const dx = (col - startCol) * pixelW;
-					const dy = lineheight * row + lineheight;
-					// Fast image-copy operation
-					ctx.drawImage(atlasCanvas, sx, sy, pixelW * viewWindow.dpr, pixelH * viewWindow.dpr, dx, dy, pixelW, pixelH);
-					
-					colCount++;
+// 			const { cols, rows, pixelW, pixelH, chars, colors, atlasBuf32, screenBuf32, screenImageData } = this;
+			if (viewWindow.atlasBuf32 && viewWindow.screenBuf32) {
+				const canvasWidth = viewWindow.canvas.width;
+				const atlasWidth = atlasCanvas.width;
+			
+				// fill buffer with black -  (AABBGGRR)
+				viewWindow.screenBuf32.fill(0xFF000000);	// TODO consider making const refs to these object properties
+			
+				 // render top to bottom
+				 for (let frameY = 0; frameY < viewWindow.height; frameY++) {
+					const rowOffset = frameY * viewWindow.width;
+//					const destinationY = frameY * pixelH * viewWindow.dpr;
+					// NOTE - now why the hell does this work like this here and differently doing drawImage()?
+					const destinationY = lineheight * frameY * viewWindow.dpr + lineheight;
+
+					// and left to right
+					for (let frameX = startCol; frameX < endCol; frameX++) {
+						const frameCharUnicode = frame[rowOffset + frameX];
+						if (frameCharUnicode <= 32) continue; // Skip space characters
+
+						// get atlas column via character unicode
+						const colIndex = charToAtlasIndex[frameCharUnicode];
+						const sourceX = colIndex * pixelW * viewWindow.dpr;
+						const sourceY = 15 * pixelH * viewWindow.dpr + 1;
+						// const ci = colors[rowOffset + frameX];	// NOTE colors[] is frame buffer specifying each char cell's color, not implemented yet
+						// const ci = 15;		// NOTE hard coded full-bright
+						// const sourceX = (frameCharUnicode - FIRST_CHAR) * pixelW;
+						// const sourceY = ci * pixelH;
+						const destinationX = (frameX - startCol) * pixelW * viewWindow.dpr;
+				
+						// copy char pixel data to screen buffer
+						for (let charY = 0; charY < pixelH * viewWindow.dpr; charY++) {	// TODO rename pixelH and W to charH and W
+							const srcIdx = (sourceY + charY) * atlasWidth + sourceX;
+							const destIdx = (destinationY + charY) * canvasWidth + destinationX;
+			
+							for (let charX = 0; charX < pixelW * viewWindow.dpr; charX++) {
+								viewWindow.screenBuf32[destIdx + charX] = viewWindow.atlasBuf32[srcIdx + charX];
+							}
+						}
+					}
+				 }
+			
+				// write screen buffer to window canvas
+				viewWindow.canvasContext.putImageData(viewWindow.screenImageData, 0, 0);
+			} else {		// no screen buffer array setup, let the computer handle copying chars from atlas to window canvas
+				for (let row = 0; row < viewWindow.height; row++) {
+					for (let col = startCol; col < endCol; col++) {
+						const charCode = frame[row * viewWindow.width + col];
+						if (charCode <= 32) continue;
+						const colIndex = charToAtlasIndex[charCode];
+						// calc atlas coordinates for this char
+						const sourceX = colIndex * pixelW * viewWindow.dpr;
+						const sourceY = 15 * pixelH * viewWindow.dpr + 1;		// NOTE this is currently hard-coded to be full bright, true 16 level color not implemented yet
+// 						const sourceX = colIndex % atlasCols * pixelW;
+// 						const sourceY = (colIndex / atlasCols | 0) * pixelW * 15;
+
+						// calc screen window canvas coordinates
+						const destinationX = (col - startCol) * pixelW;
+						const destinationY = lineheight * row + lineheight;
+						ctx.drawImage(atlasCanvas, sourceX, sourceY, pixelW * viewWindow.dpr, pixelH * viewWindow.dpr, destinationX, destinationY, pixelW, pixelH);
+
+						colCount++;
+					}
+					_debugOutput(`colCount: ${colCount};`, 'debug2');
+					colCount = 0;
+					rowCount++;
 				}
-				_debugOutput(`colCount: ${colCount};`, 'debug2');
-				colCount = 0;
-				rowCount++;
+				_debugOutput(`rowCount: ${rowCount}`, 'debug2', true);
 			}
-			_debugOutput(`rowCount: ${rowCount}`, 'debug2', true);
 		} else {
     // interates over each row again, and omits the first and last 30 pixels, to disguise the skewing!
 	// 		var printIndex = 0;		// w/ original 80 height, removePixels was 40 (despite quote of 30 above)
 																// TODO to be able to calculate this and actually have nice look up/down skewing
-    for(var row = 0; row < viewWindow.height; row++){	// determine the allowed up/down angle, calc how much that would transform a 90deg
+    		for(var row = 0; row < viewWindow.height; row++) {	// determine the allowed up/down angle, calc how much that would transform a 90deg
 														// implement the skew in a continuous way (a greater number of more granular steps)
 															// add logic to expand the visuals that are being skewed instead of just adding
 																// extra dots '.' (which is done in fPrepareFrame() function)
-		if (viewWindow.showText) {
-			dfOutput.push(...frame.slice(row * viewWindow.width + ~~removePixels, (row + 1) * viewWindow.width - ~~removePixels));
+				if (viewWindow.showText) {
+					dfOutput.push(...frame.slice(row * viewWindow.width + ~~removePixels, (row + 1) * viewWindow.width - ~~removePixels));
 														// line, build that calc into the skipEveryX() function
-			dfOutput.push("\n");	// textContent or canvas version
-    	}
-		if (viewWindow.showCanvas) {
-			viewWindow.canvasText(frame.slice(row * viewWindow.width + ~~removePixels, (row + 1) * viewWindow.width - ~~removePixels).join(''), 0, lineheight * row + lineheight, true);		// corrected/trimmed screen
-		}
-	}
+					dfOutput.push("\n");	// textContent or canvas version
+    			}
+				if (viewWindow.showCanvas) {
+					viewWindow.canvasText(frame.slice(row * viewWindow.width + ~~removePixels, (row + 1) * viewWindow.width - ~~removePixels).join(''), 0, lineheight * row + lineheight, true);		// corrected/trimmed screen
+				}
+			}
 		
-	if (viewWindow.showText) {
-	    target.textContent = dfOutput.join('');
+			if (viewWindow.showText) {
+			    target.textContent = dfOutput.join('');
+			}
 		}
-	}
   },
 
 

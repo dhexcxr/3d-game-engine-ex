@@ -1,5 +1,6 @@
 import { charLookup } from "./main-io.js";
 
+export {PALETTE_32BIT, atlasCanvas, pixelW, pixelH, charToAtlasIndex, buildGlyphAtlas, softBlitter}
 // currently just grayscale, for lighting
 const PALETTE = [
 	"#000000",
@@ -20,30 +21,37 @@ const PALETTE = [
 	"#ffffff"
 ];
 
-export let atlasCanvas = null;
-export let pixelW = 6;		// TODO make this auto measured as seen....somewhere
-export let pixelH = 12;
-export const charToAtlasIndex = new Uint16Array(65536);		// to hold CharCode values -> Atlas index
+const PALETTE_32BIT = PALETTE.map((hex) => {
+	const r = parseInt(hex.substring(1, 3), 16);
+	const g = parseInt(hex.substring(3, 5), 16);
+	const b = parseInt(hex.substring(5, 7), 16);
+	const a = 255; // Solid opacity
+	return ((a << 24) | (b << 16) | (g << 8) | r) >>> 0;
+});
 
+let atlasCanvas = null;
+let softBlitter = true;		// global option
+let pixelW = 6;		// TODO get this auto measured, as seen....somewhere
+let pixelH = 12;
+const charToAtlasIndex = new Uint16Array(65536);	// get atlas char index via char unicode
 
-export function buildGlyphAtlas(viewWindow) {
+function buildGlyphAtlas(viewWindow) {
 
-    pixelW = viewWindow.canvasFontHeight;
-    pixelH = viewWindow.canvasFontWidth;
+    pixelW = viewWindow.canvasFontWidth;
+    pixelH = viewWindow.canvasFontHeight;
 
-   // Physical dimensions for rendering the atlas backing store
+   // pixel dimensions for character atlas canvas
     const physicalCharW = pixelW * viewWindow.dpr;
    	const physicalCharH = pixelH * viewWindow.dpr;
 
-    // Gather all unique character codes used in the game and sort them
     const uniqueChars = Array.from(charLookup.keys()).sort((a, b) => a - b);
     
-    // Map each disjoint unique character code to a continuous sequential column index
+    // map disjoint character codes to sequential column index
     uniqueChars.forEach((ch, index) => {
         charToAtlasIndex[ch] = index;
     });
 
-    // Create the off-screen atlas canvas
+    // create off-screen atlas canvas
     const atlas = document.createElement("canvas");
     	// NOTE i think we need to do something to make the chars on this canvas higher res
     atlas.width = uniqueChars.length * physicalCharW;
@@ -68,7 +76,7 @@ export function buildGlyphAtlas(viewWindow) {
     actx.textAlign = "center";
     actx.textBaseline = "middle";
     const ox = pixelW / 2;
-    const oy = pixelH / 2 + pixelH * 0.05; // Perfect vertical alignment offset
+    const oy = pixelH / 2 + pixelH * 0.05;
 
     // render characters column-by-column (chars) and row-by-row (shading palette)
     for (let ci = 0; ci < PALETTE.length; ci++) {
@@ -83,4 +91,9 @@ export function buildGlyphAtlas(viewWindow) {
     viewWindow.atlasCols = uniqueChars.length;
     viewWindow.atlasRows = PALETTE.length;
 
+	// setup soft blitter buffers
+	if (softBlitter) {
+		viewWindow.atlasImageData = actx.getImageData(0, 0, atlas.width, atlas.height);
+		viewWindow.atlasBuf32 = new Uint32Array(viewWindow.atlasImageData.data.buffer);
+	}
 }

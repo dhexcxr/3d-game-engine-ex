@@ -25,7 +25,7 @@ import {player} from './player.js';
 // import {gameLoop} from './main-engine.js';
 import {game} from './game.js';
 import {map} from './map.js';
-import { buildGlyphAtlas } from './atlas.js';
+import { buildGlyphAtlas, softBlitter } from './atlas.js';
 
 import {_debugOutput, ioDebug} from './util.js';
 
@@ -189,6 +189,16 @@ let hitSideCheck = 0;		// DEBUG only, only in [io
 	// camera plane
 	get planeX() { return -player.viewY * 0.66 },		// initially 0.8391, based on tan(FOV/2), TODO make a constant
 	get planeY() { return player.viewX * 0.66 },		// smaller will be more wider
+
+	// software blitter buffers
+	screenImageData: null,
+    screenBuf32: null,
+    atlasImageData: null,
+    atlasBuf32: null,
+
+
+// TODO give all the extra things we create in the viewWindow a definition in this original object
+	// don't just glom on a bunch of stuff
   };
 
   /**
@@ -613,7 +623,7 @@ function setupCanvas() {
 	viewWindow.dpr = dpr;
   }
   // init() called from HTML
-    var init = function( input ) {
+var init = function( input ) {
     // prep document
     viewWindow.outputEl = document.getElementById("display");
     eTouchLook = document.getElementById("touchinputlook");
@@ -696,14 +706,18 @@ function setupCanvas() {
 	setupCanvas();
 	if (viewWindow.glyphAtlas) {
 		buildGlyphAtlas(viewWindow);
+		if (softBlitter) {
+			viewWindow.screenImageData = viewWindow.canvasContext.getImageData(0, 0, viewWindow.canvas.width, viewWindow.canvas.height);
+			viewWindow.screenBuf32 = new Uint32Array(viewWindow.screenImageData.data.buffer);
+		}
 	}
-		
+
 // 		main();		// moved here from _testScreenSizeAndStartTheGame
 	game.isRunning = true;
 	resumeFunction();
 
     });
-  };
+};
 
   function _convertAssetsToUnicode(asset) {
 
