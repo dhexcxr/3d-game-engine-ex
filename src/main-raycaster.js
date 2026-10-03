@@ -2,7 +2,7 @@
 
 export {raycaster};
 
-import {game, player, memoize} from './main-game-engine.js';
+import {game, player} from './main-game-engine.js';
 import {_debugOutput, brightness, viewWindow, map, charLookup, CHAR_CACHE, WALL_TILE, ioDebug, CEIL_TILE_MAP, HOLE_TILE_MAP} from './main-io.js';
 import {_r, _rh} from './main-renderer.js';
 
@@ -155,11 +155,8 @@ function raycaster() {
             fDistanceToWall = viewWindow.depth;
             fDistanceToOoB = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
             bBreakLoop = true;
-          }
-
-          // test for objects
-          else if(tileType == "o".charCodeAt(0) || tileType == ",".charCodeAt(0)) {	// NOTE we'll need to update this to account for holes next to ceiling...thingies
-          	if(!bInObject) {
+			} else if (tileType == "o".charCodeAt(0) || tileType == ",".charCodeAt(0)) {		// test for objects
+				if (!bInObject) {		// NOTE we'll need to update this to account for holes next to ceiling...thingies
 	          	fDistanceToObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
 				let fObjSampleX = hit_NS_wall ? player.y + fDistanceToObject * rayDirY : player.x + fDistanceToObject * rayDirX;
 
@@ -179,9 +176,7 @@ function raycaster() {
             }
             bInObject = true;
             sObjectType = tileType;
-          }
-
-          else if (tileType === 'X'.charCodeAt(0)) {		// exit door
+			} else if (tileType === 'X'.charCodeAt(0)) {		// exit door
           	bHitWall = true;
 
             fDistanceToWall = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
@@ -193,18 +188,15 @@ function raycaster() {
 
 			bBreakLoop = map_x === distToDoorX && map_y === distToDoorY;
             sWalltype = tileType;
-          }
-
-          // Test for walls	// NOTE why is it not....like, testing /for/ walls...
-          else if( tileType != ".".charCodeAt(0) ) {		// NOTE this also matches towers
-            bHitWall = true;
+			} else if ( tileType != ".".charCodeAt(0) ) {		// NOTE this also matches towers
+				bHitWall = true;			// Test for walls	// NOTE why is it not....like, testing /for/ walls...
             fDistanceToWall = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
             bBreakLoop = true;
             sWalltype = tileType;
           }
 
 	          // save back of object distance as soon as we're out of it
-          if (bInObject == true && tileType !== "o".charCodeAt(0) && tileType !== ",".charCodeAt(0)) {
+			if (bInObject == true && tileType !== "o".charCodeAt(0) && tileType !== ",".charCodeAt(0)) {
           		fDistanceToInverseObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
 				let fInvObjSampleX = hit_NS_wall ? player.y + fDistanceToInverseObject * rayDirY : player.x + fDistanceToInverseObject * rayDirX;
 
@@ -323,10 +315,10 @@ function raycaster() {
 		for (let lightX = lightLookUpStartX; lightX <= lightLookUpEndX; lightX++) {
 			for (let lightY = lightLookUpStartY; lightY <= lightLookUpEndY; lightY++) {
 
-				const ceilLookupIndex = lightY * map.width + lightX;
+				const lightTileLookupIndex = lightY * map.width + lightX;
 
-				ceilLightInTile = map.tiles[ceilLookupIndex] === ",".charCodeAt(0);
-				floorLightInTile = map.tiles[ceilLookupIndex] === "o".charCodeAt(0);
+				ceilLightInTile = map.isCeilLight[lightTileLookupIndex];
+				floorLightInTile = map.isFloorLight[lightTileLookupIndex];
 
 				if (ceilLightInTile
 						|| (floorLightInTile	// creepy glow from floor holes
@@ -395,7 +387,7 @@ function raycaster() {
             				|| (sObjectType === ",".charCodeAt(0) && nObjectCeiling <= nCeiling && screenRow > nObjectCeiling))) {
 					let fSampleY = ((screenRow - nTowerCeil) / (nCeiling - nTowerCeil));
 					const wallLight = lightCalcs.reduce((totalLight, lightCalc) => {
-						return totalLight + lightCalc(fSampleY);
+						return totalLight + lightCalc(1 - fSampleY * 2);	// NOTE why did we add the 1- and *2
 					}, 0);
 					const clampedLight = Math.min(Math.max(wallLight, 0.0), 0.999);
 					const lightBright = ~~(clampedLight * 4);
@@ -412,7 +404,8 @@ function raycaster() {
 			}			
 		} else if (screenRow > nCeiling		// solid block/walls/doors/etc
 				&& screenRow <= nFloor
-				&& !(screenRow >= nDoorFrameBot && sWalltype == 'X'.charCodeAt(0))) {
+					&& !(screenRow >= nDoorFrameBot
+						&& sWalltype == 'X'.charCodeAt(0))) {
 
 			if (sWalltype == "X".charCodeAt(0)) {		// Door/exit Walltype
 				if (screenRow > nDoorFrameTop) {
@@ -465,6 +458,9 @@ function raycaster() {
 						// with a small, quick callback processed in the loop
 			// FIRST - lights cast on the floor
 					// get perspective distance to this specific floor row
+				let floorLight = 0;
+
+				closestLightFloorDist = Infinity;
 
 				const currentDist = floorDistLut[screenRow];
 					// ratio of distance to this pixel to full distance to this wall
@@ -480,20 +476,16 @@ function raycaster() {
 				// true map tile x and y
 				const floorMapX = ~~floorX;
 				const floorMapY = ~~floorY;
-				let floorLight = 0;
-	
-				// check if there is a ceiling light near this floor tile
-				closestLightFloorDist = Infinity;
-	
+
 				const lightLookUpStartX = floorMapX - 2 < 0 ? 0 : floorMapX - 2;
 				const lightLookUpEndX = floorMapX + 2 > map.width - 1 ? map.width - 1 : floorMapX + 2;
 				const lightLookUpStartY = floorMapY - 2 < 0 ? 0 : floorMapY - 2;
 				const lightLookUpEndY = floorMapY + 2 > map.width - 1 ? map.width - 1 : floorMapY + 2;
 						// Look at current tile and its immediate neighbors for a light
 				for (let lightX = lightLookUpStartX; lightX <= lightLookUpEndX; lightX++) {
-				for (let lightY = lightLookUpStartY; lightY <= lightLookUpEndY; lightY++) {
+					for (let lightY = lightLookUpStartY; lightY <= lightLookUpEndY; lightY++) {
 
-				const ceilLookupIndex = lightY * map.width + lightX;
+						const lightTileLookupIndex = lightY * map.width + lightX;
 // TODO NOTE next thing, process map on load, for every tile, build array with x,y of all nearby lights
 	// then we won't have to do this searching, looping through lightX, lightY, and looking at the map.tiles array
 	// it will just be: get list of lights in range for this tile
@@ -514,58 +506,58 @@ function raycaster() {
 		// ok, first test, it seems to make some things brighter
 			// will need some fiddling with to figure out how to use it right
 
-					const ceilLight = CEIL_TILE_MAP[ceilLookupIndex] === 1;
-					const floorHole = HOLE_TILE_MAP[ceilLookupIndex] === 1;
+						const ceilLight = map.isCeilLight[lightTileLookupIndex] === 1;
+						const floorHole = map.isFloorLight[lightTileLookupIndex] === 1;
 
-					if (ceilLight
-							|| (floorHole	// creepy glow from floor holes
-								&& (lightX >= floorMapX - 1 || lightX <= floorMapX + 1)
-								&& (lightY >= floorMapY - 1 || lightY <= floorMapY + 1))) {	// TODO classify all tile types in charLookup or something, so we can do constant things like === WALL_TILE
+						if (ceilLight
+								|| (floorHole	// creepy glow from floor holes
+									&& (lightX >= floorMapX - 1 || lightX <= floorMapX + 1)
+									&& (lightY >= floorMapY - 1 || lightY <= floorMapY + 1))) {	// TODO classify all tile types in charLookup or something, so we can do constant things like === WALL_TILE
 // fancy lights
-						const lightCentX = lightX + 0.5;
-						const lightCentY = lightY + 0.5;
-
-						// hash map coordinates to calc jitter lookup (see spacial hashing)
-						const lookupIndex = (~~(floorX * 100) + ~~(floorY * 100) * 57) & map.JITTER_MASK;
-						const noiseX = map.jitterTableX[lookupIndex];
-						const noiseY = map.jitterTableY[lookupIndex];
-
-						const offset = 0.5;		// NOTE original was 0.25
-						const lightPoints = [
-								{ x: lightCentX + noiseX,          y: lightCentY + noiseY },          // Center
-								{ x: lightCentX - offset + noiseX, y: lightCentY - offset + noiseY }, // Top-Left
-								{ x: lightCentX + offset + noiseX, y: lightCentY - offset + noiseY }, // Top-Right
-								{ x: lightCentX - offset + noiseX, y: lightCentY + offset + noiseY }, // Bottom-Left
-								{ x: lightCentX + offset + noiseX, y: lightCentY + offset + noiseY }  // Bottom-Right
-							];
-
-						let visiblePoints = 0;
-						let accumulatedFalloff = 0;
-
-						// calc dist from each of 5 points in light source
-						for (let p = 0; p < lightPoints.length; p++) {
-							const pt = lightPoints[p];
-
-							const dx = floorX - pt.x;
-							const dy = floorY - pt.y;
-							const distSq = dx * dx + dy * dy;
-
-							if (distSq < MAX_RADIUS_SQ	// sum falloff for all visible points
-									&& checkDynamicLOS(floorX, floorY, pt.x, pt.y)) {
-								visiblePoints++;
-								const ratio = distSq / MAX_RADIUS_SQ;
-								accumulatedFalloff += (1.0 - ratio) * (1.0 - ratio);
+							const lightCentX = lightX + 0.5;
+							const lightCentY = lightY + 0.5;
+	
+							// hash map coordinates to calc jitter lookup (see spacial hashing)
+							const lookupIndex = (~~(floorX * 100) + ~~(floorY * 100) * 57) & map.JITTER_MASK;
+							const noiseX = map.jitterTableX[lookupIndex];
+							const noiseY = map.jitterTableY[lookupIndex];
+	
+							const offset = 0.5;		// NOTE original was 0.25
+							const lightPoints = [
+									{ x: lightCentX + noiseX,          y: lightCentY + noiseY },          // Center
+									{ x: lightCentX - offset + noiseX, y: lightCentY - offset + noiseY }, // Top-Left
+									{ x: lightCentX + offset + noiseX, y: lightCentY - offset + noiseY }, // Top-Right
+									{ x: lightCentX - offset + noiseX, y: lightCentY + offset + noiseY }, // Bottom-Left
+									{ x: lightCentX + offset + noiseX, y: lightCentY + offset + noiseY }  // Bottom-Right
+								];
+	
+							let visiblePoints = 0;
+							let accumulatedFalloff = 0;
+	
+							// calc dist from each of 5 points in light source
+							for (let p = 0; p < lightPoints.length; p++) {
+								const pt = lightPoints[p];
+	
+								const dx = floorX - pt.x;
+								const dy = floorY - pt.y;
+								const distSq = dx * dx + dy * dy;
+	
+								if (distSq < MAX_RADIUS_SQ	// sum falloff for all visible points
+										&& checkDynamicLOS(floorX, floorY, pt.x, pt.y)) {
+									visiblePoints++;
+									const ratio = distSq / MAX_RADIUS_SQ;
+									accumulatedFalloff += (1.0 - ratio) * (1.0 - ratio);
+								}
 							}
-						}
-
-						if (visiblePoints > 0) {	// calc actual amount of light
-							  const visibilityFactor = visiblePoints / lightPoints.length;
-							  const averageFalloff = accumulatedFalloff / visiblePoints;
-							  floorLight += averageFalloff * visibilityFactor * (floorHole ? 0.8 : 0.8);
+	
+							if (visiblePoints > 0) {	// calc actual amount of light
+								  const visibilityFactor = visiblePoints / lightPoints.length;
+								  const averageFalloff = accumulatedFalloff / visiblePoints;
+								  floorLight += averageFalloff * visibilityFactor * (floorHole ? 0.8 : 0.8);
+							}
 						}
 					}
 				}
-			}
 
 			const clampedLightFloor = Math.min(Math.max(floorLight, 0.0), 0.999);
 			const lightBrightFloor = ~~(clampedLightFloor * 5);

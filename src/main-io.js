@@ -219,6 +219,9 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 	  // keep track of map tiles visited by the rays, help cull sprites without trig
       map.visitedTiles = new Uint32Array(map.width * map.height);	// renderer and raycaster
 
+      map.isCeilLight = new Uint8Array(map.tiles.map(tileCode => tileCode === ",".charCodeAt(0)));
+      map.isFloorLight = new Uint8Array(map.tiles.map(tileCode => tileCode === "o".charCodeAt(0)));
+
       // places the player at the map starting point
       player.x = map.playerStartX;
       player.y = map.playerStartY;
