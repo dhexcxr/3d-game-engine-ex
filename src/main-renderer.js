@@ -272,10 +272,10 @@ let _r = {
 		}
 	}
 		
-			if (viewWindow.showCanvas) {
-    target.textContent = dfOutput.join('');
-			}
+	if (viewWindow.showText) {
+	    target.textContent = dfOutput.join('');
 		}
+	}
   },
 
 

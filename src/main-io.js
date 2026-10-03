@@ -173,10 +173,11 @@ let resModifier = 2;		// then we can check for the showText/Canvas value in the 
   	height: 80,			// also used in io, raycaster, and renderer
 //   	height: 92,			// allow for more square "pixels"
 
+	glyphAtlas: false,
 	hiRes: true,
 	resModifier: 2,		// NOTE the canvas is currently set up for 2x, if above 2 we need to increase canvas resolution
-	showCanvas: true,
-	showText: false,
+	showCanvas: false,
+	showText: true,
 
 //   	nScreenCenter = viewWindow.width / 2,		// not used
 	depth: 16.0, // viewport depth, max ray/draw dist		// raycaster and renderer
@@ -698,7 +699,11 @@ function setupCanvas() {
 	viewWindow.buffer = new Uint16Array(viewWindow.width * Math.ceil(viewWindow.height));
 	viewWindow.depthBuffer = new Array(viewWindow.width * Math.ceil(viewWindow.height));
 	setupCanvas();
-	buildGlyphAtlas(viewWindow);
+	if (viewWindow.glyphAtlas) {
+		buildGlyphAtlas(viewWindow);
+	}
+		
+// 		main();		// moved here from _testScreenSizeAndStartTheGame
 	game.isRunning = true;
 	resumeFunction();
 
