@@ -157,11 +157,6 @@ const nLookLimit = 8;
 let LockLook = false;		// IO only, DEBUG only
 let hitSideCheck = 0;		// DEBUG only, only in [io
 
-let hiRes = true;		// TODO put this and the showCanvas/Text into the viewWindow obj
-let resModifier = 2;		// then we can check for the showText/Canvas value in the Renderer
-							// and skip the textContent = array.join('')
-								// which will save a lot of time
-
   let eTouchLook;
   let eTouchMove;
 
@@ -173,11 +168,11 @@ let resModifier = 2;		// then we can check for the showText/Canvas value in the 
   	height: 80,			// also used in io, raycaster, and renderer
 //   	height: 92,			// allow for more square "pixels"
 
-	glyphAtlas: false,
+	glyphAtlas: true,
 	hiRes: true,
 	resModifier: 2,		// NOTE the canvas is currently set up for 2x, if above 2 we need to increase canvas resolution
-	showCanvas: false,
-	showText: true,
+	showCanvas: true,
+	showText: false,
 
 //   	nScreenCenter = viewWindow.width / 2,		// not used
 	depth: 16.0, // viewport depth, max ray/draw dist		// raycaster and renderer

@@ -1,5 +1,6 @@
 import { charLookup } from "./main-io.js";
 
+// currently just grayscale, for lighting
 const PALETTE = [
 	"#000000",
 	"#181818",
@@ -30,6 +31,10 @@ export function buildGlyphAtlas(viewWindow) {
     pixelW = viewWindow.canvasFontHeight;
     pixelH = viewWindow.canvasFontWidth;
 
+   // Physical dimensions for rendering the atlas backing store
+    const physicalCharW = pixelW * viewWindow.dpr;
+   	const physicalCharH = pixelH * viewWindow.dpr;
+
     // Gather all unique character codes used in the game and sort them
     const uniqueChars = Array.from(charLookup.keys()).sort((a, b) => a - b);
     
@@ -40,6 +45,9 @@ export function buildGlyphAtlas(viewWindow) {
 
     // Create the off-screen atlas canvas
     const atlas = document.createElement("canvas");
+    	// NOTE i think we need to do something to make the chars on this canvas higher res
+    atlas.width = uniqueChars.length * physicalCharW;
+    atlas.height = PALETTE.length * physicalCharH;
 
 	document.body.appendChild(atlas);		// NOTE debug only
 
@@ -47,9 +55,6 @@ export function buildGlyphAtlas(viewWindow) {
     const actx = atlas.getContext("2d", { alpha: false });
     actx.imageSmoothingEnabled = false;
 
-	// NOTE i think we need to do something to make the chars on this canvas higher res
-    atlas.width = uniqueChars.length * pixelW * viewWindow.dpr;
-    atlas.height = PALETTE.length * pixelH * viewWindow.dpr;
 	actx.scale(viewWindow.dpr, viewWindow.dpr);
     
 	// clear canvas

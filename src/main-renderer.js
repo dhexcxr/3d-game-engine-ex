@@ -225,7 +225,7 @@ let _r = {
 			let colCount = 0;
 			
 			// Clear canvas with black
-			viewWindow.clearCanvas();
+// 			viewWindow.clearCanvas();
 			
 			const startCol = ~~removePixels;
 			const endCol = viewWindow.width - ~~removePixels;
@@ -245,7 +245,7 @@ let _r = {
 					const dx = (col - startCol) * pixelW;
 					const dy = lineheight * row + lineheight;
 					// Fast image-copy operation
-					ctx.drawImage(atlasCanvas, sx, sy, pixelW, pixelH, dx, dy, pixelW, pixelH);
+					ctx.drawImage(atlasCanvas, sx, sy, pixelW * viewWindow.dpr, pixelH * viewWindow.dpr, dx, dy, pixelW, pixelH);
 					
 					colCount++;
 				}
