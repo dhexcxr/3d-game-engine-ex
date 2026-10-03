@@ -3,7 +3,7 @@
 export {raycaster};
 
 import {game, player, memoize} from './main-game-engine.js';
-import {_debugOutput, brightness, viewWindow, map, charLookup, CHAR_CACHE, WALL_TILE, ioDebug} from './main-io.js';
+import {_debugOutput, brightness, viewWindow, map, charLookup, CHAR_CACHE, WALL_TILE, ioDebug, CEIL_TILE_MAP, HOLE_TILE_MAP} from './main-io.js';
 import {_r, _rh} from './main-renderer.js';
 
 const absSign = (x) => (x === 0 ? 1 : Math.sign(x));	// RENDERER only
@@ -204,7 +204,7 @@ function raycaster() {
           }
 
 	          // save back of object distance as soon as we're out of it
-          if(bInObject == true && tileType !== "o".charCodeAt(0) && tileType !== ",".charCodeAt(0)) {
+          if (bInObject == true && tileType !== "o".charCodeAt(0) && tileType !== ",".charCodeAt(0)) {
           		fDistanceToInverseObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
 				let fInvObjSampleX = hit_NS_wall ? player.y + fDistanceToInverseObject * rayDirY : player.x + fDistanceToInverseObject * rayDirX;
 
@@ -277,7 +277,7 @@ function raycaster() {
 
 
 
-/*--------LIGHTS--------*/
+/*--------wall LIGHTS--------*/
 
 		// check if nearby tiles are lights, so we can brighten walls, etc
 		closestLightWallDist = Infinity;
@@ -318,6 +318,8 @@ function raycaster() {
 		// NOTE - TO FIX, if 2 holes are next to wall, parallel to wall, light glow does not work
 			// glow on wall is centered on middle of holes, not "equal" light glowing from each hole
 							// Look at current tile and its immediate neighbors for a light
+			// FU - i think the way this is working is correct and normal for the current logic
+				// might change to let hole lightes travel 2 tiles
 		for (let lightX = lightLookUpStartX; lightX <= lightLookUpEndX; lightX++) {
 			for (let lightY = lightLookUpStartY; lightY <= lightLookUpEndY; lightY++) {
 
@@ -368,7 +370,9 @@ function raycaster() {
 				}
 			}
 		}
-/*-----end-LIGHTS------*/
+/*-----end- wall LIGHTS------*/
+
+/*-----floor lights precalcs-*/
 
 
         // draw the columns one screenheight-pixel at a time
@@ -376,117 +380,120 @@ function raycaster() {
 
           // sky
           if(screenRow < nCeiling) {	// TODO if we are in a thing (wall, tower, light), quick fill from top of thing to bottom without looping and running all conditional checks again, could be complicated if there are more things in front of other things, like the lights are
-          	let ceilThings = vHitObjects.filter(obj => obj.objType === ','.charCodeAt(0)
-          			&& screenRow > obj.objCeil - obj.objHeight
-            		// && screenRow <= obj.objCeil - (5 / obj.distToObj)	// border around light/ceiling
-            		&& screenRow <= obj.objCeil
-            		&& (sWalltype !== "T".charCodeAt(0) || fDistanceToWall >= obj.distToObj))	// NOTE closer obj always added first
-            			/* .sort((ceilOne, ceilTwo) => ceilOne.distToObj - ceilTwo.distToObj) */;	// prob don't need sort
+				let ceilThings = vHitObjects.filter(obj => {
+					return obj.objType === ','.charCodeAt(0)
+          				&& screenRow > obj.objCeil - obj.objHeight
+	            		// && screenRow <= obj.objCeil - (5 / obj.distToObj)	// border around light/ceiling
+    	        		&& screenRow <= obj.objCeil
+						&& (sWalltype !== "T".charCodeAt(0) || fDistanceToWall >= obj.distToObj)
+				});
 
-            // case of tower block (the bit that reaches into the ceiling)
-            if(sWalltype == "T".charCodeAt(0)
-            		&& screenRow > nTowerCeil
-            		&& (sObjectType !== ",".charCodeAt(0)
-            			|| fDistanceToObject >= fDistanceToWall
-            			|| (sObjectType === ",".charCodeAt(0) && nObjectCeiling <= nCeiling && screenRow > nObjectCeiling))) {
-            	let fSampleY = ((screenRow - nTowerCeil) / (nCeiling - nTowerCeil));
-				const wallLight = lightCalcs.reduce((totalLight, lightCalc) => {
-					return totalLight + lightCalc(fSampleY);
-				}, 0);
-				const clampedLight = Math.min(Math.max(wallLight, 0.0), 0.999);
-				const lightBright = ~~(clampedLight * 4);
-                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY), lightBright);
-	    	} else if(ceilThings.length > 0) {
-                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
-                	ceilThings[0].atObjBoundary		// at vertical boundary
-                		|| screenRow >= ceilThings[0].objCeil - (5 / ceilThings[0].distToObj)	// at horizontal boundary
-                		? brightness[0]		// draw black bar
-                		: "1".charCodeAt(0);
+				if (sWalltype == "T".charCodeAt(0)	// case of tower block (the bit that reaches into the ceiling)
+            			&& screenRow > nTowerCeil
+            			&& (sObjectType !== ",".charCodeAt(0)
+            				|| fDistanceToObject >= fDistanceToWall
+            				|| (sObjectType === ",".charCodeAt(0) && nObjectCeiling <= nCeiling && screenRow > nObjectCeiling))) {
+					let fSampleY = ((screenRow - nTowerCeil) / (nCeiling - nTowerCeil));
+					const wallLight = lightCalcs.reduce((totalLight, lightCalc) => {
+						return totalLight + lightCalc(fSampleY);
+					}, 0);
+					const clampedLight = Math.min(Math.max(wallLight, 0.0), 0.999);
+					const lightBright = ~~(clampedLight * 4);
+					
+					viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY), lightBright);
+				} else if (ceilThings.length > 0) {		// things in the ceiling, currently just lights
+                	viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
+						ceilThings[0].atObjBoundary		// if at vertical boundary
+								|| screenRow >= ceilThings[0].objCeil - (5 / ceilThings[0].distToObj)	// or at horizontal boundary
+                			? brightness[0]		// draw black bar
+                			: "1".charCodeAt(0);
             } else {
                 viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = brightness[0];
-            }		          // solid block
-          } else if( screenRow > nCeiling && screenRow <= nFloor && !(screenRow >= nDoorFrameBot && sWalltype == 'X'.charCodeAt(0))) {
+			}			
+		} else if (screenRow > nCeiling		// solid block/walls/doors/etc
+				&& screenRow <= nFloor
+				&& !(screenRow >= nDoorFrameBot && sWalltype == 'X'.charCodeAt(0))) {
 
-            // Door/exit Walltype	// TODO if this is right next to light, render full bright, if one away (e.g., diagonal) render half bright
-            if(sWalltype == "X".charCodeAt(0)){
-			  if (screenRow > nDoorFrameTop) {
-				viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
+			if (sWalltype == "X".charCodeAt(0)) {		// Door/exit Walltype
+				if (screenRow > nDoorFrameTop) {
+					viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
 					_rh.renderGate(screenRow, fDistToDoor, nDoorFrameTop, nCeiling);
-              } else {
-                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = brightness[0];
-              }
+              	} else {
+                	viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = brightness[0];
+              	}
             } else if(sWalltype != ".".charCodeAt(0) || sWalltype == "T".charCodeAt(0)) {		// Solid Walltype
 
-              var fSampleY = ( (screenRow - nCeiling) / wallHeight );
+				var fSampleY = (screenRow - nCeiling) / wallHeight;
 
-              /**
-               * animation timer example
-               */
-              // if( game.animationTimer < 5 ){
-              //   viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _r.getSamplePixel(texture, fSampleX, fSampleY);
-              // } else if( game.animationTimer >= 5 && game.animationTimer < 10 ) {
-              //   viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _r.getSamplePixel(texture2, fSampleX, fSampleY);
-              // } else if( game.animationTimer >= 10 ) {
-              //   viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _r.getSamplePixel(texture3, fSampleX, fSampleY);
-              // }
+				/**
+				* animation timer example
+				*/
+				// if( game.animationTimer < 5 ){
+				//   viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _r.getSamplePixel(texture, fSampleX, fSampleY);
+				// } else if( game.animationTimer >= 5 && game.animationTimer < 10 ) {
+				//   viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _r.getSamplePixel(texture2, fSampleX, fSampleY);
+				// } else if( game.animationTimer >= 10 ) {
+				//   viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _r.getSamplePixel(texture3, fSampleX, fSampleY);
+				// }
 
-              // Render Texture Directly
-              if( viewWindow.nRenderMode == 1 ){
-                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
-                	_r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY);
-              } else if( viewWindow.nRenderMode == 2 ) {		// Render Texture with Shading
-				const wallLight = lightCalcs.reduce((totalLight, lightCalc) => {
-					return totalLight + lightCalc(fSampleY);
-				}, 0);
-				const clampedLight = Math.min(Math.max(wallLight, 0.0), 0.999);
-				const lightBright = ~~(clampedLight * 4);
-                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
-                	_rh.renderWall(fDistanceToWall,
-                		sWallFaceDirection,
-                		_r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY), lightBright);
-              } else if( viewWindow.nRenderMode == 0 ) {	// old, solid-style shading
-                viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
-                	_rh.renderSolidWall(fDistanceToWall, isBoundary);
-              }
-            } else {		// render whatever char is on the map as walltype
+				// Render Texture Directly
+				if( viewWindow.nRenderMode == 1 ){
+					viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
+                		_r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY);
+				} else if (viewWindow.nRenderMode == 2) {		// Render Texture with Shading
+					const wallLight = lightCalcs.reduce((totalLight, lightCalc) => {
+						return totalLight + lightCalc(fSampleY);
+					}, 0);
+					const clampedLight = Math.min(Math.max(wallLight, 0.0), 0.999);
+					const lightBright = ~~(clampedLight * 4);
+                	viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
+                		_rh.renderWall(fDistanceToWall,
+                			sWallFaceDirection,
+                			_r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY), lightBright);
+				} else if (viewWindow.nRenderMode == 0) {	// old, solid-style shading
+                	viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
+                		_rh.renderSolidWall(fDistanceToWall, isBoundary);
+				}
+			} else {		// render whatever char is on the map as walltype
               viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = sWalltype;
             }
-          } else {		// floor
+          } else {		// floor painting loop
           	// calc dist to floor at specific screen row
-// 			const currentDist = viewWindow.height / (2.0 * screenRow - viewWindow.height);
-// 			const currentDist = (viewWindow.skew) / (2.0 * screenRow - viewWindow.skew);
-// 			const currentDist = viewWindow.height / (2 * screenRow  - viewWindow.height - game.nJumptimer * 0.15 - game.fLooktimer * 0.15);
-				// this version does very good without skew, light pool looks like its underneath light
-// 			const currentDist = 2 * (viewWindow.height - viewWindow.skew) / (screenRow - viewWindow.skew);
-				// this version works well with skew, but is too far "below", it is rendered too low on screen
-			// const currentDist = 2 * viewWindow.height / (screenRow - viewWindow.skew);
-				// ok, i think this is it
+						// ANOTHER THING TO DO
+					// refactor this light calc, like we did with the early one for walls,
+						// so that as much as possible is calculated /outside/ of this loop
+						// with a small, quick callback processed in the loop
+			// FIRST - lights cast on the floor
+					// get perspective distance to this specific floor row
 
-			// ratio of dist of floor at current screen pixel to total ray length
 				const currentDist = floorDistLut[screenRow];
-			const distRatio = currentDist / (bHitOoB ? fDistanceToOoB : fDistanceToWall);
+					// ratio of distance to this pixel to full distance to this wall
+				const distRatio = currentDist / (bHitOoB ? fDistanceToOoB : fDistanceToWall);
+					// not needing separate currentDist value, might be nice to eventually use it
+						// then render can be simpler, by pre-baking in light based on distance here
+						// instead of a bunch of conditionals in renderer
 
-			// calc world coordinates of the floor at this screen pixel
-			let floorX = Math.min(Math.max(distRatio * exactHitX + (1.0 - distRatio) * player.x, 0), map.width - 1);
-			let floorY = Math.min(Math.max(distRatio * exactHitY + (1.0 - distRatio) * player.y, 0), map.height - 1);
+				// calc world coordinates of the floor at this screen pixel
+				let floorX = distRatio * exactHitX + (1.0 - distRatio) * player.x;
+ 				let floorY = distRatio * exactHitY + (1.0 - distRatio) * player.y;
 
-			// true map tile x and y
-			const floorMapX = ~~floorX;
-			const floorMapY = ~~floorY;
-			let floorLight = 0;
-
-			// check if there is a ceiling light near this floor tile
-			closestLightFloorDist = Infinity;
-
-			const lightLookUpStartX = Math.max(floorMapX - 2, 0);
-			const lightLookUpEndX = Math.min(floorMapX + 2, map.width - 1);
-			const lightLookUpStartY = Math.max(floorMapY - 2, 0);
-			const lightLookUpEndY = Math.min(floorMapY + 2, map.width - 1);
-		    			// Look at current tile and its immediate neighbors for a light
-			for (let lightX = lightLookUpStartX; lightX <= lightLookUpEndX; lightX++) {
+				// true map tile x and y
+				const floorMapX = ~~floorX;
+				const floorMapY = ~~floorY;
+				let floorLight = 0;
+	
+				// check if there is a ceiling light near this floor tile
+				closestLightFloorDist = Infinity;
+	
+				const lightLookUpStartX = floorMapX - 2 < 0 ? 0 : floorMapX - 2;
+				const lightLookUpEndX = floorMapX + 2 > map.width - 1 ? map.width - 1 : floorMapX + 2;
+				const lightLookUpStartY = floorMapY - 2 < 0 ? 0 : floorMapY - 2;
+				const lightLookUpEndY = floorMapY + 2 > map.width - 1 ? map.width - 1 : floorMapY + 2;
+						// Look at current tile and its immediate neighbors for a light
+				for (let lightX = lightLookUpStartX; lightX <= lightLookUpEndX; lightX++) {
 				for (let lightY = lightLookUpStartY; lightY <= lightLookUpEndY; lightY++) {
 
-					const ceilLookupIndex = lightY * map.width + lightX;
+				const ceilLookupIndex = lightY * map.width + lightX;
 // TODO NOTE next thing, process map on load, for every tile, build array with x,y of all nearby lights
 	// then we won't have to do this searching, looping through lightX, lightY, and looking at the map.tiles array
 	// it will just be: get list of lights in range for this tile
@@ -507,8 +514,8 @@ function raycaster() {
 		// ok, first test, it seems to make some things brighter
 			// will need some fiddling with to figure out how to use it right
 
-					const ceilLight = map.tiles[ceilLookupIndex] === ",".charCodeAt(0);
-					const floorHole = map.tiles[ceilLookupIndex] === "o".charCodeAt(0);
+					const ceilLight = CEIL_TILE_MAP[ceilLookupIndex] === 1;
+					const floorHole = HOLE_TILE_MAP[ceilLookupIndex] === 1;
 
 					if (ceilLight
 							|| (floorHole	// creepy glow from floor holes

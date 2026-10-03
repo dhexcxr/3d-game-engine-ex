@@ -1,6 +1,6 @@
 // main i/o
 
-export {_debugOutput, _mh, brightness, init, viewWindow, map, charLookup, codePointLookup, CHAR_CACHE, WALL_TILE, ioDebug};
+export {_debugOutput, _mh, brightness, init, viewWindow, map, charLookup, codePointLookup, CHAR_CACHE, WALL_TILE, ioDebug, CEIL_TILE_MAP, HOLE_TILE_MAP};
 
 import {game, player, gameLoop} from './main-game-engine.js';
 
@@ -14,7 +14,10 @@ const charLookup = new Map();
 const codePointLookup = new Map();
 const CHAR_CACHE = new Array();
 const CHAR_TO_CODE = {};	// TODO for 26-08-15, swap to this in renderer, and get map tile light pre-comp going
-let WALL_TILE = new Uint16Array();
+let WALL_TILE = new Uint16Array();		// TODO this probably should be on map object
+let CEIL_TILE_MAP = new Uint8Array();		// TODO also these too probably
+let HOLE_TILE_MAP = new Uint8Array();		// FU - actually these don't seem to speed up anything
+
 const ioDebug = {
 	randomLightSwitch: false
 };
@@ -240,6 +243,9 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
             map.jitterTableX[i] = (Math.random() * 0.4) - 0.2;
             map.jitterTableY[i] = (Math.random() * 0.4) - 0.2;
       }
+		// light tile truth maps
+		CEIL_TILE_MAP = Uint8Array.from(map.tiles, tileCharCode => tileCharCode === ",".charCodeAt(0));
+		HOLE_TILE_MAP = Uint8Array.from(map.tiles, tileCharCode => tileCharCode === "o".charCodeAt(0));
     });
 
 	// NOTE TODO i think this is where the oSprite thing should be called, because at this point the level has been loaded
