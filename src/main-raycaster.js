@@ -15,6 +15,7 @@ const MAX_FLR_RADIUS_SQ = 2.25; // 1.5 * 1.5
 let checkTiles = [];	// tiles to check for ceiling light
 let closestLightWallDist = Infinity;
 let closestLightFloorDist = Infinity;
+let floorDistLut = new Float32Array(Math.ceil(viewWindow.height));
 let midFrameInfoMsg = '';		// DEBUG only
 let endDoorInfoMsg = '';		// DEBUG only
 
@@ -32,6 +33,19 @@ let rayDirY = null;
 function raycaster() {
 // for the length of the screenwidth (one frame)
 // 	let visitedTiles = map.visitedTiles;
+
+	// pre-calc floor distance LUT, used for floor lights
+    const skew = viewWindow.skew;
+
+    if (floorDistLut.length !== Math.ceil(viewWindow.height)) {
+    	floorDistLut = new Float32Array(Math.ceil(viewWindow.height));
+    }
+
+    for (let r = 0; r < viewWindow.height; r++) {
+        const rowOffset = r - skew;
+        floorDistLut[r] = rowOffset !== 0 ? viewWindow.halfHeight / rowOffset : 0;
+    }
+
       for(var screenColumn = 0; screenColumn < viewWindow.width; screenColumn++){
 
         // calculates the ray angle into the world space
@@ -447,9 +461,9 @@ function raycaster() {
 				// this version works well with skew, but is too far "below", it is rendered too low on screen
 			// const currentDist = 2 * viewWindow.height / (screenRow - viewWindow.skew);
 				// ok, i think this is it
-			const currentDist = viewWindow.height / (2 * (screenRow - viewWindow.skew));
 
 			// ratio of dist of floor at current screen pixel to total ray length
+				const currentDist = floorDistLut[screenRow];
 			const distRatio = currentDist / (bHitOoB ? fDistanceToOoB : fDistanceToWall);
 
 			// calc world coordinates of the floor at this screen pixel

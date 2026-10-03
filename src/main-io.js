@@ -969,5 +969,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 // 	viewWindow.height = 85;
       // main();		// moved to init()
     }
+    viewWindow.halfHeight = Math.ceil(viewWindow.height * 0.5);
   };
 
