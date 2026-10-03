@@ -290,7 +290,7 @@ function raycaster() {
 
 		switch (sWallFaceDirection) {
 			case 'N': xDeltaStart = -2, xDeltaEnd = 2;
-						yDeltaStart = -1, yDeltaEnd = -2;	break;
+						yDeltaStart = -2, yDeltaEnd = -1;	break;
 
 			case 'S': xDeltaStart = -2, xDeltaEnd = 2;
 						yDeltaStart = 1, yDeltaEnd = 2; break;
