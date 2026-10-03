@@ -25,6 +25,7 @@ import {player} from './player.js';
 // import {gameLoop} from './main-engine.js';
 import {game} from './game.js';
 import {map} from './map.js';
+import { buildGlyphAtlas } from './atlas.js';
 
 import {_debugOutput, ioDebug} from './util.js';
 
@@ -160,8 +161,6 @@ let hiRes = true;		// TODO put this and the showCanvas/Text into the viewWindow 
 let resModifier = 2;		// then we can check for the showText/Canvas value in the Renderer
 							// and skip the textContent = array.join('')
 								// which will save a lot of time
-let showCanvas = true;
-let showText = true;
 
   let eTouchLook;
   let eTouchMove;
@@ -174,6 +173,12 @@ let showText = true;
   	height: 80,			// also used in io, raycaster, and renderer
 //   	height: 92,			// allow for more square "pixels"
 
+	hiRes: true,
+	resModifier: 2,		// NOTE the canvas is currently set up for 2x, if above 2 we need to increase canvas resolution
+	showCanvas: true,
+	showText: false,
+
+//   	nScreenCenter = viewWindow.width / 2,		// not used
 	depth: 16.0, // viewport depth, max ray/draw dist		// raycaster and renderer
 	depthBuffer: [],		// raycaster and renderer	// TODO double check what this is used for, is it necessary?
 
@@ -536,7 +541,7 @@ let showText = true;
 function setupCanvas() {
 	const canvas = document.getElementById("canvDisp");
 
-	if (!showCanvas) {
+	if (!viewWindow.showCanvas) {
 		canvas.style.display = 'none';
 		viewWindow.clearCanvas = () => { return };
 		viewWindow.canvasText = () => { return };
@@ -551,10 +556,15 @@ function setupCanvas() {
 
 	const rect = canvas.getBoundingClientRect();
 
-	let canvasFontSize = hiRes ? 3 : 6;
+	let canvasFontSize = viewWindow.hiRes ? 3 : 6;		// NOTE might be better to change canvas res (canvas.width & canvas.height) in hiRes instead of changing fontSize
+		// something like: canvas.width = Math.round(rect.width * dpr * (viewWindow.hiRes ? viewWindow.resModifier / 2 : 1))
+		// and then canvasFontSize will always be 6
+			// actually, we can look at how we do it for the buffer, viewWindow
+			// in there we change the font size used in the <div> version
 
 		// TODO NOTE could set different font color...i think, to do more things!
-	canvasContext.font = `${canvasFontSize}px "Consolas", Courier, monospace`;
+	viewWindow.canvasFont = `${canvasFontSize}px "Consolas", Courier, monospace`;
+	canvasContext.font = viewWindow.canvasFont;
 
 	// Measure a string containing full height typography extensions
 	const textMetrics = canvasContext.measureText('M');
@@ -563,7 +573,7 @@ function setupCanvas() {
 	const fontHeight = Math.ceil(textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent);
 	const fontWidth = Math.ceil(textMetrics.width);
 
-	// Set the "actual" size of the canvas
+	// Set the "actual" pixel size of the canvas
 	canvas.width = rect.width * dpr;
 	canvas.height = rect.height * dpr;		// the 1.168 compensates for the
 // 	canvas.width = Math.round(rect.width * dpr / fontWidth) * fontWidth;////<-
@@ -573,7 +583,7 @@ function setupCanvas() {
 	// Scale the context to ensure correct drawing operations
 	canvasContext.scale(dpr, dpr);
 
-	// Set the "drawn" size of the canvas
+	// Set the "drawn" size of the canvas on the HTML page
 	canvas.style.width = `${rect.width}px`;
 	canvas.style.height = `${rect.height}px`;////<-
 // 	canvas.style.width = `${Math.round(rect.width / 1.168 / canvasFontSize) * canvasFontSize}px`;
@@ -604,6 +614,7 @@ function setupCanvas() {
   	viewWindow.canvasFontSize = canvasFontSize;
   	viewWindow.canvasFontHeight = fontHeight;
   	viewWindow.canvasFontWidth = fontWidth;
+	viewWindow.dpr = dpr;
   }
   // init() called from HTML
     var init = function( input ) {
@@ -612,11 +623,11 @@ function setupCanvas() {
     eTouchLook = document.getElementById("touchinputlook");
     eTouchMove = document.getElementById("touchinputmove");
 
-     if (hiRes) {	// TODO turn into switchable option in game
-  		viewWindow.width = viewWindow.width * resModifier;
-  		viewWindow.height = viewWindow.height * resModifier;
+	if (viewWindow.hiRes) {	// TODO turn into switchable option in game
+  		viewWindow.width = viewWindow.width * viewWindow.resModifier;
+  		viewWindow.height = viewWindow.height * viewWindow.resModifier;
   		let currentFontSize = parseFloat(window.getComputedStyle(viewWindow.outputEl).getPropertyValue('font-size'));
-  		viewWindow.outputEl.style.fontSize = `${currentFontSize / resModifier}px`;
+  		viewWindow.outputEl.style.fontSize = `${currentFontSize / viewWindow.resModifier}px`;
   		viewWindow.outputEl.style.lineHeight = 1.168;		// no weird horizontal line artifacts
 
   	}
@@ -667,7 +678,7 @@ function setupCanvas() {
 		Object.freeze(CHAR_TO_CODE);
 
 		WALL_TILE = new Uint16Array(Math.max(...charLookup.keys()));
-		WALL_TILE.fill(0);
+		WALL_TILE.fill(0);							// TODO double check what this is coerced to (probably 1) and replace true with that value
 		"TX#$CWU".split('').forEach(char => WALL_TILE[char.charCodeAt(0)] = true);
     }).then(() => {
 
@@ -681,11 +692,13 @@ function setupCanvas() {
 		resumeFunction();
     });
 
-	viewWindow.outputEl.style.display = showText ? 'inline-block' : 'none';
+	viewWindow.outputEl.style.display = viewWindow.showText ? 'inline-block' : 'none';
 
     // NOTE must be called after _testScreenSizeAndStartTheGame, because that sets up final screen height
 	viewWindow.buffer = new Uint16Array(viewWindow.width * Math.ceil(viewWindow.height));
+	viewWindow.depthBuffer = new Array(viewWindow.width * Math.ceil(viewWindow.height));
 	setupCanvas();
+	buildGlyphAtlas(viewWindow);
 	game.isRunning = true;
 	resumeFunction();
 
@@ -693,6 +706,7 @@ function setupCanvas() {
   };
 
   function _convertAssetsToUnicode(asset) {
+
   	let rawCodePoint;
   	if(Array.isArray(asset)) {
 		return Uint16Array.from(asset.map(rawChar => {

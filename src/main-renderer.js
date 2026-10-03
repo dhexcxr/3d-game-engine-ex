@@ -3,6 +3,7 @@ export {_r, _rh};
 import {brightness, viewWindow, CHAR_CACHE} from './main-io.js';
 
 import {map} from './map.js';
+import { atlasCanvas, charToAtlasIndex, pixelW, pixelH } from './atlas.js';
 
 import {_debugOutput} from './util.js';
 
@@ -150,10 +151,6 @@ let _r = {
 				: fLookModifier++;
       }
 
-      // print filler pixels
-      for(var i=0; i<fLookModifier; i++){
-        pfOutput.push( "." );
-      }
 
       var toBeRemoved = (2 * fLookModifier);
 
@@ -162,6 +159,28 @@ let _r = {
       // [1,2, ,4,5, ,7,8]
       //   [1,2,4,5,7,8]
       removeFrom = _evenlyPickItemsFromArray(viewWindow.width, toBeRemoved);
+
+			if (viewWindow.canvasContext && atlasCanvas) {
+				// print filler pixels
+				for(var i=0; i < fLookModifier; i++){
+					pfOutput.push( ".".charCodeAt(0) );
+				}
+
+				for (var rpix = 0; rpix < viewWindow.width; rpix++) {
+					if (!removeFrom.includes(rpix)) { 			 // print only if the pixel is in the list of pixels to print
+						pfOutput.push(oInput[globalPrintIndex]);
+					}
+					globalPrintIndex++;
+				} // end for(rpix)
+
+				for(var i = 0; i < fLookModifier; i++) {
+					pfOutput.push( ".".charCodeAt(0) );					// print filler pixels
+				}
+			} else {
+				// print filler pixels
+				for(var i=0; i < fLookModifier; i++){
+					pfOutput.push( "." );
+				}
 
 // TODO change this to an array.from() line, using the mapFn parameter, see https://developer.mozilla.org/en-US/docs/Web/JavaScript/Reference/Global_Objects/Array/from
       for(var rpix = 0; rpix < viewWindow.width; rpix++) {      // loops through each rows of pixels
@@ -177,6 +196,7 @@ let _r = {
       for(var i=0; i<fLookModifier; i++){
         pfOutput.push( "." );		      // print filler pixels
       }
+			}
 
     } // end for(row)
 
@@ -194,21 +214,68 @@ let _r = {
 	viewWindow.clearCanvas();
 	let fontHeight = viewWindow.canvasFontHeight;
 	let lineheight = fontHeight * 1.75;
+		var removePixels = viewWindow.height / 2;
 
+		const atlasCols = viewWindow.atlasCols;
+		
+		if (viewWindow.canvasContext && atlasCanvas) {
+			const ctx = viewWindow.canvasContext;
+			
+			let rowCount = 0;
+			let colCount = 0;
+			
+			// Clear canvas with black
+			viewWindow.clearCanvas();
+			
+			const startCol = ~~removePixels;
+			const endCol = viewWindow.width - ~~removePixels;
+			for (let row = 0; row < viewWindow.height; row++) {
+				for (let col = startCol; col < endCol; col++) {
+					// Get character string from the skewed layout frame
+					const charCode = frame[row * viewWindow.width + col];
+					// O(1) Lookup of the sequential atlas column
+					const colIndex = charToAtlasIndex[charCode];
+					// Source Coordinates (White color is row 15)
+					const sx = colIndex * pixelW * viewWindow.dpr;
+					const sy = 15 * pixelH * viewWindow.dpr;
+// 					const sx = colIndex % atlasCols * pixelW;
+// 					const sy = (colIndex / atlasCols | 0) * pixelW * 15;
+					
+					// Destination Coordinates (aligned to the left edge of viewport)
+					const dx = (col - startCol) * pixelW;
+					const dy = lineheight * row + lineheight;
+					// Fast image-copy operation
+					ctx.drawImage(atlasCanvas, sx, sy, pixelW, pixelH, dx, dy, pixelW, pixelH);
+					
+					colCount++;
+				}
+				_debugOutput(`colCount: ${colCount};`, 'debug2');
+				colCount = 0;
+				rowCount++;
+			}
+			_debugOutput(`rowCount: ${rowCount}`, 'debug2', true);
+		} else {
     // interates over each row again, and omits the first and last 30 pixels, to disguise the skewing!
-    var printIndex = 0;		// w/ original 80 height, removePixels was 40 (despite quote of 30 above)
-    var removePixels = viewWindow.height / 2;			// TODO to be able to calculate this and actually have nice look up/down skewing
+	// 		var printIndex = 0;		// w/ original 80 height, removePixels was 40 (despite quote of 30 above)
+																// TODO to be able to calculate this and actually have nice look up/down skewing
     for(var row = 0; row < viewWindow.height; row++){	// determine the allowed up/down angle, calc how much that would transform a 90deg
 														// implement the skew in a continuous way (a greater number of more granular steps)
 															// add logic to expand the visuals that are being skewed instead of just adding
 																// extra dots '.' (which is done in fPrepareFrame() function)
-
-      dfOutput.push(...frame.slice(row * viewWindow.width + ~~removePixels, (row + 1) * viewWindow.width - ~~removePixels));
-      //       dfOutput.push("<br>");	// innerHTML version		// line, build that calc into the skipEveryX() function
-      dfOutput.push("\n");	// textContent or canvas version
-	  viewWindow.canvasText(frame.slice(row * viewWindow.width + ~~removePixels, (row + 1) * viewWindow.width - ~~removePixels).join(''), 0, lineheight * row + lineheight);		// corrected/trimmed screen
-    }
+		if (viewWindow.showText) {
+			dfOutput.push(...frame.slice(row * viewWindow.width + ~~removePixels, (row + 1) * viewWindow.width - ~~removePixels));
+														// line, build that calc into the skipEveryX() function
+			dfOutput.push("\n");	// textContent or canvas version
+    	}
+		if (viewWindow.showCanvas) {
+			viewWindow.canvasText(frame.slice(row * viewWindow.width + ~~removePixels, (row + 1) * viewWindow.width - ~~removePixels).join(''), 0, lineheight * row + lineheight, true);		// corrected/trimmed screen
+		}
+	}
+		
+			if (viewWindow.showCanvas) {
     target.textContent = dfOutput.join('');
+			}
+		}
   },
 
 
@@ -400,6 +467,8 @@ let _r = {
 
               // animation-cycle available, determine the current cycle
               // TODO: randomize cycle position
+		  // TODO for me, change walkframes into an array of the frames
+		  	// then just step through them on a count of currentFrame % <some number>
               if( sprite.move && "walkframes" in currentSpriteObject ){
 				if(animationTimer < 20) {
                   sAnimationFrame = "W1";
@@ -448,7 +517,7 @@ let _r = {
 
               // assign based on render mode
               let sSpriteGlyph = (viewWindow.nRenderMode == 2 || viewWindow.nRenderMode == 0)
-              						? _rh.renderWall( fSpriteDist, "W", sSamplePixel )
+									? _rh.renderWall( fSpriteDist, "W", sSamplePixel )
               						: sSamplePixel;
 
 
@@ -469,10 +538,7 @@ let _r = {
               }
             }
           }
-        } // end if
-
-        // player was hit
-        else{
+		} else {		// player was hit
           // clearInterval(game.timer);
         }
 
