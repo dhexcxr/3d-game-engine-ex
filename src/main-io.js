@@ -22,7 +22,7 @@ and then trying to export screen functions into its own module has its own compl
 export {_mh, brightness, init, viewWindow, charLookup, codePointLookup, CHAR_CACHE, WALL_TILE, CEIL_TILE_MAP, HOLE_TILE_MAP, registerOnResume};
 
 import {player} from './player.js';
-import {gameLoop} from './main-engine.js';
+// import {gameLoop} from './main-engine.js';
 import {game} from './game.js';
 import {map} from './map.js';
 
@@ -145,7 +145,7 @@ function resumeGameClock() {
 	_testScreenSizeAndStartTheGame();
 	game.lastTime = performance.now();
 	game.isRunning = true;
-	gameLoop();
+	resumeFunction();
 	_debugOutput(`isWindowActive: ${viewWindow.isWindowActive()}; bPaused: ${player.bPaused}`, 'debug2');
 }
 
@@ -252,7 +252,7 @@ let showText = true;
             _testScreenSizeAndStartTheGame();
             game.lastTime = performance.now();
 			game.isRunning = true;
-			gameLoop();
+			resumeFunction();
             player.bPaused = false;
 			secondDisplay.style.setProperty('opacity', '0%')
 			secondDisplay.innerHTML = '';
@@ -678,7 +678,7 @@ function setupCanvas() {
       	_testScreenSizeAndStartTheGame();
 		game.lastTime = performance.now();
 		game.isRunning = true;
-		gameLoop();
+		resumeFunction();
     });
 
 	viewWindow.outputEl.style.display = showText ? 'inline-block' : 'none';
@@ -686,8 +686,8 @@ function setupCanvas() {
     // NOTE must be called after _testScreenSizeAndStartTheGame, because that sets up final screen height
 	viewWindow.buffer = new Uint16Array(viewWindow.width * Math.ceil(viewWindow.height));
 	setupCanvas();
-		game.isRunning = true;
-		gameLoop();
+	game.isRunning = true;
+	resumeFunction();
 
     });
   };

@@ -6,7 +6,7 @@ import {raycaster} from './main-raycaster.js';
 import {game} from './game.js';
 
 import {_debugOutput} from './util.js';
-import {registerOnResume} from './main-io.js'
+import {registerOnResume} from './main-io.js';
 
 /**
  * Some Performance enhancers:
