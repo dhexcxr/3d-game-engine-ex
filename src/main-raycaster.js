@@ -269,9 +269,7 @@ function raycaster() {
 		closestLightWallDist = Infinity;
 
 		let wallLight = 0;		// NOTE TODO these should go into an object, probably
-		let lightFromCeilInColumn = false;		// TODO next, probably put togethet these objects to get lights working how i want them
-		let lightFromHoleInColumn = false;
-		let ceilLightInTile = false;
+		let ceilLightInTile = false;			// TODO next, probably put togethet these objects to get lights working how i want them
 		let floorLightInTile = false;
 
 		const invLightRadius = 1 / MAX_RADIUS_SQ;
@@ -279,45 +277,46 @@ function raycaster() {
 
 		let lightCalcs = new Array(9);
 
-		let xStart = 0;
-		let xEnd = 0;
-		let yStart = 0;
-		let yEnd = 0;
+		let xDeltaStart = 0;
+		let xDeltaEnd = 0;
+		let yDeltaStart = 0;
+		let yDeltaEnd = 0;
 
 		switch (sWallFaceDirection) {
-			case 'N': xStart = -2, xEnd = 2;
-						yStart = -1, yEnd = -2;	break;
+			case 'N': xDeltaStart = -2, xDeltaEnd = 2;
+						yDeltaStart = -1, yDeltaEnd = -2;	break;
 
-			case 'S': xStart = -2, xEnd = 2;
-						yStart = 1, yEnd = 2; break;
+			case 'S': xDeltaStart = -2, xDeltaEnd = 2;
+						yDeltaStart = 1, yDeltaEnd = 2; break;
 
-			case 'E': xStart = 1, xEnd = 2;
-						yStart = -2, yEnd = 2; break;
+			case 'E': xDeltaStart = 1, xDeltaEnd = 2;
+						yDeltaStart = -2, yDeltaEnd = 2; break;
 
-			case 'W': xStart = -2, xEnd = -1;
-						yStart = -2, yEnd = 2; break;
+			case 'W': xDeltaStart = -2, xDeltaEnd = -1;
+						yDeltaStart = -2, yDeltaEnd = 2; break;
 		}
 
+		const lightLookUpStartX = Math.min(Math.max(map_x + xDeltaStart, 0), map.width - 1);
+		const lightLookUpEndX = Math.min(Math.max(map_x + xDeltaEnd, 0), map.width - 1);
+		const lightLookUpStartY = Math.min(Math.max(map_y + yDeltaStart, 0), map.width - 1);
+		const lightLookUpEndY = Math.min(Math.max(map_y + yDeltaEnd, 0), map.width - 1);
+
+		// NOTE - TO FIX, if 2 holes are next to wall, parallel to wall, light glow does not work
+			// glow on wall is centered on middle of holes, not "equal" light glowing from each hole
 							// Look at current tile and its immediate neighbors for a light
-		for (let sx = xStart; sx <= xEnd; sx++) {
-			for (let sy = yStart; sy <= yEnd; sy++) {
-				const lightX = Math.min(Math.max(map_x + sx, 0), map.width - 1);
-				const lightY = Math.min(Math.max(map_y + sy, 0), map.height - 1);
+		for (let lightX = lightLookUpStartX; lightX <= lightLookUpEndX; lightX++) {
+			for (let lightY = lightLookUpStartY; lightY <= lightLookUpEndY; lightY++) {
 
 				const ceilLookupIndex = lightY * map.width + lightX;
 
 				ceilLightInTile = map.tiles[ceilLookupIndex] === ",".charCodeAt(0);
 				floorLightInTile = map.tiles[ceilLookupIndex] === "o".charCodeAt(0);
 
-				lightFromCeilInColumn = lightFromCeilInColumn || ceilLightInTile;
-				lightFromHoleInColumn = lightFromHoleInColumn || floorLightInTile;
-
-
-				// if (map.tiles[lightY * map.width + lightX] === ",") {
 				if (ceilLightInTile
 						|| (floorLightInTile	// creepy glow from floor holes
-							&& sx >= Math.sign(xStart) && sx <= Math.sign(xEnd)
-							&& sy >= Math.sign(yStart) && sy <= Math.sign(yEnd))) {	// TODO classify all tile types in charLookup or something, so we can do constant things like === WALL_TILE
+							&& lightX >= map_x - 1 && lightX <= map_x + 1
+							&& lightY >= map_y - 1 && lightY <= map_y + 1)) {	// TODO classify all tile types in charLookup or something, so we can do constant things like === WALL_TILE
+
 					const dx = exactHitX - (lightX + 0.5);
 					const dy = exactHitY - (lightY + 0.5);	// TODO we might need to calc the yDist from light to wall in here, to better blend ceil vs floor
 					const distSq = ceilLightInTile ? dx * dx + dy * dy : 0;
@@ -465,15 +464,17 @@ function raycaster() {
 			// check if there is a ceiling light near this floor tile
 			closestLightFloorDist = Infinity;
 
+			const lightLookUpStartX = Math.max(floorMapX - 2, 0);
+			const lightLookUpEndX = Math.min(floorMapX + 2, map.width - 1);
+			const lightLookUpStartY = Math.max(floorMapY - 2, 0);
+			const lightLookUpEndY = Math.min(floorMapY + 2, map.width - 1);
 		    			// Look at current tile and its immediate neighbors for a light
-			for (let sx = -2; sx <= 2; sx++) {
-				for (let sy = -2; sy <= 2; sy++) {
-					const lightX = Math.min(Math.max(floorMapX + sx, 0), map.width - 1);
-					const lightY = Math.min(Math.max(floorMapY + sy, 0), map.height - 1);
+			for (let lightX = lightLookUpStartX; lightX <= lightLookUpEndX; lightX++) {
+				for (let lightY = lightLookUpStartY; lightY <= lightLookUpEndY; lightY++) {
 
 					const ceilLookupIndex = lightY * map.width + lightX;
 // TODO NOTE next thing, process map on load, for every tile, build array with x,y of all nearby lights
-	// then we won't have to do this searching, looping through sx, sy, and looking at the map.tiles array
+	// then we won't have to do this searching, looping through lightX, lightY, and looking at the map.tiles array
 	// it will just be: get list of lights in range for this tile
 		// calculate dx, dy for this pixel to this light
 		// continue
@@ -497,26 +498,25 @@ function raycaster() {
 
 					if (ceilLight
 							|| (floorHole	// creepy glow from floor holes
-								&& (sx >= -1 || sx <= 1)
-								&& (sy >= -1 || sy <= 1))) {	// TODO classify all tile types in charLookup or something, so we can do constant things like === WALL_TILE
+								&& (lightX >= floorMapX - 1 || lightX <= floorMapX + 1)
+								&& (lightY >= floorMapY - 1 || lightY <= floorMapY + 1))) {	// TODO classify all tile types in charLookup or something, so we can do constant things like === WALL_TILE
 // fancy lights
 						const lightCentX = lightX + 0.5;
 						const lightCentY = lightY + 0.5;
-
-						const offset = 0.5;		// NOTE original was 0.25
 
 						// hash map coordinates to calc jitter lookup (see spacial hashing)
 						const lookupIndex = (~~(floorX * 100) + ~~(floorY * 100) * 57) & map.JITTER_MASK;
 						const noiseX = map.jitterTableX[lookupIndex];
 						const noiseY = map.jitterTableY[lookupIndex];
 
-						const lightPoints = floorHole
-							? [{ x: lightCentX + noiseX,          y: lightCentY + noiseY },          // Center
+						const offset = 0.5;		// NOTE original was 0.25
+						const lightPoints = [
+								{ x: lightCentX + noiseX,          y: lightCentY + noiseY },          // Center
 								{ x: lightCentX - offset + noiseX, y: lightCentY - offset + noiseY }, // Top-Left
 								{ x: lightCentX + offset + noiseX, y: lightCentY - offset + noiseY }, // Top-Right
 								{ x: lightCentX - offset + noiseX, y: lightCentY + offset + noiseY }, // Bottom-Left
-								{ x: lightCentX + offset + noiseX, y: lightCentY + offset + noiseY }]  // Bottom-Right
-							: [{ x: lightCentX + noiseX,          y: lightCentY + noiseY }];
+								{ x: lightCentX + offset + noiseX, y: lightCentY + offset + noiseY }  // Bottom-Right
+							];
 
 						let visiblePoints = 0;
 						let accumulatedFalloff = 0;
@@ -539,7 +539,7 @@ function raycaster() {
 
 						if (visiblePoints > 0) {	// calc actual amount of light
 							  const visibilityFactor = visiblePoints / lightPoints.length;
-							  const averageFalloff = accumulatedFalloff / visiblePoints;			// NOTE consider turning down ceilLight intensity
+							  const averageFalloff = accumulatedFalloff / visiblePoints;
 							  floorLight += averageFalloff * visibilityFactor * (floorHole ? 0.8 : 0.8);
 						}
 					}
