@@ -3,7 +3,7 @@
 export {raycaster};
 
 import {game, player, memoize} from './main-game-engine.js';
-import {_debugOutput, brightness, viewWindow, map, charLookup, CHAR_CACHE, WALL_TILE} from './main-io.js';
+import {_debugOutput, brightness, viewWindow, map, charLookup, CHAR_CACHE, WALL_TILE, ioDebug} from './main-io.js';
 import {_r, _rh} from './main-renderer.js';
 
 const absSign = (x) => (x === 0 ? 1 : Math.sign(x));	// RENDERER only

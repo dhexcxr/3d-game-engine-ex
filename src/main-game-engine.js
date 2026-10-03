@@ -56,14 +56,18 @@ const game = {
 	fLooktimer: 0,	// HERE in screen.skew (which should move), also in io and renderer			// eh first put it together in io, then we can decide to split that up
 	lastTime: 0,
 	physLastTime: 0,
+	physAccumulator: 0,
 
 	startRunning: true,		// DEBUG
 };
 
 // watchProp(game, 'timer');
 
-const MAX_FPS = 60;
-const FRAME_INTERVAL_MS = 1000 / MAX_FPS;
+const MAX_PHYS_FPS = 60;
+const PHYSICS_STEP = 1 / MAX_PHYS_FPS; // Fixed step in seconds (~0.01667s)
+const PHYSICS_STEP_MS = 1000 / MAX_PHYS_FPS; // Step in milliseconds (~16.67ms)
+const MAX_ACCUMULATED_TIME = 250; // Safety cap (prevents "spiral of death" during long tab freezes)
+// const FRAME_INTERVAL_MS = 1000 / MAX_PHYS_FPS;
 
   /**
    * The basic game loop
@@ -79,8 +83,9 @@ const FRAME_INTERVAL_MS = 1000 / MAX_FPS;
 	let lastPlayerX = player.x;
 	let lastPlayerY = player.y;
 	let debug = {
-		xSpeed: 0,
-		ySpeed: 0
+		playerXDelta: 0,
+		playerYDelta: 0,
+		notMoving: 0
 	};
 
 
@@ -101,10 +106,15 @@ const FRAME_INTERVAL_MS = 1000 / MAX_FPS;
 		game.timer = requestAnimationFrame((currentTime) => {
 			// main requestAnimationFrame() logic stolen from https://www.aleksandrhovhannisyan.com/blog/javascript-game-loop/
 	//		const currentTime = performance.now()
-	  		const rawDelta = currentTime - game.lastTime;
+			let rawDelta = currentTime - game.lastTime;
 			game.lastTime = currentTime;
 
+			if (rawDelta > MAX_ACCUMULATED_TIME) {
+				rawDelta = MAX_ACCUMULATED_TIME;
+			}
+
 			const physRawDelta = currentTime - game.physLastTime;
+			game.physAccumulator += rawDelta;
 
 			// DEBUG stuff
 	  		// Guard against edge cases (e.g., background tab pauses, heavy hitching)
@@ -120,23 +130,37 @@ const FRAME_INTERVAL_MS = 1000 / MAX_FPS;
 			game.currentFrame++;	// NOTE this might need to be done in the physics update, in the if() below
 
 			// TODO look at accumulator pattern: https://gemini.google.com/app/d18c682a4a15f318
-			if (physRawDelta >= FRAME_INTERVAL_MS) {
+				// BUT NEXT - do flickering lights, https://share.google/aimode/uo1ZrZFtdbPwDjhI7
+			// Consume time in fixed increments
+			while (game.physAccumulator >= PHYSICS_STEP_MS) {
 
 				physSmoothedDelta = (physSmoothedDelta * alpha) + (physRawDelta * (1 - alpha));			// Exponential Moving Average (EMA)
 				const smoothedPhysFPS = 1000 / physSmoothedDelta;
 
-				debug.xSpeed = Math.max(debug.xSpeed, Math.round((lastPlayerX - player.x) / physSmoothedDelta * 1000000) / 1000);
-				debug.ySpeed = Math.max(debug.ySpeed, Math.round((lastPlayerY - player.y) / physSmoothedDelta * 1000000) / 1000);
+				if (lastPlayerX - player.x === 0 && lastPlayerY - player.y === 0) {
+					debug.notMoving += rawDelta;
+					if (debug.notMoving >= 1000 * 1) {
+						debug.playerXDelta = 0;
+						debug.playerYDelta = 0;
+						debug.notMoving = 0;
+					}
+				} else {
+					debug.notMoving = 0;
+				}
+ 
+				debug.playerXDelta = [debug.playerXDelta, Math.round((lastPlayerX - player.x) / physSmoothedDelta * 1000000) / 1000].reduce((max, current) => Math.abs(current) > Math.abs(max) ? current : max);;
+				debug.playerYDelta = [debug.playerYDelta, Math.round((lastPlayerY - player.y) / physSmoothedDelta * 1000000) / 1000].reduce((max, current) => Math.abs(current) > Math.abs(max) ? current : max);;
 
-				_debugOutput(`PhysFPS: ${Math.round(smoothedPhysFPS)}; xSpeed: ${debug.xSpeed}; ySpeed: ${debug.ySpeed};
-				physRawDelta: ${Math.round(physRawDelta)}; physSmoothedDelta: ${Math.round(physSmoothedDelta)};`, 'debug');
+				_debugOutput(`PhysFPS: ${Math.round(smoothedPhysFPS)}; playerXDelta: ${debug.playerXDelta}; playerYDelta: ${debug.playerYDelta};
+				physRawDelta: ${physRawDelta.toFixed(2)}; physSmoothedDelta: ${physSmoothedDelta.toFixed(2)};
+				notMoving: ${Math.round(debug.notMoving)}; notMovCond: ${debug.notMoving >= 1000 * 3}`, 'debug');
 
 				// DEBUG only
 				lastPlayerX = player.x;
 				lastPlayerY = player.y;
 
 				// Synchronize next frame to arrive on time
-				game.physLastTime = currentTime - (physRawDelta % FRAME_INTERVAL_MS);
+				game.physLastTime = currentTime - (physRawDelta % PHYSICS_STEP);
 
 				/**
 				* Game-function related
@@ -157,7 +181,7 @@ const FRAME_INTERVAL_MS = 1000 / MAX_FPS;
 				*/
 				
 				if (player.bPlayerMoving()) {
-					_mh.move(player.viewX, player.viewY, physRawDelta);
+					_mh.move(player.viewX, player.viewY, PHYSICS_STEP_MS);		// Always pass constant step
 				}
 				
 				// normalize player angle		// this should probably be in io/movement
@@ -169,10 +193,10 @@ const FRAME_INTERVAL_MS = 1000 / MAX_FPS;
 				}
 				
 				// allows jumping for only a certain amount of time
-				if(player.bJumping){
+				if(player.bJumping) {
 					game.nJumptimer++
 				}
-				if( game.nJumptimer > 6 ){
+				if(game.nJumptimer > 6) {
 					player.bFalling = true;
 					player.bJumping = false;
 					game.nJumptimer = 6;
@@ -186,19 +210,14 @@ const FRAME_INTERVAL_MS = 1000 / MAX_FPS;
 					player.bFalling = false;
 				}
 
+				game.physAccumulator -= PHYSICS_STEP_MS;
 			}	// end of physics update
 
 			/**
 			* Drawing related
 			*/
 			
-			
-			// 		let doorStartAngle = 0;		// DEBUG only
-			// 		let doorStartDist = 0;
-			// 		let doorEndAngle = 0;		// DEBUG only
-			// 		let doorEndDist = 0;
-			// 		let prevTile = '';		// DEBUG only
-			
+			// NOW NEXT, look into position interpolation
 			raycaster();
 			
 			_r.drawSprites();

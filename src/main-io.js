@@ -1,6 +1,6 @@
 // main i/o
 
-export {_debugOutput, _mh, brightness, init, viewWindow, map, charLookup, codePointLookup, CHAR_CACHE, WALL_TILE};
+export {_debugOutput, _mh, brightness, init, viewWindow, map, charLookup, codePointLookup, CHAR_CACHE, WALL_TILE, ioDebug};
 
 import {game, player, gameLoop} from './main-game-engine.js';
 
@@ -15,6 +15,9 @@ const codePointLookup = new Map();
 const CHAR_CACHE = new Array();
 const CHAR_TO_CODE = {};	// TODO for 26-08-15, swap to this in renderer, and get map tile light pre-comp going
 let WALL_TILE = new Uint16Array();
+const ioDebug = {
+	randomLightSwitch: false
+};
 
 let brightness = ["\u00A0", "░", "▒", "▓", "█"];
 
@@ -278,6 +281,10 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 			secondDisplay.style.setProperty('opacity', (enableOverlay ? '70%' : '0%'))
 			secondDisplay.innerHTML = 'paused';
           }										// try hack with checking for paused or viewWindow.isWindowActive() in main loop for now
+        }
+
+        if (e.which == 76) { // l
+        	ioDebug.randomLightSwitch = !ioDebug.randomLightSwitch;
         }
 
         if (player.bPaused) return;
@@ -553,7 +560,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
         player.ang += 0.05;
       }
 
-      let playerSpeed = player.bRunning ? 0.012 : 0.006;	// ~3 unit/sec @ 60 physics fps
+      let playerSpeed = player.bRunning ? 0.006 : 0.003;	// ~3 unit/sec @ 60 physics fps
 
 
       let deltaXDir = 0;
@@ -593,7 +600,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
         totalY += deltaY * deltaYDir;
       }
 
-      _debugOutput(`deltaX: ${deltaX}; deltaY: ${deltaY};`, 'debug2');
+      _debugOutput(`deltaX: ${deltaX}; deltaY: ${deltaY}; randomLightSwitch: ${ioDebug.randomLightSwitch}`, 'debug2');
 
       let newX = player.x + totalX;
       let newY = player.y + totalY;
