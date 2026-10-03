@@ -1,10 +1,12 @@
-export {game, player, gameLoop};
+export {gameLoop};
 
 import {_r, _rh} from './main-renderer.js';
-import {move} from './player.js';
+import {player, move} from './player.js';
 import {raycaster} from './main-raycaster.js';
+import {game} from './game.js';
 
 import {_debugOutput} from './util.js';
+import {registerOnResume} from './main-io.js'
 
 /**
  * Some Performance enhancers:
@@ -20,47 +22,6 @@ import {_debugOutput} from './util.js';
  */
 
 
-const player = {
-	x: 14.0,		// io, raycaster, and renderer
-	y: 1.0,	// io, raycaster, and renderer
-	ang: 1.5,		// used in io and renderer, probably could replace all of these with the playerX/Y vectors
-
-	bTurnLeft: false,		// probably, these are only used in IO
-	bTurnRight: false,
-	bStrafeLeft: false,
-	bStrafeRight: false,		// NOTE i don't like these being in here
-	bMoveForward: false,
-	bMoveBackward: false,
-	bJumping: false,
-	bFalling: false,
-	bRunning: false,
-	bPaused: false,
-	bPlayerMayMoveForward: true,	// this is also used in renderer, when we determin if player is too close to sprite
-	// NOTE oh, might should bPlayerMoving be in _mh?
-	bPlayerMoving: function() {
-		return (this.bTurnLeft || this.bTurnRight || this.bStrafeLeft || this.bStrafeRight
-			|| (this.bMoveForward && this.bPlayerMayMoveForward) || this.bMoveBackward
-			|| this.bJumping || this.bFalling || this.bRunning) && !this.bPaused
-		},		// HERE, should probably move this into io, it's only used to determine if to call the _mh.move() function
-							// i think i implemented this as a way to block movement when paused
-							// but there's probably a better way to do that /in/ the io movement functions instead of the game loop
-	get viewX() { return Math.cos(this.ang) },		// NOTE these are used all over the place for player movement, maybe share
-	get viewY() { return Math.sin(this.ang) },	// NOTE this and the planeX/Y should probably be in renderer
-};
-
-const game = {
-	timer: {},		// here and io, holds setInterval that controls game time/speed
-	isRunning: false,
-	currentFrame: 0, 	// here in main loop, raycaster, and renderer
-	animationTimer: 0,		// here and renderer
-	nJumptimer: 0,	// only HERE, but this should probably be moved into io....well is movement io or is it game logic?
-	fLooktimer: 0,	// HERE in screen.skew (which should move), also in io and renderer			// eh first put it together in io, then we can decide to split that up
-	lastTime: 0,
-	physLastTime: 0,
-	physAccumulator: 0,
-
-	startRunning: true,		// DEBUG
-};
 
 // watchProp(game, 'timer');
 
@@ -70,6 +31,7 @@ const PHYSICS_STEP_MS = 1000 / MAX_PHYS_FPS; // Step in milliseconds (~16.67ms)
 const MAX_ACCUMULATED_TIME = 250; // Safety cap (prevents "spiral of death" during long tab freezes)
 // const FRAME_INTERVAL_MS = 1000 / MAX_PHYS_FPS;
 
+registerOnResume(gameLoop);
   /**
    * The basic game loop
    * main() called from io._testScreenSizeAndStartTheGame
@@ -90,15 +52,6 @@ const MAX_ACCUMULATED_TIME = 250; // Safety cap (prevents "spiral of death" duri
 	};
 
 
-//     game.timer = setInterval(gameLoop, 33);		// default
-// 	if (document.pointerLockElement || game.startRunning) {					// NOTE TODO most things rely on the frame rate
-// // 		game.timer = setInterval(gameLoop, 33.333);		// (not the right way to do it)
-// // 		requestAnimationFrame(gameLoop());
-// 		gameLoop();
-// 		game.isRunning = true;								// so at higher speed everything happens faster
-// 	} else {												// TODO update to rely on time between ticks so we can speed this up
-// //     	gameLoop();			// TODO run one of this so that we paint the first screen on startup, then wait for user click
-// 	}							// FOLLOWUP - well, maybe not, without the one run is just starts on a blank screen, which is ok
 
 	function gameLoop(){
 //       _debugOutput('clear', 'debug2');
@@ -106,7 +59,6 @@ const MAX_ACCUMULATED_TIME = 250; // Safety cap (prevents "spiral of death" duri
 
 		game.timer = requestAnimationFrame((currentTime) => {
 			// main requestAnimationFrame() logic stolen from https://www.aleksandrhovhannisyan.com/blog/javascript-game-loop/
-	//		const currentTime = performance.now()
 			let rawDelta = currentTime - game.lastTime;
 			game.lastTime = currentTime;
 
@@ -168,7 +120,7 @@ const MAX_ACCUMULATED_TIME = 250; // Safety cap (prevents "spiral of death" duri
 				*/
 				
 				game.animationTimer++;				// here and renderer, and a commented out section of raycaster
-				if(game.animationTimer > 15){
+				if (game.animationTimer > 60) {	// NOTE we can probably replace this with some kind of frame counter
 					game.animationTimer = 0;
 				}
 				// TODO this needs to wait till the map is loaded before continuing on past here
@@ -182,7 +134,7 @@ const MAX_ACCUMULATED_TIME = 250; // Safety cap (prevents "spiral of death" duri
 				*/
 				
 				if (player.bPlayerMoving()) {
-					move(player.viewX, player.viewY, PHYSICS_STEP_MS, player);		// Always pass constant step
+					move(PHYSICS_STEP_MS);		// Always pass constant step
 				}
 				
 				// normalize player angle		// this should probably be in io/movement

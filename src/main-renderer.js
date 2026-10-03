@@ -1,7 +1,11 @@
 export {_r, _rh};
 
-import {game, player} from './main-game-engine.js';
-import {_debugOutput, brightness, viewWindow, map, charLookup, codePointLookup, CHAR_CACHE} from './main-io.js';
+import {brightness, viewWindow, CHAR_CACHE} from './main-io.js';
+
+import {map} from './map.js';
+
+import {_debugOutput} from './util.js';
+
 
 /*
 	original top level funcs:
@@ -50,7 +54,7 @@ let _r = {
 	   *                               (texture tiled 4x across one block)
 	   * @return {string}
 	   */
-	  getSamplePixel: function(texture, x, y){
+	getSamplePixel: function(texture, x, y, playerAng, wallFace = 'E') {
 
 		var scaleFactor = texture?.scale  || defaultTexScale;
 		var texWidth    = texture?.width  || defaultTexWidth;
@@ -60,10 +64,14 @@ let _r = {
 
 		if( texpixels instanceof Map ){
 		  // Different Texture based on viewport
-		  if( player.ang > 0 && player.ang < Math.PI ){
-			texpixels = texpixels.get('S');
+			if (wallFace === 'E' || wallFace === 'W') {
+				texpixels = (playerAng > 0 && playerAng <= Math.PI)
+					? texpixels.get('S')
+					: texpixels.get('N');
 		  } else {
-			texpixels = texpixels.get('N');
+				texpixels = (playerAng > 0.5 * Math.PI && playerAng <= 1.5 * Math.PI)
+					? texpixels.get('N')
+					: texpixels.get('S');		// TODO switch these names to L and R
 		  }
 		}
 
@@ -112,14 +120,14 @@ let _r = {
    * the aim is to remove the first and last 30 pixels of very row,
    * to obscure the skewing
    */		// NOTE TODO i think this is where the skewing can be improved
-  fPrepareFrame: function(oInput, oOverlay, eTarget){
+  fPrepareFrame: function(oInput, oOverlay, eTarget, screenLook) {
     var oOverlay = oOverlay || false;
     var eTarget  = eTarget || viewWindow.outputEl;
     pfOutput.length = 0;
 
 
     // this is the maximum of variation created by the lookup timer, aka the final lookmodifier value
-    var neverMoreThan = Math.round(viewWindow.height / _skipEveryXrow(game.fLooktimer) - 1);
+    var neverMoreThan = Math.round(viewWindow.height / _skipEveryXrow(screenLook) - 1);
 
     // used to skew the image
     var globalPrintIndex = 0;
@@ -127,7 +135,7 @@ let _r = {
 
     // if looking up, the starting point is the max number of pixesl to indent,
     // which will be decremented, otherwise it remains 0, which will be incremented
-    if( game.fLooktimer > 0 && isFinite(neverMoreThan) ){
+    if( screenLook > 0 && isFinite(neverMoreThan) ){
       fLookModifier = neverMoreThan;
     }
 
@@ -136,9 +144,10 @@ let _r = {
     for(var row = 0; row < viewWindow.height; row++){
 
       // increment the fLookModifier every time it needs to grow (grows per row)
-      if ( _everyAofB(row, _skipEveryXrow(game.fLooktimer)) ) {
-						// looking up
-          game.fLooktimer > 0 ? fLookModifier-- : fLookModifier++;
+      if ( _everyAofB(row, _skipEveryXrow(screenLook)) ) {
+				screenLook > 0
+				? fLookModifier--		// looking up
+				: fLookModifier++;
       }
 
       // print filler pixels
@@ -176,9 +185,8 @@ let _r = {
 
 
 		// this might be better in io, named drawToScreen
-  fDrawFrame: function(overlayscreen, target) {
-
-    var frame = _r.fPrepareFrame(viewWindow.buffer, overlayscreen);
+  fDrawFrame: function(overlayscreen, target, screenLook) {
+    var frame = _r.fPrepareFrame(viewWindow.buffer, overlayscreen, '', screenLook);
 // 	var frame = screen;		// DEBUG uncomment to remove skew from look up/down rendering
     var target = target || viewWindow.outputEl;
 
@@ -229,7 +237,8 @@ let _r = {
         var fCollideY2 = +(sprite.y) + 0.425; // 0.25
         var fCollideX2 = +(sprite.x) - 0.65; //0.5
 
-        if( map.tiles[ ~~(fCollideY) * map.width + ~~(fCollideX)] != ".".charCodeAt(0) || map.tiles[ ~~(fCollideY2) * map.width + ~~(fCollideX2)] != ".".charCodeAt(0) ){
+        if (map.tiles[ ~~(fCollideY) * map.width + ~~(fCollideX)] != ".".charCodeAt(0)
+        		|| map.tiles[ ~~(fCollideY2) * map.width + ~~(fCollideX2)] != ".".charCodeAt(0)) {
 
           sprite.stuckcounter++;
 
@@ -290,20 +299,20 @@ let _r = {
   /**
    * Sorts the Sprite list based on distance from the player
    */
-   updateSpriteBuffer: function() {
+   updateSpriteBuffer: function(playerX, playerY) {
 
     	// converts object of objects to list
     map.sprites = {
     	...(Object.values(map?.sprites).map(sprite => {
     		    // calculates the distance to the player
-    		sprite.z = Math.sqrt((sprite.x - player.x) ** 2 + (sprite.y - player.y) ** 2);
+    		sprite.z = Math.sqrt((sprite.x - playerX) ** 2 + (sprite.y - playerY) ** 2);
     		return sprite;
     	}).sort(_sortSpriteList))    // sorts the list
     };		    // make object from array again
   },
 
 
-  drawSprites: function() {
+  drawSprites: function(player, currentFrame, animationTimer) {
       // draw sprites	// TODO change this to an array of objects probably
 	  for (const sprite of Object.values(map.sprites)) {
 
@@ -314,7 +323,7 @@ let _r = {
 // 											spriteTileIndex - map.width, spriteTileIndex - map.width + 1, spriteTileIndex - map.width - 1];
 		let spriteTileAdjacentCardinals = [spriteTileIndex];
 
-		let spriteTileNotVisited = spriteTileAdjacentCardinals.some(tileIndex => map.visitedTiles[tileIndex] !== game.currentFrame);
+		let spriteTileNotVisited = spriteTileAdjacentCardinals.some(tileIndex => map.visitedTiles[tileIndex] !== currentFrame);
 
 		if(spriteTileNotVisited) {
 // 			_debugOutput(`STV: ${!spriteTileNotVisited}`, 'debug2');
@@ -385,15 +394,6 @@ let _r = {
             fSpriteBeautyAngle -= +(Math.PI * 2.0);
           }
 
-          // loops through the sprite pixels
-          for(var sx = 0; sx < fSpriteWidth; sx++ ){
-            for(var sy = 0; sy < fSpriteHeight; sy++){
-
-              // sample sprite
-              var fSampleX = sx / fSpriteWidth;
-              var fSampleY = sy / fSpriteHeight;
-
-              var sSamplePixel = "";
 
               // var sSpAngle = false;
               var sAnimationFrame = false;
@@ -401,11 +401,11 @@ let _r = {
               // animation-cycle available, determine the current cycle
               // TODO: randomize cycle position
               if( sprite.move && "walkframes" in currentSpriteObject ){
-                if( game.animationTimer < 5 ){
+				if(animationTimer < 20) {
                   sAnimationFrame = "W1";
-                } else if( game.animationTimer >= 5 && game.animationTimer < 10 ) {
+				} else if (animationTimer >= 20 && animationTimer < 40) {
                   sAnimationFrame = "W2";
-                } else if( game.animationTimer >= 10 ) {
+				} else if (animationTimer >= 40) {
                   sAnimationFrame = false;
                 }
               }
@@ -423,18 +423,26 @@ let _r = {
                   sprite.a = "R";
                 }
               }
+          // loops through the sprite pixels
+          for(var sx = 0; sx < fSpriteWidth; sx++ ){
+            for(var sy = 0; sy < fSpriteHeight; sy++){
 
+              // sample sprite
+              var fSampleX = sx / fSpriteWidth;
+              var fSampleY = sy / fSpriteHeight;
+
+              var sSamplePixel = "";
 
               // check if object has both, angles, or animations
               if( sprite.a && sAnimationFrame ) {
-                sSamplePixel = _r.getSamplePixel(currentSpriteObject.angles[sprite.a][sAnimationFrame], fSampleX, fSampleY);
+                sSamplePixel = _r.getSamplePixel(currentSpriteObject.angles[sprite.a][sAnimationFrame], fSampleX, fSampleY, player.ang);
               } else if( sprite.a ) {
-                sSamplePixel = _r.getSamplePixel(currentSpriteObject.angles[sprite.a], fSampleX, fSampleY);
+                sSamplePixel = _r.getSamplePixel(currentSpriteObject.angles[sprite.a], fSampleX, fSampleY, player.ang);
               } else if( sAnimationFrame ) {
-                sSamplePixel = _r.getSamplePixel(currentSpriteObject[sAnimationFrame], fSampleX, fSampleY);
+                sSamplePixel = _r.getSamplePixel(currentSpriteObject[sAnimationFrame], fSampleX, fSampleY, player.ang);
               } else {
                 // if not, use basic sprite
-                sSamplePixel = _r.getSamplePixel(currentSpriteObject, fSampleX, fSampleY);
+                sSamplePixel = _r.getSamplePixel(currentSpriteObject, fSampleX, fSampleY, player.ang);
               }
 
 
@@ -448,7 +456,9 @@ let _r = {
 
               if (nSpriteColumn >= 0 && nSpriteColumn < viewWindow.width){
                 // only render the sprite pixel if it is not a . or a space, and if the sprite is far enough from the player
-                if (sSpriteGlyph != "." && sSpriteGlyph != brightness[0] && viewWindow.depthBuffer[nSpriteColumn] >= fSpriteDist ){
+                if (sSpriteGlyph != ".".charCodeAt(0)
+                		&& sSpriteGlyph != brightness[0]
+                		&& viewWindow.depthBuffer[nSpriteColumn] >= fSpriteDist ) {
 
                   // render pixels to screen
                   var yccord = fSpriteCeiling + sy;
@@ -489,7 +499,7 @@ let _r = {
       let pixelBright;
       let startBright = -1;
 
-      pixel = CHAR_CACHE[pixel];		// Unit16Array functionality
+      pixel = CHAR_CACHE[pixel] ?? pixel;		// Unit16Array functionality
       if( sWallFaceDirection === "N" || sWallFaceDirection === "S" ){
 
         if(fDistanceToWall < viewWindow.depth / 5.5 ){
@@ -658,7 +668,7 @@ let _r = {
       return fill;
     },
 
-    renderFloor: function(screenRow, lightBright = 0) {
+    renderFloor: function(screenRow, lightBright = 0, screenLook) {
       var fill = "`".charCodeAt(0);
 
 	  // TODO do something better with this
@@ -671,7 +681,7 @@ let _r = {
 	  	fill = brightness[Math.min(Math.max(startBright + pixelBright + lightBright, 0), 4)];
 
 	  } else {
-		let b = ((0.15 * game.fLooktimer - 2) * screenRow) / viewWindow.height + 2;
+		let b = ((0.15 * screenLook - 2) * screenRow) / viewWindow.height + 2;
 
 	  	if(b < 0.25 ) {
           fill = "x".charCodeAt(0);

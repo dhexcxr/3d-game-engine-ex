@@ -3,8 +3,12 @@
 export {raycaster};
 
 import {game, player} from './main-game-engine.js';
-import {_debugOutput, brightness, viewWindow, map, charLookup, CHAR_CACHE, WALL_TILE, ioDebug, CEIL_TILE_MAP, HOLE_TILE_MAP} from './main-io.js';
+import {brightness, viewWindow, charLookup, CHAR_CACHE, WALL_TILE} from './main-io.js';
 import {_r, _rh} from './main-renderer.js';
+
+import {map} from './map.js';
+
+import {_debugOutput, ioDebug} from './util.js';
 
 const absSign = (x) => (x === 0 ? 1 : Math.sign(x));	// RENDERER only
 const edgeThreshold = 0.05;		// control thickness of border in flat renderer, also holes	// RAYCASTER only
@@ -30,7 +34,7 @@ let rayDirY = null;
 // let visitedTiles = map.visitedTiles;
 
 
-function raycaster() {
+function raycaster(game, player) {
 // for the length of the screenwidth (one frame)
 // 	let visitedTiles = map.visitedTiles;
 
@@ -320,6 +324,12 @@ function raycaster() {
 				ceilLightInTile = map.isCeilLight[lightTileLookupIndex];
 				floorLightInTile = map.isFloorLight[lightTileLookupIndex];
 
+// IDEAS for floor lights
+	// give them standard 2 tile x/y dist, like ceil lights
+	// change to larger radius
+	// and smaller adjustment ratio
+		// 2.75 radius and 0.4 adj is pretty good
+
 				if (ceilLightInTile
 						|| (floorLightInTile	// creepy glow from floor holes
 							&& lightX >= map_x - 1 && lightX <= map_x + 1
@@ -337,7 +347,7 @@ function raycaster() {
 						return (fSampleY) => {
 							let totalLight = 0;
 
-							const lookupIndex = (~~(fSampleX * 100) + ~~(fSampleY * 100) * 57) & map.JITTER_MASK;
+							const lookupIndex = (~~(fSampleX * 100) * 57 + ~~(fSampleY * 100)) & map.JITTER_MASK;
 							const noiseX = map.jitterTableX[lookupIndex];
 							const noiseY = map.jitterTableY[lookupIndex];
 
@@ -386,13 +396,14 @@ function raycaster() {
             				|| fDistanceToObject >= fDistanceToWall
             				|| (sObjectType === ",".charCodeAt(0) && nObjectCeiling <= nCeiling && screenRow > nObjectCeiling))) {
 					let fSampleY = ((screenRow - nTowerCeil) / (nCeiling - nTowerCeil));
-					const wallLight = lightCalcs.reduce((totalLight, lightCalc) => {
-						return totalLight + lightCalc(1 - fSampleY * 2);	// NOTE why did we add the 1- and *2
-					}, 0);
+					const wallLight = lightCalcs.reduce((totalLight, lightCalc) => {	// lights on upper part of tower
+						return totalLight + lightCalc((1 - fSampleY) * 2);	// 1- to flip/mirror the light calc'd for normal wall part
+// 						return totalLight + lightCalc(1 - fSampleY * 0.5);	// NOTE this version is interesting too
+					}, 0);													// *2 to make the effect smaller because this is above the light
 					const clampedLight = Math.min(Math.max(wallLight, 0.0), 0.999);
 					const lightBright = ~~(clampedLight * 4);
 					
-					viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY), lightBright);
+					viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY, player.ang, sWallFaceDirection), lightBright);
 				} else if (ceilThings.length > 0) {		// things in the ceiling, currently just lights
                 	viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
 						ceilThings[0].atObjBoundary		// if at vertical boundary
@@ -432,7 +443,7 @@ function raycaster() {
 				// Render Texture Directly
 				if( viewWindow.nRenderMode == 1 ){
 					viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
-                		_r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY);
+						_r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY, player.ang, sWallFaceDirection);
 				} else if (viewWindow.nRenderMode == 2) {		// Render Texture with Shading
 					const wallLight = lightCalcs.reduce((totalLight, lightCalc) => {
 						return totalLight + lightCalc(fSampleY);
@@ -442,7 +453,7 @@ function raycaster() {
                 	viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
                 		_rh.renderWall(fDistanceToWall,
                 			sWallFaceDirection,
-                			_r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY), lightBright);
+					_r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY, player.ang, sWallFaceDirection), lightBright);
 				} else if (viewWindow.nRenderMode == 0) {	// old, solid-style shading
                 	viewWindow.buffer[screenRow * viewWindow.width + screenColumn] =
                 		_rh.renderSolidWall(fDistanceToWall, isBoundary);
@@ -476,6 +487,8 @@ function raycaster() {
 				// true map tile x and y
 				const floorMapX = ~~floorX;
 				const floorMapY = ~~floorY;
+
+				if (map.tiles[floorMapY * map.width + floorMapX] !== "o".charCodeAt(0)) {
 
 				const lightLookUpStartX = floorMapX - 2 < 0 ? 0 : floorMapX - 2;
 				const lightLookUpEndX = floorMapX + 2 > map.width - 1 ? map.width - 1 : floorMapX + 2;
@@ -559,10 +572,12 @@ function raycaster() {
 					}
 				}
 
+			}
+
 			const clampedLightFloor = Math.min(Math.max(floorLight, 0.0), 0.999);
 			const lightBrightFloor = ~~(clampedLightFloor * 5);
 
-            viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderFloor(screenRow, lightBrightFloor);
+            		viewWindow.buffer[screenRow * viewWindow.width + screenColumn] = _rh.renderFloor(screenRow, lightBrightFloor, game.fLooktimer);
           }
         } // end draw column loop
 
@@ -597,8 +612,8 @@ function checkDynamicLOS(startX, startY, endX, endY) {
 	for (let i = 1; i < steps; i++) {
 		const t = i / steps;
 		// Interpolate a point along the line between pixel and light center
-		const checkX = Math.floor(startX + (endX - startX) * t);
-		const checkY = Math.floor(startY + (endY - startY) * t);
+		const checkX = ~~(startX + (endX - startX) * t);
+		const checkY = ~~(startY + (endY - startY) * t);
 
 		// Sample the map
 		const tile = map.tiles[checkY * map.width + checkX];	// TODO NOTE make an array of block/wall tiles, so this is just a lookup

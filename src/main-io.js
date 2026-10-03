@@ -1,8 +1,32 @@
 // main i/o
 
-export {_debugOutput, _mh, brightness, init, viewWindow, map, charLookup, codePointLookup, CHAR_CACHE, WALL_TILE, ioDebug, CEIL_TILE_MAP, HOLE_TILE_MAP};
+/* suggestion from gemini:
+	Alternative Long-term Architecture: Extracting Screen State
+	
+	  The root reason main-renderer.js and main-raycaster_partMultiObj.js depend on main-io.js is because of variables like viewWindow, brightness,
+	  charLookup, and CHAR_CACHE.
+	
+	  If you extract these layout/drawing configuration variables into a dedicated, lightweight module (e.g., src/screen.js or src/graphics-state.js):
+	   1. main-renderer.js, main-raycaster_partMultiObj.js, and main-io.js can all import viewWindow and constants from src/graphics-state.js.
+	   2. This decouples user input (I/O) from rendering, preventing the circular reference completely and clarifying the code's structural boundaries.
 
-import {game, player, gameLoop} from './main-game-engine.js';
+
+BUT, we also need to move the _TILE arrays
+i think the best place for them is in map.js
+and then trying to export screen functions into its own module has its own complications
+	like the _testScreenSizeAndStartTheGame needs to be in io with init()
+	and in the screen
+*/
+
+// TODO remove exports not being used
+export {_mh, brightness, init, viewWindow, charLookup, codePointLookup, CHAR_CACHE, WALL_TILE, CEIL_TILE_MAP, HOLE_TILE_MAP, registerOnResume};
+
+import {player} from './player.js';
+import {gameLoop} from './main-engine.js';
+import {game} from './game.js';
+import {map} from './map.js';
+
+import {_debugOutput, ioDebug} from './util.js';
 
 let gameResumeGuardOn = false;
 
@@ -18,11 +42,11 @@ let WALL_TILE = new Uint16Array();		// TODO this probably should be on map objec
 let CEIL_TILE_MAP = new Uint8Array();		// TODO also these too probably
 let HOLE_TILE_MAP = new Uint8Array();		// FU - actually these don't seem to speed up anything
 
-const ioDebug = {
-	randomLightSwitch: false
-};
-
 let brightness = ["\u00A0", "░", "▒", "▓", "█"];
+
+// NOTE TODO i don't think the resume on window is working correctly,
+	// it might be related to the weird hud staying on screen after first clicked on
+	// after pointer lock
 
 // Update status when the user switches tabs or minimizes the window
 document.addEventListener('visibilitychange', () => {		// NOTE TODO i can get what I think is a race condition 
@@ -98,6 +122,14 @@ document.addEventListener("pointerlockchange", (event) => {
 		// if not, ignore mouse move, put "click to start" or something message on screen
 });
 
+// NOTE TODO i don't like the names on this var and the callback registering func
+	// but I think i need to get the above listeners working/pointer lock removing HUD
+	// first, and then maybe name this one resumeGameClock
+let resumeFunction = null;
+
+function registerOnResume(callback) {
+	resumeFunction = callback;
+}
 
 // function focusPause() {		// TODO if I ever find out why the above conditionals are opposite, or can make them not opposite
 // 									// put all that in this with the guard
@@ -158,25 +190,6 @@ let showText = true;
 	get planeY() { return player.viewX * 0.66 },		// smaller will be more wider
   };
 
-  let map = {};
-
-const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO only
-
-  // leaving the console for errors, logging seems to kill performance
-  var _debugOutput = function(input, elementId, append = false){
-  	let debugEl = document.getElementById(elementId)
-
-  	if(input === 'clear') {
-  	  debugEl.textContent = '';
-  	} else {
-	  if(append) {
-  		debugEl.insertAdjacentHTML("beforeend", `; ${input}`);
-  	  } else {
-  		debugEl.innerHTML = input;
-  	  }
-  	}
-  };
-
   /**
    * Loads
    * @param  {[string]} level The Level file
@@ -201,7 +214,6 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
           resolve();
         };
 
-        document.getElementById("map").src = "assets/" + level;
         var firstScriptTag = document.getElementsByTagName("script")[0];
         firstScriptTag.parentNode.insertBefore(tag, firstScriptTag);
       });
@@ -209,47 +221,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
     var levelLoaded = loadScriptAsync(level, sLevelstring);
 
-    return levelLoaded.then(function() {		// NOTE TODO this module should just interact with the real world
-    										// this func for example, just load the map/level data
-    										// then a system module will take that data and set the player X/Y/Ang
-    										// generate the proper sprites coordinates, etc
-      // updates the level map and dimensions
-      map = window[sLevelstring];
-      map.tiles = _convertAssetsToUnicode(map.tiles);		// TODO change this to map.tileCodes or something
-	  // keep track of map tiles visited by the rays, help cull sprites without trig
-      map.visitedTiles = new Uint32Array(map.width * map.height);	// renderer and raycaster
-
-      map.isCeilLight = new Uint8Array(map.tiles.map(tileCode => tileCode === ",".charCodeAt(0)));
-      map.isFloorLight = new Uint8Array(map.tiles.map(tileCode => tileCode === "o".charCodeAt(0)));
-
-      // places the player at the map starting point
-      player.x = map.playerStartX;
-      player.y = map.playerStartY;
-      player.ang = map.playerStartA;
-
-// 	map.sprites = '';		// DEBUG uncomment to disable
-      if( map.sprites == "autogen" ){
-        map.sprites = _generateRandomSprites();
-      }
-
-      document.querySelector("body").style.color = map.color;
-      document.querySelector("body").style.background = map.background;
-
-      // pre-baked light dist/intensity jitter
-      const JITTER_SIZE = map.width * map.height * 100;
-      map.JITTER_MASK = JITTER_SIZE - 1;
-
-      map.jitterTableX = new Float32Array(JITTER_SIZE);
-      map.jitterTableY = new Float32Array(JITTER_SIZE);
-
-      for (let i = 0; i < JITTER_SIZE; i++) {		// -0.2 to 0.2 range
-            map.jitterTableX[i] = (Math.random() * 0.4) - 0.2;
-            map.jitterTableY[i] = (Math.random() * 0.4) - 0.2;
-      }
-		// light tile truth maps
-		CEIL_TILE_MAP = Uint8Array.from(map.tiles, tileCharCode => tileCharCode === ",".charCodeAt(0));
-		HOLE_TILE_MAP = Uint8Array.from(map.tiles, tileCharCode => tileCharCode === "o".charCodeAt(0));
-    });
+	return levelLoaded.then(() => map.prep(window[sLevelstring]));
 
 	// NOTE TODO i think this is where the oSprite thing should be called, because at this point the level has been loaded
 		// and we should have the oSprites....i think
@@ -269,6 +241,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
       	// Ignore the event if the window is not currently active
   		if (!viewWindow.isWindowActive() || !document.pointerLockElement) return;
 
+		// TODO change these all to e.Code
         console.log(e.which);		// DEBUG ONLY
 		if (e.which === 192) {		// `, print ray details to console
 			printRayObs();
@@ -409,7 +382,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 
 // TODO add listener for pointerlockchange so mouse doesn't move viewport when not "locked"
 	// see https://developer.mozilla.org/en-US/docs/Web/API/Document/pointerlockchange_event
-      document.body.requestPointerLock();
+      document.body.requestPointerLock({unadjustedMovement: true});
       document.onmousemove = function (e) {
 		// Ignore the event if the window is not currently active or paused
   		if (!viewWindow.isWindowActive() || player.bPaused || !document.pointerLockElement) return;
@@ -557,92 +530,10 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
         _loadLevel( map.exitsto );
       }
     },
-
-    // called once per frame, handles movement computation
-    move: function(viewX, viewY, deltaTime){
-
-      if(player.bTurnLeft){
-        player.ang -= 0.05;
-      }
-
-      if(player.bTurnRight){
-        player.ang += 0.05;
-      }
-
-      let playerSpeed = player.bRunning ? 0.006 : 0.003;	// ~3 unit/sec @ 60 physics fps
-
-
-      let deltaXDir = 0;
-      let deltaYDir = 0;
-      let deltaX = viewX * playerSpeed * deltaTime;
-      let deltaY = viewY * playerSpeed * deltaTime;
-      let totalX = 0;
-      let totalY = 0;
-
-
-      if(player.bStrafeLeft ^ player.bStrafeRight) {		// TODO continue optimizing this
-      	let [straifDeltaX, straifDeltaY] = [deltaY, deltaX];
-      	if(player.bStrafeLeft) {
-      		deltaXDir = 1;
-        	deltaYDir = -1;
-      	} else {
-      		deltaXDir = -1;
-        	deltaYDir = 1;
-
-      	}
-
-        totalX += straifDeltaX * deltaXDir;
-        totalY += straifDeltaY * deltaYDir;
-      }
-
-
-      if((player.bMoveForward && player.bPlayerMayMoveForward) ^ player.bMoveBackward) {
-        if(player.bMoveForward) {
-      	  deltaXDir = 1;
-          deltaYDir = 1;
-      	} else {
-      	  deltaXDir = -1;
-          deltaYDir = -1;
-      	}
-
-        totalX += deltaX * deltaXDir;
-        totalY += deltaY * deltaYDir;
-      }
-
-      _debugOutput(`deltaX: ${deltaX}; deltaY: ${deltaY}; randomLightSwitch: ${ioDebug.randomLightSwitch}`, 'debug2');
-
-      let newX = player.x + totalX;
-      let newY = player.y + totalY;
-
-
-      // TODO i think i need the direction the door faces, if the player stays on that side of the door then all movement should be allowed
-      	// that will fix the issue with only being allowed to move normal to the door
-      let checkX = (totalX > 0) ? (newX + PLAYER_RADIUS) : (newX - PLAYER_RADIUS);
-
-      if (map.tiles[~~player.y * map.width + ~~checkX] === '.'.charCodeAt(0)
-      		|| map.tiles[~~player.y * map.width + ~~checkX] === ','.charCodeAt(0)) {
-      	player.x = newX;
-	  } else if (map.tiles[~~player.y * map.width + ~~checkX] === 'X'		// check for door tiles so we can go half way into the tile
-	  		&& ((Math.sign(totalX) <= 0 && checkX - ~~checkX > 0.5) || (Math.sign(totalX) >= 0 && checkX - ~~checkX < 0.5))) {
-	  	player.x = newX;
-	  }
-
-      let checkY = (totalY > 0) ? (newY + PLAYER_RADIUS) : (newY - PLAYER_RADIUS);
-
-      if (map.tiles[~~checkY * map.width + ~~player.x]  === '.'.charCodeAt(0)
-      		|| map.tiles[~~checkY * map.width + ~~player.x] === ','.charCodeAt(0)) {
-      	player.y = newY;
-	  } else if (map.tiles[~~checkY * map.width + ~~player.x] === 'X'.charCodeAt(0)
-	  		&& ((Math.sign(totalY) >= 0 && checkY - ~~checkY < 0.5) || (Math.sign(totalY) <= 0 && checkY - ~~checkY > 0.5))) {
-	  	player.y = newY;
-	  }
-
-	  },
-
   };
 
-  function setupCanvas() {
 
+function setupCanvas() {
 	const canvas = document.getElementById("canvDisp");
 
 	if (!showCanvas) {
@@ -742,7 +633,16 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
     // initial gameload
     _loadLevel("mainlevelfile1.map").then(() => {
 
+		// places the player at the map starting point
+		player.x = map.playerStartX;
+		player.y = map.playerStartY;
+		player.ang = map.playerStartA;
+		
+		document.querySelector("body").style.color = map.color;
+		document.querySelector("body").style.background = map.background;
+
 		// convert characters to unicode
+		map.tiles = _convertAssetsToUnicode(map.tiles);		// TODO change this to map.tileCodes or something
 		brightness = _convertAssetsToUnicode(brightness);		// TODO make brightness not const, so I can reassign it just like texture
 		for (const texObj of Object.values(textures)) {
 			texObj.texture = _convertAssetsToUnicode(texObj.texture);
@@ -795,9 +695,10 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
   function _convertAssetsToUnicode(asset) {
   	let rawCodePoint;
   	if(Array.isArray(asset)) {
-		return Uint16Array.from(asset.map(char => {
-  			rawCodePoint = char.charCodeAt(0)
-			charLookup.set(rawCodePoint, char);
+		return Uint16Array.from(asset.map(rawChar => {
+  			rawCodePoint = rawChar.charCodeAt(0);
+			charLookup.set(rawCodePoint, rawChar);
+			codePointLookup.set(rawChar, rawCodePoint);
   			return rawCodePoint;
   		}));
   	} else if(typeof asset === 'string' || asset instanceof String) {
@@ -818,57 +719,9 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
 	Look: ${game.fLooktimer}; Tile: ${map.tiles[~~player.y * map.width + ~~player.x]}`, 'debug');
   }
 
-  var _randomIntFromInterval = function(min, max) { // min and max included
-    return ~~(Math.random() * (max - min + 1) + min);
-  };
 
   	// NOTE oh wait, the naive way I initially thought of doing this just creates a "static-y" sky, I need a real skybox
   let starPicker =() => _randomIntFromInterval(1, 100) === 1;		// NOTE this should probably go into the renderer when the skybox is implemented
-
-
-  // generates only pogels that can be placed
-  var _generateRandomCoordinates = function(){
-
-    var x = +(_randomIntFromInterval(0, map.width)) + 0;
-    var y = +(_randomIntFromInterval(0, map.height)) - 0;
-
-    while (map.tiles[ ~~(y) * map.width + ~~(x)] !== '.'.charCodeAt(0)) {
-      x = +(_randomIntFromInterval(0, map.width)) + 1;
-      y = +(_randomIntFromInterval(0, map.height)) - 1;
-    }
-
-    var oCoordinates = {
-      "x": x,
-      "y": y
-    };
-
-    return oCoordinates;
-  };
-
-
-  // generate random Sprites
-  var _generateRandomSprites = function( nNumberOfSprites ){		// NOTE this (along with generateRandomCoordinates and randomIntFromInterval) should go somewhere else, it is currently only called by _loadLevel, when picking random places to put sprites, but that (and this) should be in a "build world" or main engine module probably, it doesn't really interact with the "real world"
-    nNumberOfSprites = nNumberOfSprites || Math.round( map.width * map.width / 15 );
-    // generates random Pogels or Obetrls! :oooo
-    var oRandomLevelSprites = {};	// NOTE so this is an object.....
-    for( var m = 0; m < nNumberOfSprites; m++){
-      var randAngle = _randomIntFromInterval(0, +(Math.PI * 2.0));
-      var nSpriteRand = _randomIntFromInterval(0,3);
-      var randomCoordinates = _generateRandomCoordinates();
-      var oRandomSprite = {
-          "x": randomCoordinates.x,
-          "y": randomCoordinates.y,
-          "r": randAngle,
-          "name": (nSpriteRand === 1) ? "O" : "P",
-          "move": true,
-          "speed": _randomIntFromInterval(0, 5) * 0.01,
-          "stuckcounter": 0,
-      }
-      oRandomLevelSprites[m] = oRandomSprite ;	// and it holds more objects that are referenced by an integer
-    }												// TODO we should probably change to an array of some type
-    return oRandomLevelSprites;
-  };
-
 
   // for every row make a viewWindow.width amount of pixels
   var _createTestScreen = function(){
@@ -926,10 +779,7 @@ const PLAYER_RADIUS = 0.2;		// keep the player a bit away from the walls	// IO o
         _debugOutput("Trymax exceeded", 'debug');
       }
 
-    }
-    // if it does, set aspect-ratio-based height
-    // and start the game
-    else{
+	} else {			// if it does, set aspect-ratio-based height, and start the game
       var fAdjustedAspectRatio = viewPortAspect / 2.82;		// TODO figure out what all these magic number are
 // 		var fAdjustedAspectRatio = viewPortAspect / 2.4522;		// default resolution * 1.15
 
