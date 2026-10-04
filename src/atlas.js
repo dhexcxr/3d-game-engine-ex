@@ -30,7 +30,7 @@ const PALETTE_32BIT = PALETTE.map((hex) => {
 });
 
 let atlasCanvas = null;
-let softBlitter = true;		// global option
+const softBlitter = true;		// global option
 let pixelW = 6;		// TODO get this auto measured, as seen....somewhere
 let pixelH = 12;
 const charToAtlasIndex = new Uint16Array(65536);	// get atlas char index via char unicode
@@ -41,12 +41,14 @@ function buildGlyphAtlas(viewWindow) {
     pixelH = viewWindow.canvasFontHeight;
 
    // pixel dimensions for character atlas canvas
-    const physicalCharW = pixelW * viewWindow.dpr;
-   	const physicalCharH = pixelH * viewWindow.dpr;
+   	const physicalCharW = Math.round(pixelW * viewWindow.dpr);
+   	const physicalCharH = Math.round(pixelH * viewWindow.dpr);
 
-    const uniqueChars = Array.from(charLookup.keys()).sort((a, b) => a - b);
+	viewWindow.physicalCharW = physicalCharW;	// TODO define these on viewWindow object
+	viewWindow.physicalCharH = physicalCharH;
     
     // map disjoint character codes to sequential column index
+	const uniqueChars = Array.from(charLookup.keys()).sort((a, b) => a - b);
     uniqueChars.forEach((ch, index) => {
         charToAtlasIndex[ch] = index;
     });
@@ -70,7 +72,6 @@ function buildGlyphAtlas(viewWindow) {
     actx.fillRect(0, 0, atlas.width, atlas.height);
     
 	// canvas Font render settings
-    const fontPx = Math.floor(pixelH * 0.84);
     // actx.font = `700 ${fontPx}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
 	actx.font = viewWindow.canvasFont;
     actx.textAlign = "center";

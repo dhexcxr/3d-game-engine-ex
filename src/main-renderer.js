@@ -220,6 +220,8 @@ let _r = {
 		
 		if (viewWindow.canvasContext && atlasCanvas) {
 			const ctx = viewWindow.canvasContext;
+			const physicalCharW = viewWindow.physicalCharW;
+			const physicalCharH = viewWindow.physicalCharH;
 			
 			let rowCount = 0;
 			let colCount = 0;
@@ -229,20 +231,22 @@ let _r = {
 			
 			const startCol = ~~removePixels;
 			const endCol = viewWindow.width - ~~removePixels;
-// 			const { cols, rows, pixelW, pixelH, chars, colors, atlasBuf32, screenBuf32, screenImageData } = this;
+
 			if (viewWindow.atlasBuf32 && viewWindow.screenBuf32) {
 				const canvasWidth = viewWindow.canvas.width;
+				const canvasHeight = viewWindow.canvas.height;
 				const atlasWidth = atlasCanvas.width;
-			
+
+					// TODO try doing a putImageData() with a static black canvas buffer, see if that's faster
 				// fill buffer with black -  (AABBGGRR)
 				viewWindow.screenBuf32.fill(0xFF000000);	// TODO consider making const refs to these object properties
+
+				const physicalLineHeight = Math.round(lineheight * viewWindow.dpr);
 			
 				 // render top to bottom
 				 for (let frameY = 0; frameY < viewWindow.height; frameY++) {
 					const rowOffset = frameY * viewWindow.width;
-//					const destinationY = frameY * pixelH * viewWindow.dpr;
-					// NOTE - now why the hell does this work like this here and differently doing drawImage()?
-					const destinationY = lineheight * frameY * viewWindow.dpr + lineheight;
+					const destRawY = physicalLineHeight + frameY * physicalLineHeight;
 
 					// and left to right
 					for (let frameX = startCol; frameX < endCol; frameX++) {
@@ -251,21 +255,28 @@ let _r = {
 
 						// get atlas column via character unicode
 						const colIndex = charToAtlasIndex[frameCharUnicode];
-						const sourceX = colIndex * pixelW * viewWindow.dpr;
-						const sourceY = 15 * pixelH * viewWindow.dpr + 1;
-						// const ci = colors[rowOffset + frameX];	// NOTE colors[] is frame buffer specifying each char cell's color, not implemented yet
-						// const ci = 15;		// NOTE hard coded full-bright
-						// const sourceX = (frameCharUnicode - FIRST_CHAR) * pixelW;
-						// const sourceY = ci * pixelH;
-						const destinationX = (frameX - startCol) * pixelW * viewWindow.dpr;
+
+						const sourceX = Math.round(colIndex * pixelW * viewWindow.dpr);
+						const sourceY = Math.round(15 * pixelH * viewWindow.dpr);
+
+						const sourceW = Math.round((colIndex + 1) * pixelW * viewWindow.dpr) - sourceX;
+						const sourceH = Math.round(16 * pixelH * viewWindow.dpr) - sourceY;
+
+						const destRawX = Math.round((frameX - startCol) * pixelW * viewWindow.dpr);
 				
 						// copy char pixel data to screen buffer
-						for (let charY = 0; charY < pixelH * viewWindow.dpr; charY++) {	// TODO rename pixelH and W to charH and W
+						for (let charY = 0; charY < sourceH; charY++) {	// TODO rename pixelH and W to charH and W
+							const destY = destRawY + charY;
+							if (destY < 0 || destY >= canvasHeight) continue;
+
 							const srcIdx = (sourceY + charY) * atlasWidth + sourceX;
-							const destIdx = (destinationY + charY) * canvasWidth + destinationX;
-			
-							for (let charX = 0; charX < pixelW * viewWindow.dpr; charX++) {
-								viewWindow.screenBuf32[destIdx + charX] = viewWindow.atlasBuf32[srcIdx + charX];
+							const destRowOffset = destY * canvasWidth;
+
+							for (let charX = 0; charX < sourceW; charX++) {
+								const destX = destRawX + charX;
+								if (destX < 0 || destX >= canvasWidth) continue;
+
+								viewWindow.screenBuf32[destRowOffset + destX] = viewWindow.atlasBuf32[srcIdx + charX];
 							}
 						}
 					}

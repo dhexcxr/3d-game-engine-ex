@@ -168,7 +168,7 @@ let hitSideCheck = 0;		// DEBUG only, only in [io
   	height: 80,			// also used in io, raycaster, and renderer
 //   	height: 92,			// allow for more square "pixels"
 
-	glyphAtlas: true,
+	glyphAtlas: true,		// global options
 	hiRes: true,
 	resModifier: 2,		// NOTE the canvas is currently set up for 2x, if above 2 we need to increase canvas resolution
 	showCanvas: true,
@@ -576,8 +576,8 @@ function setupCanvas() {
 	const textMetrics = canvasContext.measureText('M');
 
 	// Calculate total height using font bounding metrics
-	const fontHeight = Math.ceil(textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent);
-	const fontWidth = Math.ceil(textMetrics.width);
+	const fontHeight = Math.round(textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent);
+	const fontWidth = Math.round(textMetrics.width);
 
 	// Set the "actual" pixel size of the canvas
 	canvas.width = rect.width * dpr;
