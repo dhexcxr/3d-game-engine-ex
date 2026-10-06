@@ -2,7 +2,8 @@ export {gameLoop};
 
 import {_r, _rh} from './main-renderer.js';
 import {player, move} from './player.js';
-import {raycaster} from './main-raycaster.js';
+// import {raycaster} from './main-raycaster.js';		// single-threaded
+import {raycaster} from './raycast.js';			// web worker raycasters
 import {game} from './game.js';
 
 import {_debugOutput} from './util.js';
@@ -57,7 +58,7 @@ registerOnResume(gameLoop);
 //       _debugOutput('clear', 'debug2');
 // 	  if (!viewWindow.isWindowActive || player.bPaused) return;
 
-		game.timer = requestAnimationFrame((currentTime) => {
+		game.timer = requestAnimationFrame(async (currentTime) => {
 			// main requestAnimationFrame() logic stolen from https://www.aleksandrhovhannisyan.com/blog/javascript-game-loop/
 			let rawDelta = currentTime - game.lastTime;
 			game.lastTime = currentTime;
@@ -171,7 +172,7 @@ registerOnResume(gameLoop);
 			*/
 			
 			// NOW NEXT, look into position interpolation
-			raycaster(game, player);
+			await raycaster(game, player);
 			
 			_r.drawSprites(player, game.currentFrame, game.animationTimer);
 			
