@@ -11,15 +11,15 @@ let lastMapRef = null;
 function initWorkers() {
 	if (workers) return;
 	workers = [];
-	for (let i = 0; i < numWorkers; i++) {
+	for (let workerIndex = 0; workerIndex < numWorkers; workerIndex++) {
 		workers.push(new Worker('src/raycast-worker.js'));
 	}
 }
 
 function sendMapToWorkers() {
 	initWorkers();
-	for (let i = 0; i < numWorkers; i++) {
-		workers[i].postMessage({
+	for (let workerIndex = 0; workerIndex < numWorkers; workerIndex++) {
+		workers[workerIndex].postMessage({
 			type: 'INIT_MAP',
 			mapWidth: map.width,
 			mapHeight: map.height,
@@ -50,10 +50,18 @@ function raycaster(game, player) {
 	const sliceWidth = Math.floor(totalWidth / numWorkers);
 	const sliceHeight = Math.ceil(viewWindow.height);
 
-	const promises = workers.map((worker, i) => {
+	const promises = workers.map((worker, workerIndex) => {
 		return new Promise((resolve) => {
-			const startCol = i * sliceWidth;
-			const endCol = (i === numWorkers - 1) ? totalWidth : (i + 1) * sliceWidth;
+			const startCol = workerIndex * sliceWidth;	// TODO NOTE we need to make sure we're not skipping columns due to rounding of sliceWidth
+															// FOR INSTANCE if we set workers to 6, we get some weird vertical glitches near right side of text screen
+															// AND ONLY TEXT for some reason
+																// it also looks perhaps like it is a wider viewing angle maybe
+																// like things look farther away
+															// oh, yeah, deffo
+																// if we set to 8 workers, the glitch goes away
+																// but we get an even wider viewing angle
+																	// there must be some column doubling going on somewhere
+			const endCol = (workerIndex === numWorkers - 1) ? totalWidth : (workerIndex + 1) * sliceWidth;
 			const wWidth = endCol - startCol;
 
 			// Allocate and transfer fresh buffers to the worker
