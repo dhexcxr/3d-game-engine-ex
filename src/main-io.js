@@ -576,14 +576,12 @@ function setupCanvas() {
 	const textMetrics = canvasContext.measureText('M');
 
 	// Calculate total height using font bounding metrics
-	const fontHeight = Math.round(textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent);
-	const fontWidth = Math.round(textMetrics.width);
+	const fontPixelHeight = textMetrics.actualBoundingBoxAscent + textMetrics.actualBoundingBoxDescent;
+	const fontPixelWidth = textMetrics.width;
 
 	// Set the "actual" pixel size of the canvas
 	canvas.width = rect.width * dpr;
-	canvas.height = rect.height * dpr;		// the 1.168 compensates for the
-// 	canvas.width = Math.round(rect.width * dpr / fontWidth) * fontWidth;////<-
-// 	canvas.height = Math.round(rect.height * dpr / 1.168 / fontHeight) * fontHeight;////<-		// the 1.168 compensates for the original line-height in the display element
+	canvas.height = rect.height * dpr;
 			// NEXT TODO remove the skipPixels stuff and transform the canvas to do lookup/down
 
 	// Scale the context to ensure correct drawing operations
@@ -591,13 +589,7 @@ function setupCanvas() {
 
 	// Set the "drawn" size of the canvas on the HTML page
 	canvas.style.width = `${rect.width}px`;
-	canvas.style.height = `${rect.height}px`;////<-
-// 	canvas.style.width = `${Math.round(rect.width / 1.168 / canvasFontSize) * canvasFontSize}px`;
-// 	canvas.style.height = `${Math.round(rect.height / 1.168 / canvasFontSize) * canvasFontSize}px`;
-// 	canvas.style.width = `${Math.round(rect.width / fontWidth) * fontWidth}px`;////<-
-// 	canvas.style.height = `${Math.round(rect.height / 1.168 / fontHeight) * fontHeight}px`;
-// 	canvas.style.width = `${canvas.width / 2}px`;
-// 	canvas.style.height = `${canvas.height / 2}px`;
+	canvas.style.height = `${rect.height}px`;
 
 	// set some nice/required options
 	canvasContext.fillStyle = 'white';
@@ -618,8 +610,8 @@ function setupCanvas() {
 		fill ? canvasContext.fillText(text, x, y, maxWidth) : canvasContext.strokeText(text, x, y, maxWidth)
 	};
   	viewWindow.canvasFontSize = canvasFontSize;
-  	viewWindow.canvasFontHeight = fontHeight;
-  	viewWindow.canvasFontWidth = fontWidth;
+  	viewWindow.canvasFontPointHeight = fontPixelHeight;
+  	viewWindow.canvasFontPointWidth = fontPixelWidth;
 	viewWindow.dpr = dpr;
   }
   // init() called from HTML

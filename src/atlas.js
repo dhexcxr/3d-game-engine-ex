@@ -1,6 +1,6 @@
 import { charLookup } from "./main-io.js";
 
-export {PALETTE_32BIT, atlasCanvas, pixelW, pixelH, charToAtlasIndex, buildGlyphAtlas, softBlitter}
+export {PALETTE_32BIT, atlasCanvas, fontPointWidth, fontPointHeight, charToAtlasIndex, buildGlyphAtlas, softBlitter}
 // currently just grayscale, for lighting
 const PALETTE = [
 	"#000000",
@@ -31,33 +31,33 @@ const PALETTE_32BIT = PALETTE.map((hex) => {
 
 let atlasCanvas = null;
 const softBlitter = true;		// global option
-let pixelW = 6;		// TODO get this auto measured, as seen....somewhere
-let pixelH = 12;
+let fontPointWidth = 6;		// TODO get this auto measured, as seen....somewhere
+let fontPointHeight = 12;
 const charToAtlasIndex = new Uint16Array(65536);	// get atlas char index via char unicode
 
 function buildGlyphAtlas(viewWindow) {
 
-    pixelW = viewWindow.canvasFontWidth;
-    pixelH = viewWindow.canvasFontHeight;
+    fontPointWidth = viewWindow.canvasFontPointWidth;
+    fontPointHeight = viewWindow.canvasFontPointHeight;
 
    // pixel dimensions for character atlas canvas
-   	const physicalCharW = Math.round(pixelW * viewWindow.dpr);
-   	const physicalCharH = Math.round(pixelH * viewWindow.dpr);
+   	const charPixelW = Math.round(fontPointWidth * viewWindow.dpr);
+   	const charPixelH = Math.round(fontPointHeight * viewWindow.dpr);
 
-	viewWindow.physicalCharW = physicalCharW;	// TODO define these on viewWindow object
-	viewWindow.physicalCharH = physicalCharH;
+	viewWindow.charPixelW = charPixelW;	// TODO define these on viewWindow object
+	viewWindow.charPixelH = charPixelH;
     
     // map disjoint character codes to sequential column index
 	const uniqueChars = Array.from(charLookup.keys()).sort((a, b) => a - b);
     uniqueChars.forEach((ch, index) => {
-        charToAtlasIndex[ch] = index;
+        charToAtlasIndex[ch] = index * charPixelW;	// directly store starting x coordinate
     });
 
     // create off-screen atlas canvas
     const atlas = document.createElement("canvas");
     	// NOTE i think we need to do something to make the chars on this canvas higher res
-    atlas.width = uniqueChars.length * physicalCharW;
-    atlas.height = PALETTE.length * physicalCharH;
+    atlas.width = uniqueChars.length * charPixelW;
+    atlas.height = PALETTE.length * charPixelH;
 
 	document.body.appendChild(atlas);		// NOTE debug only
 
@@ -69,22 +69,27 @@ function buildGlyphAtlas(viewWindow) {
     
 	// clear canvas
     actx.fillStyle = "#000000";
-    actx.fillRect(0, 0, atlas.width, atlas.height);
+    actx.fillRect(0, 0, atlas.width / viewWindow.dpr, atlas.height / viewWindow.dpr);
     
 	// canvas Font render settings
     // actx.font = `700 ${fontPx}px ui-monospace, "SF Mono", Menlo, Consolas, monospace`;
 	actx.font = viewWindow.canvasFont;
     actx.textAlign = "center";
     actx.textBaseline = "middle";
-    const ox = pixelW / 2;
-    const oy = pixelH / 2 + pixelH * 0.05;
+    
+    // calc character cell point width for glyph atlas
+    // using rounded character pixel size
+    const cellPointW = charPixelW / viewWindow.dpr;
+    const cellPointH = charPixelH / viewWindow.dpr;
+    const ox = cellPointW / 2;
+    const oy = cellPointH / 2 + cellPointH * 0.05;
 
     // render characters column-by-column (chars) and row-by-row (shading palette)
     for (let ci = 0; ci < PALETTE.length; ci++) {
         actx.fillStyle = PALETTE[ci];
         uniqueChars.forEach((ch, index) => {
             const charStr = String.fromCharCode(ch);
-            actx.fillText(charStr, index * pixelW + ox, ci * pixelH + oy);
+            actx.fillText(charStr, index * cellPointW + ox, ci * cellPointH + oy);
         });
     }
     atlasCanvas = atlas;

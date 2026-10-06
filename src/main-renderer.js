@@ -3,7 +3,7 @@ export {_r, _rh};
 import {brightness, viewWindow, CHAR_CACHE} from './main-io.js';
 
 import {map} from './map.js';
-import { atlasCanvas, charToAtlasIndex, pixelW, pixelH } from './atlas.js';
+import { atlasCanvas, charToAtlasIndex } from './atlas.js';
 
 import {_debugOutput} from './util.js';
 
@@ -212,16 +212,15 @@ let _r = {
 
 	dfOutput.length = 0;
 	viewWindow.clearCanvas();
-	let fontHeight = viewWindow.canvasFontHeight;
-	let lineheight = fontHeight * 1.75;
+	let lineheight = viewWindow.canvasFontPointHeight * 2;
 		var removePixels = viewWindow.height / 2;
 
 		const atlasCols = viewWindow.atlasCols;
 		
 		if (viewWindow.canvasContext && atlasCanvas) {
 			const ctx = viewWindow.canvasContext;
-			const physicalCharW = viewWindow.physicalCharW;
-			const physicalCharH = viewWindow.physicalCharH;
+			const charPixelW = viewWindow.charPixelW;
+			const charPixelH = viewWindow.charPixelH;
 			
 			let rowCount = 0;
 			let colCount = 0;
@@ -240,76 +239,94 @@ let _r = {
 					// TODO try doing a putImageData() with a static black canvas buffer, see if that's faster
 				// fill buffer with black -  (AABBGGRR)
 				viewWindow.screenBuf32.fill(0xFF000000);	// TODO consider making const refs to these object properties
+				const screenBuf32 = viewWindow.screenBuf32;
+				const atlasBuf32 = viewWindow.atlasBuf32;
 
-				const physicalLineHeight = Math.round(lineheight * viewWindow.dpr);
-			
-				 // render top to bottom
-				 for (let frameY = 0; frameY < viewWindow.height; frameY++) {
+
+				const linePixelHeight = Math.round(lineheight * viewWindow.dpr);
+
+				const startCol = ~~removePixels;
+				const endCol = viewWindow.width - ~~removePixels;
+
+				// pre-calc sourceY, at the moment we only render full brightness
+					// once we get colors/shades going this will need to move
+				const sourceY = 15 * charPixelH;
+
+				// loop rows of frame and build frame buffer
+				for (let frameY = 0; frameY < viewWindow.height; frameY++) {
 					const rowOffset = frameY * viewWindow.width;
-					const destRawY = physicalLineHeight + frameY * physicalLineHeight;
+					const destY = linePixelHeight + frameY * linePixelHeight;
 
-					// and left to right
+					let destX = 0; // create  counter var for destination x coordinate
+
+					// loop frame columns
 					for (let frameX = startCol; frameX < endCol; frameX++) {
-						const frameCharUnicode = frame[rowOffset + frameX];
-						if (frameCharUnicode <= 32) continue; // Skip space characters
+						const charCode = frame[rowOffset + frameX];
 
-						// get atlas column via character unicode
-						const colIndex = charToAtlasIndex[frameCharUnicode];
-
-						const sourceX = Math.round(colIndex * pixelW * viewWindow.dpr);
-						const sourceY = Math.round(15 * pixelH * viewWindow.dpr);
-
-						const sourceW = Math.round((colIndex + 1) * pixelW * viewWindow.dpr) - sourceX;
-						const sourceH = Math.round(16 * pixelH * viewWindow.dpr) - sourceY;
-
-						const destRawX = Math.round((frameX - startCol) * pixelW * viewWindow.dpr);
-				
-						// copy char pixel data to screen buffer
-						for (let charY = 0; charY < sourceH; charY++) {	// TODO rename pixelH and W to charH and W
-							const destY = destRawY + charY;
-							if (destY < 0 || destY >= canvasHeight) continue;
-
-							const srcIdx = (sourceY + charY) * atlasWidth + sourceX;
-							const destRowOffset = destY * canvasWidth;
-
-							for (let charX = 0; charX < sourceW; charX++) {
-								const destX = destRawX + charX;
-								if (destX < 0 || destX >= canvasWidth) continue;
-
-								viewWindow.screenBuf32[destRowOffset + destX] = viewWindow.atlasBuf32[srcIdx + charX];
-							}
+						// early-out on spaces
+						if (charCode <= 32 || charCode === 160) {
+							destX += charPixelW;
+							continue;
 						}
+
+						const sourceX = charToAtlasIndex[charCode];
+				
+						// calc array indices
+						let srcIdx = sourceY * atlasWidth + sourceX;
+						let destIdx = destY * canvasWidth + destX;
+
+						// copy chars from atlas to screen buffer
+						for (let charPixelY = 0; charPixelY < charPixelH; charPixelY++) {
+							if (destY + charPixelY >= canvasHeight) break;	// early-out on out of bounds
+
+							let sPtr = srcIdx;
+							let dPtr = destIdx;
+							for (let charPixelX = 0; charPixelX < charPixelW; charPixelX++) {
+								if (destX + charPixelX >= canvasWidth) break;	// early-out on out of bounds
+								screenBuf32[dPtr++] = atlasBuf32[sPtr++];
+							}
+
+							srcIdx += atlasWidth;
+							destIdx += canvasWidth;
+						}
+					destX += charPixelW;
 					}
-				 }
-			
-				// write screen buffer to window canvas
+				}
 				viewWindow.canvasContext.putImageData(viewWindow.screenImageData, 0, 0);
 			} else {		// no screen buffer array setup, let the computer handle copying chars from atlas to window canvas
-				for (let row = 0; row < viewWindow.height; row++) {
+				// NOTE for this to render exactly like the soft blitter we need to calculate
+					// these from rounded values from above and divide by DPR
+				const fontPointWidth = viewWindow.charPixelW / viewWindow.dpr;
+				const fontPointHeight = viewWindow.charPixelH / viewWindow.dpr;
+				const linePointHeight = Math.round(lineheight * viewWindow.dpr) /  viewWindow.dpr;
+				
+				for (let row = 0; row < viewWindow.height; row++) {		// TODO give row and col vars all the same name
+					
+					const destPointY = linePointHeight * row + linePointHeight;
 					for (let col = startCol; col < endCol; col++) {
 						const charCode = frame[row * viewWindow.width + col];
-						if (charCode <= 32) continue;
-						const colIndex = charToAtlasIndex[charCode];
-						// calc atlas coordinates for this char
-						const sourceX = colIndex * pixelW * viewWindow.dpr;
-						const sourceY = 15 * pixelH * viewWindow.dpr + 1;		// NOTE this is currently hard-coded to be full bright, true 16 level color not implemented yet
-// 						const sourceX = colIndex % atlasCols * pixelW;
-// 						const sourceY = (colIndex / atlasCols | 0) * pixelW * 15;
+						if (charCode <= 32 || charCode === 160) continue;
 
-						// calc screen window canvas coordinates
-						const destinationX = (col - startCol) * pixelW;
-						const destinationY = lineheight * row + lineheight;
-						ctx.drawImage(atlasCanvas, sourceX, sourceY, pixelW * viewWindow.dpr, pixelH * viewWindow.dpr, destinationX, destinationY, pixelW, pixelH);
-
-						colCount++;
+						// get atlas canvas coordinates
+						const sourceX = charToAtlasIndex[charCode];
+						const sourceY = 15 * charPixelH;	// currently hardcoded to full brightness
+			
+						// pixel coordinates on screen canvas
+						const destPointX = (col - startCol) * fontPointWidth;
+			
+						// Render crisp, undistorted glyphs at the perfect logical native width
+						ctx.drawImage(atlasCanvas,
+							sourceX, sourceY, charPixelW, charPixelH,
+							destPointX, destPointY, fontPointWidth, fontPointHeight);
 					}
-					_debugOutput(`colCount: ${colCount};`, 'debug2');
-					colCount = 0;
-					rowCount++;
 				}
-				_debugOutput(`rowCount: ${rowCount}`, 'debug2', true);
 			}
 		} else {
+			const linePointHeight = Math.round(lineheight * viewWindow.dpr) /  viewWindow.dpr;
+			// NOTE TODO we need to fix the text width for this canvas renderer
+				// both canvas atlas renderers seem to match the plain text version
+				// this one is too wide, height was fixed by above linePointHeight calc
+					// probably need to do a similar multiply by DPR, round, divide by DPR
     // interates over each row again, and omits the first and last 30 pixels, to disguise the skewing!
 	// 		var printIndex = 0;		// w/ original 80 height, removePixels was 40 (despite quote of 30 above)
 																// TODO to be able to calculate this and actually have nice look up/down skewing
@@ -323,7 +340,7 @@ let _r = {
 					dfOutput.push("\n");	// textContent or canvas version
     			}
 				if (viewWindow.showCanvas) {
-					viewWindow.canvasText(frame.slice(row * viewWindow.width + ~~removePixels, (row + 1) * viewWindow.width - ~~removePixels).join(''), 0, lineheight * row + lineheight, true);		// corrected/trimmed screen
+					viewWindow.canvasText(frame.slice(row * viewWindow.width + ~~removePixels, (row + 1) * viewWindow.width - ~~removePixels).join(''), 0, linePointHeight * row + linePointHeight, true);		// corrected/trimmed screen
 				}
 			}
 		
