@@ -75,7 +75,7 @@ function raycaster(game, player) {
 					// regular array does not have this kind of set()
 						// should we switch to TypedArray for this?
 // 				viewWindow.depthBuffer.set(depthBuffer, startCol);
-				viewWindow.depthBuffer.splice(startCol, depthBuffer.length, depthBuffer);
+				viewWindow.depthBuffer.splice(startCol, depthBuffer.length, ...depthBuffer);
 
 				// 3. Aggregate worker-specific visited tiles back into the map
 				for (let j = 0; j < map.visitedTiles.length; j++) {

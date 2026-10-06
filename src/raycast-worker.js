@@ -1,3 +1,52 @@
+// Global states for worker thread
+let player = {
+    x: 0,
+    y: 0,
+    ang: 0,
+    viewX: 0,
+    viewY: 0,
+    bJumping: false,
+    bFalling: false
+};
+let game = {
+    currentFrame: 0,
+    animationTimer: 0,
+    fLooktimer: 0,
+    nJumptimer: 0
+};
+let map = {
+    width: 0,
+    height: 0,
+    tiles: null,
+    visitedTiles: null,
+    isCeilLight: null,
+    isFloorLight: null,
+    JITTER_MASK: 0,
+    jitterTableX: null,
+    jitterTableY: null
+};
+let viewWindow = {
+    width: 0,
+    height: 0,
+    halfHeight: 0,
+    skew: 0,
+    depth: 16.0,
+    nRenderMode: 2,
+    buffer: null,
+    depthBuffer: null
+};
+// Shading namespaces mapping calls to local functions
+const _r = {
+    getSamplePixel
+};
+const _rh = {
+    renderWall,
+    renderGate,
+    renderFloor,
+    renderSolidWall
+};
+
+
 // Shared configurations loaded once
 let mapWidth = 0;
 let mapHeight = 0;
@@ -380,15 +429,15 @@ function runRaycasterSlice(params) {
 		// var nGrainControl = 0.1;
 //		 var nGrainControl = 0.05;
 		
-		var map_x = ~~(playerX);	// the player's current map xy coordinates
-		var map_y = ~~(playerY);	// TODO get all this crap that is constant out of this loop, actually this needs to be reset every ray
+		var map_x = ~~(player.x);	// the player's current map xy coordinates
+		var map_y = ~~(player.y);	// TODO get all this crap that is constant out of this loop, actually this needs to be reset every ray
 		
-		let currentMapTileIndex = map_y * mapWidth + map_x;
+		let currentMapTileIndex = map_y * map.width + map_x;
 		
-		visitedTiles[currentMapTileIndex] = currentFrame;	// TODO maybe just check the player XY instead of setting this for sprites
-// 	visitedTiles[currentMapTileIndex] = currentFrame >>> 0;	// TODO maybe just check the player XY instead of setting this for sprites
+		map.visitedTiles[currentMapTileIndex] = game.currentFrame;	// TODO maybe just check the player XY instead of setting this for sprites
+// 	visitedTiles[currentMapTileIndex] = game.currentFrame >>> 0;	// TODO maybe just check the player XY instead of setting this for sprites
 
-		let tileType = mapTiles[currentMapTileIndex];	// NOTE this could be only inside loop, I want it right now so we can debug what the ray is hitting by saving into rayOb	// ACTUALLY i think I might have meant outside the loop, it doesn't change with the rays cast
+		let tileType = map.tiles[currentMapTileIndex];	// NOTE this could be only inside loop, I want it right now so we can debug what the ray is hitting by saving into rayOb	// ACTUALLY i think I might have meant outside the loop, it doesn't change with the rays cast
 
 		var delta_x = Math.abs(1 / rayDirX);	// the dist the ray must travel to reach the border of the next tile
 		var delta_y = Math.abs(1 / rayDirY);
@@ -399,11 +448,11 @@ function runRaycasterSlice(params) {
 		var step_y = absSign(rayDirY);
 
 			// calculate distance to initial tile boundary
-		var side_dist_x = delta_x * (step_x === 1 ? (map_x + 1 - playerX) : (playerX- map_x));
-		var side_dist_y = delta_y * (step_y === 1 ? (map_y + 1 - playerY) : (playerY- map_y));
+		var side_dist_x = delta_x * (step_x === 1 ? (map_x + 1 - player.x) : (player.x - map_x));
+		var side_dist_y = delta_y * (step_y === 1 ? (map_y + 1 - player.y) : (player.y - map_y));
 		
 		// check if player is on door tile, so we can properly render it
-		let playerInsideDoorTile = mapTiles[~~playerY * mapWidth + ~~playerX] === 'X'.charCodeAt(0);
+		let playerInsideDoorTile = map.tiles[~~player.y * map.width + ~~player.x] === 'X'.charCodeAt(0);
 
 		if (playerInsideDoorTile) {	// NOTE this is not working, just comment out for now
 // 			bHitWall = true;
@@ -412,8 +461,8 @@ function runRaycasterSlice(params) {
 			
 			fDistToDoor = fDistanceToWall + Math.abs(0.5 / (hit_NS_wall ? rayDirX : rayDirY));
 			
-			let distToDoorX = ~~(playerX + fDistToDoor * rayDirX);
-			let distToDoorY = ~~(playerY + fDistToDoor * rayDirY);
+			let distToDoorX = ~~(player.x + fDistToDoor * rayDirX);
+			let distToDoorY = ~~(player.y + fDistToDoor * rayDirY);
 			
 			bBreakLoop = map_x === distToDoorX && map_y === distToDoorY && fDistToDoor >= 0;
 			sWalltype = tileType;
@@ -434,13 +483,13 @@ function runRaycasterSlice(params) {
 				hit_NS_wall = false;
 			}
 	
-			currentMapTileIndex = map_y * mapWidth + map_x;
+			currentMapTileIndex = map_y * map.width + map_x;
 	
-			visitedTiles[currentMapTileIndex] = currentFrame;
-			tileType = mapTiles[currentMapTileIndex];
+			map.visitedTiles[currentMapTileIndex] = game.currentFrame;
+			tileType = map.tiles[currentMapTileIndex];
 	
 			// test if ray hits out of bounds
-			if (map_x < 0 || map_x >= mapWidth || map_y < 0 || map_y >= map.height) {
+			if (map_x < 0 || map_x >= map.width || map_y < 0 || map_y >= map.height) {
 	//			 bHitWall = true; // no wall there, but with this enabled we paint a wall, but can still go through it
 				bHitOoB = true;
 				fDistanceToWall = viewWindow.depth;
@@ -450,7 +499,7 @@ function runRaycasterSlice(params) {
 			} else if (tileType == "o".charCodeAt(0) || tileType == ",".charCodeAt(0)) {		// test for objects
 				if (!bInObject) {		// NOTE we'll need to update this to account for holes next to ceiling...thingies
 					fDistanceToObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
-					let fObjSampleX = hit_NS_wall ? playerY + fDistanceToObject * rayDirY : playerX + fDistanceToObject * rayDirX;
+					let fObjSampleX = hit_NS_wall ? player.y + fDistanceToObject * rayDirY : player.x + fDistanceToObject * rayDirX;
 					
 					// used to place texture exactly where ray hit wall
 					fObjSampleX -= ~~(fObjSampleX);
@@ -476,8 +525,8 @@ function runRaycasterSlice(params) {
 				
 				fDistToDoor = fDistanceToWall + Math.abs(0.5 / (hit_NS_wall ? rayDirX : rayDirY));
 				
-				let distToDoorX = ~~(playerX + fDistToDoor * rayDirX);
-				let distToDoorY = ~~(playerY + fDistToDoor * rayDirY);
+				let distToDoorX = ~~(player.x + fDistToDoor * rayDirX);
+				let distToDoorY = ~~(player.y + fDistToDoor * rayDirY);
 				
 				bBreakLoop = map_x === distToDoorX && map_y === distToDoorY;
 				sWalltype = tileType;
@@ -495,7 +544,7 @@ function runRaycasterSlice(params) {
 					// TODO test how this might work with two separate holes, we'll need to paint hole, then floor, then hole
 	//		 	if (!bHitBackObject) {
 					fDistanceToInverseObject = hit_NS_wall ? side_dist_x - delta_x : side_dist_y - delta_y;
-					let fInvObjSampleX = hit_NS_wall ? playerY + fDistanceToInverseObject * rayDirY : playerX + fDistanceToInverseObject * rayDirX;
+					let fInvObjSampleX = hit_NS_wall ? player.y + fDistanceToInverseObject * rayDirY : player.x + fDistanceToInverseObject * rayDirX;
 					
 					// used to place texture exactly where ray hit wall
 					fInvObjSampleX -= ~~(fInvObjSampleX);
@@ -522,13 +571,13 @@ function runRaycasterSlice(params) {
 		let exactHitY = 0;
 		
 		if (hit_NS_wall) {		// NS wall	// sin(RayAng) gives normalized Ray Vector
-			fSampleX = playerY + (bHitOoB ? fDistanceToOoB : fDistanceToWall) * rayDirY;
+			fSampleX = player.y + (bHitOoB ? fDistanceToOoB : fDistanceToWall) * rayDirY;
 			sWallFaceDirection = step_x === 1 ? "W" : "E";
 			
 			exactHitX = map_x + (sWallFaceDirection === 'W' ? 0 : 1);
 			exactHitY = fSampleX;
 		} else {
-			fSampleX = playerX + (bHitOoB ? fDistanceToOoB : fDistanceToWall) * rayDirX;
+			fSampleX = player.x + (bHitOoB ? fDistanceToOoB : fDistanceToWall) * rayDirX;
 			sWallFaceDirection = step_y === 1 ? "N" : "S";
 			
 			exactHitX = fSampleX;
@@ -542,10 +591,10 @@ function runRaycasterSlice(params) {
 		if (fSampleX <= edgeThreshold || fSampleX >= 1.0 - edgeThreshold) {
 			if (hit_NS_wall) {
 				let tileCheckLocDif = sWallFaceDirection === 'W' ? -1 : 1;
-				isBoundary = sWalltype !== mapTiles[(map_y + tileCheckLocDif) * mapWidth + map_x];
+				isBoundary = sWalltype !== map.tiles[(map_y + tileCheckLocDif) * map.width + map_x];
 			} else {
 				let tileCheckLocDif = sWallFaceDirection === 'S' ? -1 : 1;
-				isBoundary = sWalltype !== mapTiles[map_y * mapWidth + map_x + tileCheckLocDif];
+				isBoundary = sWalltype !== map.tiles[map_y * map.width + map_x + tileCheckLocDif];
 			}
 		}
 
@@ -613,10 +662,10 @@ function runRaycasterSlice(params) {
 		}
 		
 		
-		const lightLookUpStartX = Math.min(Math.max(map_x + xDeltaStart, 0), mapWidth - 1);
-		const lightLookUpEndX = Math.min(Math.max(map_x + xDeltaEnd, 0), mapWidth - 1);
-		const lightLookUpStartY = Math.min(Math.max(map_y + yDeltaStart, 0), mapWidth - 1);
-		const lightLookUpEndY = Math.min(Math.max(map_y + yDeltaEnd, 0), mapWidth - 1);
+		const lightLookUpStartX = Math.min(Math.max(map_x + xDeltaStart, 0), map.width - 1);
+		const lightLookUpEndX = Math.min(Math.max(map_x + xDeltaEnd, 0), map.width - 1);
+		const lightLookUpStartY = Math.min(Math.max(map_y + yDeltaStart, 0), map.width - 1);
+		const lightLookUpEndY = Math.min(Math.max(map_y + yDeltaEnd, 0), map.width - 1);
 		
 		// NOTE - TO FIX, if 2 holes are next to wall, parallel to wall, light glow does not work
 			// glow on wall is centered on middle of holes, not "equal" light glowing from each hole
@@ -626,7 +675,7 @@ function runRaycasterSlice(params) {
 		for (let lightX = lightLookUpStartX; lightX <= lightLookUpEndX; lightX++) {
 			for (let lightY = lightLookUpStartY; lightY <= lightLookUpEndY; lightY++) {
 				
-				const lightTileLookupIndex = lightY * mapWidth + lightX;
+				const lightTileLookupIndex = lightY * map.width + lightX;
 				
 // 				ceilLightInTile = mapTiles[lightTileLookupIndex] === ",".charCodeAt(0);
 //  				floorLightInTile = mapTiles[lightTileLookupIndex] === "o".charCodeAt(0);
@@ -733,7 +782,7 @@ function runRaycasterSlice(params) {
 					const clampedLight = Math.min(Math.max(wallLight, 0.0), 0.999);
 					const lightBright = ~~(clampedLight * 4);
   
-					viewWindow.buffer[screenRow * viewWindow.width + localColumn] = renderWall(fDistanceToWall, sWallFaceDirection, getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY, player.ang, sWallFaceDirection), lightBright);
+					viewWindow.buffer[screenRow * viewWindow.width + localColumn] = _rh.renderWall(fDistanceToWall, sWallFaceDirection, _r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY, player.ang, sWallFaceDirection), lightBright);
 
 				} else if (ceilThings.length > 0) {		// things in the ceiling, currently just lights
 					viewWindow.buffer[screenRow * viewWindow.width + localColumn] =
@@ -752,7 +801,7 @@ function runRaycasterSlice(params) {
 				if (sWalltype == "X".charCodeAt(0)) {		// Door/exit Walltype
 					if (screenRow > nDoorFrameTop) {
 						viewWindow.buffer[screenRow * viewWindow.width + localColumn] =
-							renderGate(screenRow, fDistToDoor, nDoorFrameTop, nCeiling);
+							_rh.renderGate(screenRow, fDistToDoor, nDoorFrameTop, nCeiling);
 					} else {
 						viewWindow.buffer[screenRow * viewWindow.width + localColumn] = brightness[0];
 					}
@@ -763,19 +812,19 @@ function runRaycasterSlice(params) {
 					/**
 					* animation timer example
 					*/
-					// if ( game.animationTimer < 5 ) {
-					//   viewWindow.buffer[screenRow * viewWindow.width + localColumn] = getSamplePixel(texture, fSampleX, fSampleY);
-					// } else if ( game.animationTimer >= 5 && game.animationTimer < 10 ) {
-					//   viewWindow.buffer[screenRow * viewWindow.width + localColumn] = getSamplePixel(texture2, fSampleX, fSampleY);
-					// } else if ( game.animationTimer >= 10 ) {
-					//   viewWindow.buffer[screenRow * viewWindow.width + localColumn] = getSamplePixel(texture3, fSampleX, fSampleY);
+					// if ( game.animationTimer < 5) {
+					//   viewWindow.buffer[screenRow * viewWindow.width + localColumn] = _r.getSamplePixel(texture, fSampleX, fSampleY);
+					// } else if ( game.animationTimer >= 5 && game.animationTimer < 10) {
+					//   viewWindow.buffer[screenRow * viewWindow.width + localColumn] = _r.getSamplePixel(texture2, fSampleX, fSampleY);
+					// } else if ( game.animationTimer >= 10) {
+					//   viewWindow.buffer[screenRow * viewWindow.width + localColumn] = _r.getSamplePixel(texture3, fSampleX, fSampleY);
 					// }
 
 
 					// Render Texture Directly
 					if (viewWindow.nRenderMode == 1) {
 						viewWindow.buffer[screenRow * viewWindow.width + localColumn] =
-							getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY, player.ang, sWallFaceDirection);
+							_r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY, player.ang, sWallFaceDirection);
 					} else if (viewWindow.nRenderMode == 2) {		// Render Texture with Shading
 						const wallLight = lightCalcs.reduce((totalLight, lightCalc) => {
 							return totalLight + lightCalc(fSampleY);
@@ -785,12 +834,12 @@ function runRaycasterSlice(params) {
 						const lightBright = ~~(clampedLight * 4);
 						
 						viewWindow.buffer[screenRow * viewWindow.width + localColumn] =
-							renderWall(fDistanceToWall,
+							_rh.renderWall(fDistanceToWall,
 								sWallFaceDirection,
-								getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY, player.ang, sWallFaceDirection), lightBright);
+								_r.getSamplePixel(textures[CHAR_CACHE[sWalltype]], fSampleX, fSampleY, player.ang, sWallFaceDirection), lightBright);
 					} else if (viewWindow.nRenderMode == 0) {	// old, solid-style shading
 						viewWindow.buffer[screenRow * viewWindow.width + localColumn] =
-							renderSolidWall(fDistanceToWall, isBoundary);
+							_rh.renderSolidWall(fDistanceToWall, isBoundary);
 					}
 				} else {		// render whatever char is on the map as walltype
 					viewWindow.buffer[screenRow * viewWindow.width + localColumn] = sWalltype;
@@ -813,7 +862,7 @@ function runRaycasterSlice(params) {
 // 				const currentDist1 = viewWindow.height / (2 * (screenRow - viewWindow.skew));
 				const currentDist = floorDistLut[screenRow];
 					// ratio of distance to this pixel to full distance to this wall
-				const weight = currentDist / (bHitOoB ? fDistanceToOoB : fDistanceToWall);
+				const distRatio = currentDist / (bHitOoB ? fDistanceToOoB : fDistanceToWall);
 					// not needing separate currentDist value, might be nice to eventually use it
 						// then render can be simpler, by pre-baking in light based on distance here
 						// instead of a bunch of conditionals in renderer
@@ -822,17 +871,17 @@ function runRaycasterSlice(params) {
 					// project out to get the exact world coordinates on the floor
 	// 			let floorX = Math.min(Math.max(weight * exactHitX + (1.0 - weight) * playerX, 0), mapWidth - 1);
 	// 			let floorY = Math.min(Math.max(weight * exactHitY + (1.0 - weight) * playerY, 0), map.height - 1);
-				let floorX = weight * exactHitX + (1.0 - weight) * playerX;
- 				let floorY = weight * exactHitY + (1.0 - weight) * playerY;
 				
 // 				const floorX = playerX+ weight * floorDeltaX;
 // 				const floorY = playerY+ weight * floorDeltaY;
+				let floorX = distRatio * exactHitX + (1.0 - distRatio) * player.x;
+ 				let floorY = distRatio * exactHitY + (1.0 - distRatio) * player.y;
 				
 					// get map tile this floor pixel belongs to
 				const floorMapX = ~~floorX;
 				const floorMapY = ~~floorY;
 				
-				if (mapTiles[floorMapY * mapWidth + floorMapX] !== "o".charCodeAt(0)) {
+				if (map.tiles[floorMapY * map.width + floorMapX] !== "o".charCodeAt(0)) {
 					
 							
 	// 				const lightLookUpStartX = Math.max(floorMapX - 2, 0);
@@ -841,9 +890,9 @@ function runRaycasterSlice(params) {
 	// 				const lightLookUpEndY = Math.min(floorMapY + 2, mapWidth - 1);
 					
 					const lightLookUpStartX = floorMapX - 2 < 0 ? 0 : floorMapX - 2;
-					const lightLookUpEndX = floorMapX + 2 > mapWidth - 1 ? mapWidth - 1 : floorMapX + 2;
+					const lightLookUpEndX = floorMapX + 2 > map.width - 1 ? map.width - 1 : floorMapX + 2;
 					const lightLookUpStartY = floorMapY - 2 < 0 ? 0 : floorMapY - 2;
-					const lightLookUpEndY = floorMapY + 2 > mapWidth - 1 ? mapWidth - 1 : floorMapY + 2;
+					const lightLookUpEndY = floorMapY + 2 > map.width - 1 ? map.width - 1 : floorMapY + 2;
 					
 								// Look at current tile and its immediate neighbors for a light
 					for (let lightX = lightLookUpStartX; lightX <= lightLookUpEndX; lightX++) {
@@ -851,9 +900,9 @@ function runRaycasterSlice(params) {
 		// 					const lightX = Math.min(Math.max(floorMapX + sx, 0), mapWidth - 1);
 		// 					const lightY = Math.min(Math.max(floorMapY + sy, 0), map.height - 1);
 							
-							const lightTileLookupIndex = lightY * mapWidth + lightX;
+							const lightTileLookupIndex = lightY * map.width + lightX;
 		// TODO NOTE next thing, process map on load, for every tile, build array with x,y of all nearby lights
-			// then we won't have to do this searching, looping through lightX, lightY, and looking at the mapTiles array
+			// then we won't have to do this searching, looping through lightX, lightY, and looking at the map.tiles array
 			// it will just be: get list of lights in range for this tile
 				// calculate dx, dy for this pixel to this light
 				// continue
@@ -874,10 +923,10 @@ function runRaycasterSlice(params) {
 					
 // 							const ceilLight = mapTiles[lightTileLookupIndex] === ",".charCodeAt(0);
 // 							const floorHole = mapTiles[lightTileLookupIndex] === "o".charCodeAt(0);
-							const ceilLight = isCeilLight[lightTileLookupIndex] === 1;
-							const floorHole = isFloorLight[lightTileLookupIndex] === 1;
 	// 						const ceilLight = CEIL_TILE_MAP[lightTileLookupIndex] === 1;
 	// 						const floorHole = HOLE_TILE_MAP[lightTileLookupIndex] === 1;
+							const ceilLight = map.isCeilLight[lightTileLookupIndex] === 1;
+							const floorHole = map.isFloorLight[lightTileLookupIndex] === 1;
 							
 							if (ceilLight
 									|| (floorHole	// creepy glow from floor holes
@@ -941,10 +990,10 @@ function runRaycasterSlice(params) {
 				
 				
 				// 5. Finalize palette index
-				const clampedLight = Math.min(Math.max(floorLight, 0.0), 0.999);
-				const lightBrightFloor = ~~(clampedLight * 5);
-				
-				viewWindow.buffer[screenRow * viewWindow.width + localColumn] = renderFloor(screenRow, lightBrightFloor, game.fLooktimer);
+			const clampedLightFloor = Math.min(Math.max(floorLight, 0.0), 0.999);
+			const lightBrightFloor = ~~(clampedLightFloor * 5);
+
+				viewWindow.buffer[screenRow * viewWindow.width + localColumn] = _rh.renderFloor(screenRow, lightBrightFloor, game.fLooktimer);
 			}
 		} // end draw column loop
 		
@@ -967,7 +1016,7 @@ function runRaycasterSlice(params) {
 // 					: brightness[3];
 					y <= floor.backOfObjFloor + (4 / floor.distToBackOfObj)	// at horizontal boundary
 					? brightness[2]
-					: renderSolidWall(floor.distToObj, floor.atObjBackBoundary)
+					: _rh.renderSolidWall(floor.distToObj, floor.atObjBackBoundary)
 		  });
 		  
 		  vHitObjects.filter(obj => {
@@ -998,7 +1047,7 @@ function checkDynamicLOS(startX, startY, endX, endY) {
 		const checkY = ~~(startY + (endY - startY) * t);
 		
 		// Sample the map
-		const tile = mapTiles[checkY * mapWidth + checkX];	// TODO NOTE make an array of block/wall tiles, so this is just a lookup
+		const tile = map.tiles[checkY * map.width + checkX];	// TODO NOTE make an array of block/wall tiles, so this is just a lookup
 // 		if (tile > 0 && WALL_TILE[tile] /* "TX#$CWU".split('').map(char => char.charCodeAt(0)).includes(tile) */) {
 // 			return false; // Intersection found, wall blocks light
 // 		}
@@ -1010,31 +1059,73 @@ function checkDynamicLOS(startX, startY, endX, endY) {
 
 self.onmessage = function (event) {
     const data = event.data;
-
     if (data.type === 'INIT_MAP') {
-        mapWidth = data.mapWidth;
-        mapHeight = data.mapHeight;
-        mapTiles = data.mapTiles;
-        isCeilLight = data.isCeilLight;
-        isFloorLight = data.isFloorLight;
-        jitterMask = data.jitterMask;
-        jitterTableX = data.jitterTableX;
-        jitterTableY = data.jitterTableY;
+        map.width = data.mapWidth;
+        map.height = data.mapHeight;
+        map.tiles = data.mapTiles;
+        map.isCeilLight = data.isCeilLight;
+        map.isFloorLight = data.isFloorLight;
+        map.JITTER_MASK = data.jitterMask;
+        map.jitterTableX = data.jitterTableX;
+        map.jitterTableY = data.jitterTableY;
+
         textures = data.textures;
         CHAR_CACHE = data.CHAR_CACHE;
         WALL_TILE = data.WALL_TILE;
         brightness = data.brightness;
-    } 
+    }
     else if (data.type === 'RENDER_SLICE') {
-        const visitedTiles = new Uint32Array(mapWidth * mapHeight);
-
-        runRaycasterSlice({ ...data, visitedTiles });
-
+        const {
+            startColumn,
+            endColumn,
+            buffer,
+            depthBuffer,
+            playerX,
+            playerY,
+            playerAng,
+            playerViewX,
+            playerViewY,
+            playerBJumping,
+            playerBFalling,
+            currentFrame,
+            animationTimer,
+            fLooktimer,
+            nJumptimer,
+            viewHeight,
+            viewSkew,
+            viewHalfHeight,
+            viewPlaneX,
+            viewPlaneY,
+            viewNRenderMode
+        } = data;
+        // Populate worker-global states
+        player.x = playerX;
+        player.y = playerY;
+        player.ang = playerAng;
+        player.viewX = playerViewX;
+        player.viewY = playerViewY;
+        player.bJumping = playerBJumping;
+        player.bFalling = playerBFalling;
+        game.currentFrame = currentFrame;
+        game.animationTimer = animationTimer;
+        game.fLooktimer = fLooktimer;
+        game.nJumptimer = nJumptimer;
+        viewWindow.width = endColumn - startColumn; // local slice width
+        viewWindow.height = viewHeight;
+        viewWindow.halfHeight = viewHalfHeight;
+        viewWindow.skew = viewSkew;
+        viewWindow.nRenderMode = viewNRenderMode;
+        viewWindow.buffer = buffer;
+        viewWindow.depthBuffer = depthBuffer;
+        // Reset visited tiles array for this frame
+        map.visitedTiles = new Uint32Array(map.width * map.height);
+        // Run the rendering algorithm
+        runRaycasterSlice({ ...data, visitedTiles: map.visitedTiles });
         // Transfer computed ArrayBuffers back with zero copy
         self.postMessage({
-            buffer: data.buffer,
-            depthBuffer: data.depthBuffer,
-            visitedTiles
-        }, [data.buffer.buffer, data.depthBuffer.buffer]);
+            buffer,
+            depthBuffer,
+            visitedTiles: map.visitedTiles
+        }, [buffer.buffer, depthBuffer.buffer]);
     }
 };

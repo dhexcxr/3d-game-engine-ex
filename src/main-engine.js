@@ -2,8 +2,8 @@ export {gameLoop};
 
 import {_r, _rh} from './main-renderer.js';
 import {player, move} from './player.js';
-import {raycaster} from './main-raycaster.js';		// single-threaded
-// import {raycaster} from './raycast.js';			// web worker raycasters
+// import {raycaster} from './main-raycaster.js';		// single-threaded
+import {raycaster} from './raycast.js';			// web worker raycasters
 import {game} from './game.js';
 
 import {_debugOutput} from './util.js';
