@@ -236,12 +236,12 @@ let _r = {
 				const canvasHeight = viewWindow.canvas.height;
 				const atlasWidth = atlasCanvas.width;
 
-					// TODO try doing a putImageData() with a static black canvas buffer, see if that's faster
-				// fill buffer with black -  (AABBGGRR)
-				viewWindow.screenBuf32.fill(0xFF000000);	// TODO consider making const refs to these object properties
 				const screenBuf32 = viewWindow.screenBuf32;
 				const atlasBuf32 = viewWindow.atlasBuf32;
 
+				// copy a blank array into the screen buffer
+					// TODO setting viewWindow.clearCanvas() to this when the softBlitter is on
+				screenBuf32.set(viewWindow.blankScreen);
 
 				const linePixelHeight = Math.round(lineheight * viewWindow.dpr);
 
@@ -630,6 +630,9 @@ let _r = {
   // each texture has 4 values: 3 hues plus black
   // each value can be rendered with 5 shades (4 plus black)
   var _rh = {		// TODO this should probably be a class, then it can hold all its "global" variables as well
+
+// TODO add lighting noise/jitter to all these distance calc's as well
+	// so light transitions are not just a hard border
 
     renderWall: function(fDistanceToWall, sWallFaceDirection, pixel, lightBright = 0) {
 						// TODO try making lightBright -1, and clamping the bottom too

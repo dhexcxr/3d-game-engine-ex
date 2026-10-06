@@ -196,6 +196,7 @@ let hitSideCheck = 0;		// DEBUG only, only in [io
     atlasImageData: null,
     atlasBuf32: null,
 
+    blankScreen: null,
 
 // TODO give all the extra things we create in the viewWindow a definition in this original object
 	// don't just glom on a bunch of stuff
@@ -701,6 +702,9 @@ var init = function( input ) {
 		if (softBlitter) {
 			viewWindow.screenImageData = viewWindow.canvasContext.getImageData(0, 0, viewWindow.canvas.width, viewWindow.canvas.height);
 			viewWindow.screenBuf32 = new Uint32Array(viewWindow.screenImageData.data.buffer);
+			viewWindow.blankScreen = new Uint32Array(viewWindow.screenBuf32);
+			viewWindow.blankScreen.fill(0xFF000000);
+//			viewWindow.blankScreen = viewWindow.canvasContext.createImageData(viewWindow.screenImageData);
 		}
 	}
 
