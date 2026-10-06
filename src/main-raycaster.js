@@ -13,9 +13,9 @@ import {_debugOutput, ioDebug} from './util.js';
 const absSign = (x) => (x === 0 ? 1 : Math.sign(x));	// RENDERER only
 const edgeThreshold = 0.05;		// control thickness of border in flat renderer, also holes	// RAYCASTER only
 
-// Constants for 1.5 tile maximum light radius
-const MAX_RADIUS_SQ = 6.25; // 1.5 * 1.5
-const MAX_FLR_RADIUS_SQ = 2.25; // 1.5 * 1.5
+// tile max light radius
+const MAX_RADIUS_SQ = 6.25; // 2.5 tile radius (2.5 * 2.5)
+const MAX_FLR_RADIUS_SQ = 2.25; // 1.5 tile radius (1.5 * 1.5)
 let checkTiles = [];	// tiles to check for ceiling light
 let closestLightWallDist = Infinity;
 let closestLightFloorDist = Infinity;
@@ -602,7 +602,6 @@ function raycaster(game, player) {
           });
         } // end draw column loop		// == nFObjectBackCeil, draw black 'pixel'
       }  // end column loop
-//       map.visitedTiles = visitedTiles;
 }
 
 function checkDynamicLOS(startX, startY, endX, endY) {
